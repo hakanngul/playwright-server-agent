@@ -1,0 +1,33 @@
+{
+  "name": "Google Arama Testi",
+  "description": "Google'a git ve arama yap",
+  "browserPreference": "chromium",
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "type",
+      "target": "#APjFqb",
+      "strategy": "css",
+      "value": "playwright",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Arama sonuçlarının ekran görüntüsünü al"
+    }
+  ]
+}

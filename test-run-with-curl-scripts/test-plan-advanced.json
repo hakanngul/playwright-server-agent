@@ -1,0 +1,75 @@
+{
+  "name": "GitHub Arama ve Doğrulama Testi",
+  "description": "GitHub'a git, arama yap ve sonuçları doğrula",
+  "browserPreference": "chromium",
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://github.com",
+      "description": "GitHub ana sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "click",
+      "target": "[aria-label='Search GitHub']",
+      "strategy": "css",
+      "description": "Arama kutusuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Arama kutusunun açılmasını bekle"
+    },
+    {
+      "action": "type",
+      "target": "#query-builder-test",
+      "strategy": "css",
+      "value": "playwright",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "3000",
+      "description": "Arama sonuçlarının yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Arama sonuçlarının ekran görüntüsünü al"
+    },
+    {
+      "action": "verifyElementExists",
+      "target": ".repo-list",
+      "strategy": "css",
+      "description": "Repo listesinin var olduğunu doğrula"
+    },
+    {
+      "action": "click",
+      "target": ".repo-list-item:first-child a",
+      "strategy": "css",
+      "description": "İlk repo sonucuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "3000",
+      "description": "Repo sayfasının yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Repo sayfasının ekran görüntüsünü al"
+    },
+    {
+      "action": "verifyUrlContains",
+      "value": "github.com",
+      "description": "URL'in github.com içerdiğini doğrula"
+    }
+  ]
+}
