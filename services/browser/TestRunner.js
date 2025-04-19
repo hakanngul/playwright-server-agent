@@ -6,6 +6,7 @@
 import { BrowserManager } from './BrowserManager.js';
 import { BrowserPool } from './BrowserPool.js';
 import { StepExecutor } from './StepExecutor.js';
+import { JsonReporter } from '../reporting/index.js';
 
 /**
  * Runs test plans
@@ -28,6 +29,12 @@ export class TestRunner {
     this.browserManager = options.browserManager || null;
     this.stepExecutor = null;
     this.browserPoolId = null; // ID for browser acquired from pool
+
+    // JSON reporter for test results
+    this.jsonReporter = new JsonReporter({
+      reportsDir: options.reportsDir || './data/reports',
+      screenshotsDir: this.screenshotsDir
+    });
 
     console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
   }
@@ -126,6 +133,15 @@ export class TestRunner {
     // Calculate duration and set end time
     results.endTime = new Date().toISOString();
     results.duration = Date.now() - startTime;
+
+    // Generate JSON report
+    try {
+      const reportId = await this.jsonReporter.generateReport(results);
+      results.reportId = reportId;
+      console.log(`JSON report generated with ID: ${reportId}`);
+    } catch (error) {
+      console.error(`Error generating JSON report: ${error.message}`);
+    }
 
     // Call the test completed callback if provided
     if (this.onTestCompleted) {

@@ -6,6 +6,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
+import reportRoutes from './routes/reports.js';
 import { TestAgent } from './services/testAgent.js';
 import { BrowserPool } from './services/browser/index.js';
 
@@ -151,6 +152,9 @@ app.use('/screenshots', express.static(screenshotsDir));
 
 // Use API routes
 app.use('/api', apiRoutes);
+
+// Use reports routes
+app.use('/api/reports', reportRoutes);
 
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
