@@ -3,7 +3,7 @@
   "description": "Google'a git ve arama yap",
   "browserPreference": "chromium",
   "headless": false,
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "steps": [
     {
       "action": "navigate",
@@ -40,6 +40,10 @@
       "action": "wait",
       "value": "2000",
       "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Playwright sayfasının ekran görüntüsünü al"
     }
   ]
 }
