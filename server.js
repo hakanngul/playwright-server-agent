@@ -172,14 +172,13 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test/verify-playwright', (req, res) => {
   // Sadece Playwright'in yüklü olduğunu kontrol edelim, tarayıcı başlatmadan
   try {
-    const { chromium, firefox, webkit } = require('playwright');
-    res.json({ 
-      success: true, 
+    const { chromium, firefox } = require('playwright');
+    res.json({
+      success: true,
       message: 'Playwright is installed correctly',
       availableBrowsers: {
         chromium: true,
-        firefox: true,
-        webkit: true
+        firefox: true
       }
     });
   } catch (error) {
@@ -196,8 +195,7 @@ app.get('/api/test/verify-playwright', (req, res) => {
 app.get('/api/browsers', (req, res) => {
   const browsers = [
     { id: 'chromium', name: 'Chromium' },
-    { id: 'firefox', name: 'Firefox' },
-    { id: 'webkit', name: 'WebKit (Safari)' }
+    { id: 'firefox', name: 'Firefox' }
   ];
 
   res.json(browsers);

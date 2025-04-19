@@ -1,4 +1,4 @@
-import { chromium, firefox, webkit } from 'playwright';
+import { chromium, firefox } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -34,7 +34,7 @@ class TestAgent {
 
       // Launch options based on Puppeteer's successful configuration
       const launchOptions = {
-        headless: false, // Use non-headless mode to avoid CAPTCHA
+        headless: true, // Use headless mode for curl tests
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -43,7 +43,15 @@ class TestAgent {
           '--disable-features=IsolateOrigins,site-per-process',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--mute-audio',
+          '--hide-scrollbars',
+          '--window-size=1920,1080',
+          '--lang=en-US,en',
+          '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"'
         ],
         ignoreDefaultArgs: ['--enable-automation'],
         timeout: 60000 // Increase timeout to 60 seconds
@@ -54,10 +62,6 @@ class TestAgent {
         case 'firefox':
           console.log('Using Firefox browser');
           this.browser = await firefox.launch(launchOptions);
-          break;
-        case 'webkit':
-          console.log('Using WebKit (Safari) browser');
-          this.browser = await webkit.launch(launchOptions);
           break;
         case 'chromium':
         default:
@@ -70,16 +74,31 @@ class TestAgent {
 
       // Create a new browser context with viewport and user agent
       this.context = await this.browser.newContext({
-        viewport: { width: 1280, height: 800 },
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59',
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         locale: 'en-US',
+        geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
+        permissions: ['geolocation'],
+        colorScheme: 'light',
+        deviceScaleFactor: 1,
+        hasTouch: false,
+        isMobile: false,
+        javaScriptEnabled: true,
         // Avoid bot detection
         bypassCSP: true,
         ignoreHTTPSErrors: true,
         extraHTTPHeaders: {
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br'
+          'Accept-Language': 'en-US,en;q=0.9,tr;q=0.8',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'sec-ch-ua': '"Google Chrome";v="120", "Chromium";v="120", "Not-A.Brand";v="24"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"macOS"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'none',
+          'sec-fetch-user': '?1',
+          'upgrade-insecure-requests': '1'
         }
       });
 
@@ -110,6 +129,84 @@ class TestAgent {
               originalQuery(parameters)
           );
         }
+
+        // Hide automation features
+        delete navigator.__proto__.webdriver;
+
+        // Modify plugins
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => {
+            return [{
+              0: {
+                type: 'application/pdf',
+                suffixes: 'pdf',
+                description: 'Portable Document Format'
+              },
+              description: 'PDF Viewer',
+              filename: 'internal-pdf-viewer',
+              length: 1,
+              name: 'Chrome PDF Viewer'
+            }];
+          }
+        });
+
+        // Add Chrome specific properties
+        window.chrome = {
+          app: {
+            isInstalled: false,
+            InstallState: {
+              DISABLED: 'disabled',
+              INSTALLED: 'installed',
+              NOT_INSTALLED: 'not_installed'
+            },
+            RunningState: {
+              CANNOT_RUN: 'cannot_run',
+              READY_TO_RUN: 'ready_to_run',
+              RUNNING: 'running'
+            }
+          },
+          runtime: {
+            OnInstalledReason: {
+              CHROME_UPDATE: 'chrome_update',
+              INSTALL: 'install',
+              SHARED_MODULE_UPDATE: 'shared_module_update',
+              UPDATE: 'update'
+            },
+            OnRestartRequiredReason: {
+              APP_UPDATE: 'app_update',
+              OS_UPDATE: 'os_update',
+              PERIODIC: 'periodic'
+            },
+            PlatformArch: {
+              ARM: 'arm',
+              ARM64: 'arm64',
+              MIPS: 'mips',
+              MIPS64: 'mips64',
+              X86_32: 'x86-32',
+              X86_64: 'x86-64'
+            },
+            PlatformNaclArch: {
+              ARM: 'arm',
+              MIPS: 'mips',
+              MIPS64: 'mips64',
+              X86_32: 'x86-32',
+              X86_64: 'x86-64'
+            },
+            PlatformOs: {
+              ANDROID: 'android',
+              CROS: 'cros',
+              LINUX: 'linux',
+              MAC: 'mac',
+              OPENBSD: 'openbsd',
+              WIN: 'win'
+            },
+            RequestUpdateCheckStatus: {
+              NO_UPDATE: 'no_update',
+              THROTTLED: 'throttled',
+              UPDATE_AVAILABLE: 'update_available'
+            }
+          }
+        };
       });
 
       console.log('Browser page initialized with anti-detection measures');
@@ -321,7 +418,8 @@ class TestAgent {
           await this.page.fill(typeSelector, '');
 
           // Type the text with a delay for more human-like typing
-          await this.page.type(typeSelector, value, { delay: 50 });
+          // Using fill with delay for more human-like typing
+          await this.page.fill(typeSelector, value, { delay: 50 });
 
           console.log(`Typed text: ${value}`);
           break;
