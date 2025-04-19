@@ -262,20 +262,45 @@ The server supports the following actions in test steps:
 - **Navigation**:
   - `navigate`: Navigate to a URL
   - `navigateAndWait`: Navigate to a URL and wait for page to load
+  - `goBack`: Navigate back in browser history
+  - `goForward`: Navigate forward in browser history
+  - `refresh`: Refresh the current page
 
 - **Element Interaction**:
   - `click`: Click on an element
+  - `doubleClick`: Double-click on an element
+  - `hover`: Hover over an element
   - `type`: Type text into an element
   - `select`: Select an option from a dropdown
+  - `check`: Check a checkbox or radio button
+  - `uncheck`: Uncheck a checkbox
+  - `upload`: Upload a file to a file input
 
 - **Keyboard**:
   - `pressEnter`: Press the Enter key
+  - `pressTab`: Press the Tab key
+  - `pressEscape`: Press the Escape key
 
 - **Wait**:
   - `wait`: Wait for a specified time in milliseconds
+  - `waitForElement`: Wait for an element to appear
+  - `waitForElementToDisappear`: Wait for an element to disappear
+  - `waitForNavigation`: Wait for navigation to complete
+  - `waitForURL`: Wait for a specific URL
 
 - **Screenshot**:
   - `takeScreenshot`: Take a screenshot of the current page
+  - `takeElementScreenshot`: Take a screenshot of a specific element
+
+- **Verification**:
+  - `verifyText`: Verify text is present on the page
+  - `verifyTitle`: Verify the page title
+  - `verifyURL`: Verify the current URL
+  - `verifyElementExists`: Verify an element exists in the DOM
+  - `verifyElementVisible`: Verify an element is visible
+
+- **Frame Handling**:
+  - `clickInFrame`: Click on an element within an iframe
 
 ## Selector Strategies
 

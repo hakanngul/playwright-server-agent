@@ -52,6 +52,7 @@ export class StepExecutor {
 
     try {
       switch (step.action) {
+        // Navigation actions
         case 'navigate':
         case 'navigateAndWait':
           await this.page.goto(step.value, {
@@ -60,8 +61,28 @@ export class StepExecutor {
           });
           console.log('Navigation complete');
           break;
+        case 'goBack':
+          await this.page.goBack();
+          console.log('Navigated back');
+          break;
+        case 'goForward':
+          await this.page.goForward();
+          console.log('Navigated forward');
+          break;
+        case 'refresh':
+          await this.page.reload();
+          console.log('Page refreshed');
+          break;
+
+        // Element interaction actions
         case 'click':
           await this.elementHelper.clickElement(step.target, step.strategy);
+          break;
+        case 'doubleClick':
+          await this.elementHelper.doubleClickElement(step.target, step.strategy);
+          break;
+        case 'hover':
+          await this.elementHelper.hoverElement(step.target, step.strategy);
           break;
         case 'type':
           await this.elementHelper.typeText(step.target, step.strategy, step.value);
@@ -69,12 +90,61 @@ export class StepExecutor {
         case 'select':
           await this.elementHelper.selectOption(step.target, step.strategy, step.value);
           break;
+        case 'check':
+          await this.elementHelper.checkElement(step.target, step.strategy, true);
+          break;
+        case 'uncheck':
+          await this.elementHelper.checkElement(step.target, step.strategy, false);
+          break;
+        case 'upload':
+          await this.elementHelper.uploadFile(step.target, step.strategy, step.value);
+          break;
+
+        // Keyboard actions
+        case 'pressEnter':
+          console.log('Pressing Enter key');
+          await this.page.keyboard.press('Enter');
+          console.log('Enter key pressed, waiting for page to load...');
+          await this.page.waitForLoadState('networkidle');
+          break;
+        case 'pressTab':
+          console.log('Pressing Tab key');
+          await this.page.keyboard.press('Tab');
+          break;
+        case 'pressEscape':
+          console.log('Pressing Escape key');
+          await this.page.keyboard.press('Escape');
+          break;
+
+        // Wait actions
         case 'wait':
           const waitTime = parseInt(step.value) || 1000;
           console.log(`Waiting for ${waitTime}ms`);
           await this.page.waitForTimeout(waitTime);
           console.log('Wait complete');
           break;
+        case 'waitForElement':
+          console.log(`Waiting for element: ${step.target}`);
+          await this.elementHelper.waitForElementByStrategy(step.target, step.strategy, parseInt(step.timeout) || 30000);
+          console.log('Element found');
+          break;
+        case 'waitForElementToDisappear':
+          console.log(`Waiting for element to disappear: ${step.target}`);
+          await this.elementHelper.waitForElementToDisappear(step.target, step.strategy);
+          console.log('Element disappeared');
+          break;
+        case 'waitForNavigation':
+          console.log('Waiting for navigation to complete');
+          await this.elementHelper.waitForNavigation();
+          console.log('Navigation complete');
+          break;
+        case 'waitForURL':
+          console.log(`Waiting for URL: ${step.value}`);
+          await this.elementHelper.waitForURL(step.value);
+          console.log('URL reached');
+          break;
+
+        // Screenshot actions
         case 'takeScreenshot':
           try {
             console.log('Taking screenshot of the current page');
@@ -86,12 +156,62 @@ export class StepExecutor {
             console.log('Screenshot capture is disabled, skipping takeScreenshot action');
           }
           break;
-        case 'pressEnter':
-          console.log('Pressing Enter key');
-          await this.page.keyboard.press('Enter');
-          console.log('Enter key pressed, waiting for page to load...');
-          await this.page.waitForLoadState('networkidle');
+        case 'takeElementScreenshot':
+          try {
+            console.log(`Taking screenshot of element: ${step.target}`);
+            const elementScreenshot = `element_${Date.now()}.png`;
+            const screenshotPath = path.join(this.screenshotManager.screenshotsDir, elementScreenshot);
+            await this.elementHelper.takeElementScreenshot(step.target, step.strategy, screenshotPath);
+            console.log(`Element screenshot saved: ${elementScreenshot}`);
+            result.screenshot = elementScreenshot;
+          } catch (error) {
+            console.log(`Error taking element screenshot: ${error.message}`);
+          }
           break;
+
+        // Verification actions
+        case 'verifyText':
+          console.log(`Verifying text: ${step.value}`);
+          const textPresent = await this.elementHelper.verifyTextPresent(step.value);
+          if (!textPresent) {
+            throw new Error(`Text not found: ${step.value}`);
+          }
+          break;
+        case 'verifyTitle':
+          console.log(`Verifying title: ${step.value}`);
+          const titleMatches = await this.elementHelper.verifyTitle(step.value, step.exactMatch);
+          if (!titleMatches) {
+            throw new Error(`Title verification failed: ${step.value}`);
+          }
+          break;
+        case 'verifyURL':
+          console.log(`Verifying URL: ${step.value}`);
+          const urlMatches = await this.elementHelper.verifyURL(step.value, step.exactMatch);
+          if (!urlMatches) {
+            throw new Error(`URL verification failed: ${step.value}`);
+          }
+          break;
+        case 'verifyElementExists':
+          console.log(`Verifying element exists: ${step.target}`);
+          const elementExists = await this.elementHelper.doesElementExist(step.target, step.strategy);
+          if (!elementExists) {
+            throw new Error(`Element does not exist: ${step.target}`);
+          }
+          break;
+        case 'verifyElementVisible':
+          console.log(`Verifying element is visible: ${step.target}`);
+          const elementVisible = await this.elementHelper.isElementVisible(step.target, step.strategy);
+          if (!elementVisible) {
+            throw new Error(`Element is not visible: ${step.target}`);
+          }
+          break;
+
+        // Frame actions
+        case 'clickInFrame':
+          console.log(`Clicking element in frame: ${step.frameName}, target: ${step.target}`);
+          await this.elementHelper.clickElementInFrame(step.frameName, step.target, step.strategy);
+          break;
+
         default:
           throw new Error(`Unsupported action: ${step.action}`);
       }
