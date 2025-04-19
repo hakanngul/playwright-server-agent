@@ -3,6 +3,9 @@
  * Provides utilities for interacting with page elements
  */
 
+import { ElementError, TimeoutError } from '../errors/index.js';
+import { retry } from '../utils/RetryHelper.js';
+
 /**
  * Helper class for element interactions
  */
@@ -117,24 +120,71 @@ export class ElementHelper {
   async clickElement(target, strategy, options = {}) {
     console.log(`Finding element to click: ${target} using ${strategy}`);
 
-    // Playwright has built-in waiting, but we'll keep our explicit wait for compatibility
-    const clickElementVisible = await this.waitForElementByStrategy(target, strategy, 10000);
-    if (!clickElementVisible) {
-      throw new Error(`Element not visible or not found: ${target} using ${strategy}`);
+    const retryOptions = {
+      maxRetries: 3,
+      initialDelay: 500,
+      factor: 1.5,
+      onRetry: ({ attempt, error, willRetry }) => {
+        console.log(`Retry ${attempt} clicking element: ${target} (${willRetry ? 'will retry' : 'giving up'})`);
+        console.error(`Error: ${error.message}`);
+      }
+    };
+
+    try {
+      await retry(async () => {
+        try {
+          // Playwright has built-in waiting, but we'll keep our explicit wait for compatibility
+          const clickElementVisible = await this.waitForElementByStrategy(target, strategy, options.timeout || 10000);
+          if (!clickElementVisible) {
+            throw new ElementError(
+              `Element not visible or not found: ${target}`,
+              target,
+              'click',
+              true
+            );
+          }
+
+          const clickSelector = this.convertToSelector(target, strategy);
+
+          // Click with appropriate options
+          await this.page.click(clickSelector, {
+            force: options.force || false,
+            timeout: options.timeout || 10000,
+            delay: options.delay || 100 // Small delay for more human-like interaction
+          });
+
+          console.log('Click performed successfully');
+          return true;
+        } catch (error) {
+          // Convert Playwright errors to our custom errors
+          if (error.name === 'TimeoutError') {
+            throw new TimeoutError(
+              `Timeout waiting for element: ${target}`,
+              'clickElement',
+              options.timeout || 10000
+            );
+          }
+
+          // If it's already our custom error, just rethrow it
+          if (error instanceof ElementError || error instanceof TimeoutError) {
+            throw error;
+          }
+
+          // Otherwise, wrap it in our custom error
+          throw new ElementError(
+            `Failed to click element: ${error.message}`,
+            target,
+            'click',
+            true
+          );
+        }
+      }, retryOptions);
+
+      return true;
+    } catch (error) {
+      console.error(`Error clicking element after retries: ${error.message}`);
+      return false;
     }
-
-    const clickSelector = this.convertToSelector(target, strategy);
-
-    // Click with force:true to ensure the click happens even if the element
-    // is covered by another element
-    await this.page.click(clickSelector, {
-      force: options.force || false,
-      timeout: options.timeout || 10000,
-      delay: options.delay || 100 // Small delay for more human-like interaction
-    });
-
-    console.log('Click performed successfully');
-    return true;
   }
 
   /**

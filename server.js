@@ -273,8 +273,33 @@ app.post('/api/test/run', async (req, res) => {
 
 // Error handling middleware
 app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
+  console.error('Error handling middleware caught an error:');
+  console.error(err);
+
+  // Check if it's our custom error
+  if (err.toJSON && typeof err.toJSON === 'function') {
+    const errorJson = err.toJSON();
+    const statusCode = err.code === 'NOT_FOUND' ? 404 :
+                      err.code === 'VALIDATION_ERROR' ? 400 :
+                      err.code === 'UNAUTHORIZED' ? 401 :
+                      err.code === 'FORBIDDEN' ? 403 : 500;
+
+    return res.status(statusCode).json({
+      error: errorJson.message,
+      code: errorJson.code,
+      details: errorJson
+    });
+  }
+
+  // For regular errors
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal server error';
+
+  res.status(statusCode).json({
+    error: message,
+    code: err.code || 'INTERNAL_ERROR',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 // Add browser pool configuration endpoint

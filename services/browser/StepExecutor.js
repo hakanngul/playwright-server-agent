@@ -4,6 +4,8 @@
  */
 
 import { ElementHelper } from './ElementHelper.js';
+import { AppError, NavigationError } from '../errors/index.js';
+import { retry } from '../utils/RetryHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import path from 'path';
 
@@ -55,11 +57,40 @@ export class StepExecutor {
         // Navigation actions
         case 'navigate':
         case 'navigateAndWait':
-          await this.page.goto(step.value, {
-            waitUntil: 'networkidle',
-            timeout: 60000
+          await retry(async () => {
+            try {
+              console.log(`Navigating to: ${step.value}`);
+              await this.page.goto(step.value, {
+                waitUntil: 'networkidle',
+                timeout: step.timeout || 60000
+              });
+              console.log('Navigation complete');
+              return true;
+            } catch (error) {
+              // Convert Playwright errors to our custom errors
+              if (error.name === 'TimeoutError') {
+                throw new NavigationError(
+                  `Timeout navigating to: ${step.value}`,
+                  step.value,
+                  true
+                );
+              }
+
+              throw new NavigationError(
+                `Failed to navigate to: ${step.value} - ${error.message}`,
+                step.value,
+                true
+              );
+            }
+          }, {
+            maxRetries: 2,
+            initialDelay: 1000,
+            factor: 2,
+            onRetry: ({ attempt, error, willRetry }) => {
+              console.log(`Retry ${attempt} navigating to: ${step.value} (${willRetry ? 'will retry' : 'giving up'})`);
+              console.error(`Error: ${error.message}`);
+            }
           });
-          console.log('Navigation complete');
           break;
         case 'goBack':
           await this.page.goBack();
