@@ -4,7 +4,7 @@
   "browserPreference": "chromium",
   "headless": false,
   "useBrowserPool": false,
-  "takeScreenshots": true,
+  "takeScreenshots": false,
   "steps": [
     {
       "action": "navigate",
@@ -13,8 +13,8 @@
     },
     {
       "action": "type",
-      "target": "#APjFqb",
-      "strategy": "css",
+      "target": "APjFqb",
+      "strategy": "id",
       "value": "playwright",
       "description": "Arama terimini yaz"
     },
