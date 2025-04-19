@@ -1,23 +1,24 @@
 import express from 'express';
-import path from 'path';
-import fs from 'fs';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
+import path from 'path';
 import { execSync } from 'child_process';
-import { TestAgent } from './services/testAgent.js';
+import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
+import { TestAgent } from './services/testAgent.js';
 
-// Get current file path and directory
+// Get the directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Log system information for debugging
-const logSystemInfo = () => {
+// Log system information
+function logSystemInfo() {
   console.log('\n--- System Information ---');
   console.log(`Platform: ${process.platform}`);
   console.log(`Node Version: ${process.version}`);
 
+  // Check for Chrome/Chromium
   try {
     const chromeVersion = execSync('google-chrome --version').toString().trim();
     console.log(`Chrome Version: ${chromeVersion}`);
@@ -29,27 +30,19 @@ const logSystemInfo = () => {
       console.log(`Chromium Version: ${chromiumVersion}`);
     } catch (e) {
       console.log('Chromium not found via chromium command');
+    }
+  }
 
-      // WebKit/Safari desteği kaldırıldı
-      if (false) {
-        try {
-          // Sadece versiyon bilgisini al, uygulamayı başlatma
-          const safariVersion = execSync('defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString').toString().trim();
-          console.log(`Safari Version: ${safariVersion}`);
-        } catch (e) {
-          console.log('Safari version check failed');
-        }
-      } else if (process.platform === 'win32') {
-        try {
-          const winChromeVersion = execSync('reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version').toString().trim();
-          const versionMatch = winChromeVersion.match(/version\s+REG_SZ\s+([\d.]+)/i);
-          if (versionMatch && versionMatch[1]) {
-            console.log(`Windows Chrome Version: ${versionMatch[1]}`);
-          }
-        } catch (e) {
-          console.log('Chrome version not found in Windows registry');
-        }
+  // Windows için Chrome kontrolü
+  if (process.platform === 'win32') {
+    try {
+      const winChromeVersion = execSync('reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version').toString().trim();
+      const versionMatch = winChromeVersion.match(/version\\s+REG_SZ\\s+([\\d.]+)/i);
+      if (versionMatch && versionMatch[1]) {
+        console.log(`Windows Chrome Version: ${versionMatch[1]}`);
       }
+    } catch (e) {
+      console.log('Chrome version not found in Windows registry');
     }
   }
 
@@ -57,7 +50,7 @@ const logSystemInfo = () => {
   try {
     if (process.platform === 'win32') {
       const firefoxVersion = execSync('reg query "HKEY_CURRENT_USER\\Software\\Mozilla\\Mozilla Firefox" /v CurrentVersion').toString().trim();
-      const versionMatch = firefoxVersion.match(/CurrentVersion\s+REG_SZ\s+([\d.]+)/i);
+      const versionMatch = firefoxVersion.match(/CurrentVersion\\s+REG_SZ\\s+([\\d.]+)/i);
       if (versionMatch && versionMatch[1]) {
         console.log(`Firefox Version: ${versionMatch[1]}`);
       }
@@ -72,7 +65,7 @@ const logSystemInfo = () => {
   // WebKit/Safari desteği kaldırıldı
 
   console.log('------------------------\n');
-};
+}
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -156,15 +149,16 @@ app.use('/screenshots', express.static(screenshotsDir));
 app.use('/api', apiRoutes);
 
 // Add a simple health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Add a simple test endpoint to verify Playwright is working
-app.get('/api/test/verify-playwright', (req, res) => {
+app.get('/api/test/verify-playwright', (_req, res) => {
   // Sadece Playwright'in yüklü olduğunu kontrol edelim, tarayıcı başlatmadan
   try {
-    const { chromium, firefox } = require('playwright');
+    // Just check if we can import Playwright
+    require('playwright');
     res.json({
       success: true,
       message: 'Playwright is installed correctly',
@@ -185,7 +179,7 @@ app.get('/api/test/verify-playwright', (req, res) => {
 
 // API Endpoints
 // Add browser selection endpoint
-app.get('/api/browsers', (req, res) => {
+app.get('/api/browsers', (_req, res) => {
   const browsers = [
     { id: 'chromium', name: 'Chromium' },
     { id: 'firefox', name: 'Firefox' },
@@ -221,20 +215,35 @@ app.post('/api/test/run', async (req, res) => {
     const testAgent = new TestAgent(browserPreference, { headless });
 
     // Step completion callback
-    testAgent.onStepCompleted = (step, result, index) => {
-      console.log(`Step ${index + 1} completed: ${result.success ? 'Success' : 'Failed'}`);
+    testAgent.setStepCompletedCallback((result) => {
+      console.log(`Step ${result.step} completed: ${result.success ? 'Success' : 'Failed'}`);
 
       // Send step completion message via WebSocket
       broadcastMessage({
         type: 'step_completed',
-        stepIndex: index,
-        step: step,
+        stepIndex: result.step - 1,
+        step: {
+          action: result.action,
+          target: result.target,
+          value: result.value,
+          strategy: result.strategy,
+          description: result.description
+        },
         result: result
       });
-    };
+    });
 
     // Run the test
     const results = await testAgent.runTest(testPlan);
+
+    // Make sure to close the browser
+    try {
+      await testAgent.close();
+      console.log('Browser closed after test completion');
+    } catch (error) {
+      console.error('Error closing browser after test:', error);
+    }
+
     console.log('Test completed, sending results to client');
     res.json(results);
   } catch (error) {
@@ -247,7 +256,7 @@ app.post('/api/test/run', async (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });

@@ -2,7 +2,7 @@
   "name": "Google Arama Testi",
   "description": "Google'a git ve arama yap",
   "browserPreference": "chromium",
-  "headless": true,
+  "headless": false,
   "takeScreenshots": false,
   "steps": [
     {
@@ -29,6 +29,17 @@
     {
       "action": "takeScreenshot",
       "description": "Arama sonuçlarının ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "//h3[text()='Playwright: Fast and reliable end-to-end testing for modern web apps']",
+      "strategy": "xpath",
+      "description": "Playwright Sayfasını Aç"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "Sonuçların yüklenmesini bekle"
     }
   ]
 }
