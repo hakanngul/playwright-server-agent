@@ -80,6 +80,19 @@ class TestAgent {
           };
           this.browser = await firefox.launch(firefoxOptions);
           break;
+        case 'edge':
+          console.log('Using Microsoft Edge browser');
+          // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
+          const edgeOptions = {
+            ...launchOptions,
+            channel: 'msedge', // Microsoft Edge kanalını kullan
+            args: [
+              ...launchOptions.args,
+              '--edge-webdriver'
+            ]
+          };
+          this.browser = await chromium.launch(edgeOptions);
+          break;
         case 'chromium':
         default:
           console.log('Using Chromium browser');
@@ -121,6 +134,8 @@ class TestAgent {
       // Tarayıcı tipine göre user agent ayarla
       if (this.browserType === 'firefox') {
         contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0';
+      } else if (this.browserType === 'edge') {
+        contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
       } else {
         contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
       }

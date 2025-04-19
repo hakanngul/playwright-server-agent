@@ -26,3 +26,11 @@ sleep 5
 # Firefox testini çalıştır
 echo "Firefox testini çalıştırıyor..."
 ./run-test.sh -b firefox -h $HEADLESS
+
+echo -e "\n\n"
+echo "5 saniye bekleniyor..."
+sleep 5
+
+# Edge testini çalıştır
+echo "Microsoft Edge testini çalıştırıyor..."
+./run-test.sh -b edge -h $HEADLESS

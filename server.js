@@ -170,7 +170,8 @@ app.get('/api/test/verify-playwright', (req, res) => {
       message: 'Playwright is installed correctly',
       availableBrowsers: {
         chromium: true,
-        firefox: true
+        firefox: true,
+        edge: true
       }
     });
   } catch (error) {
@@ -187,7 +188,8 @@ app.get('/api/test/verify-playwright', (req, res) => {
 app.get('/api/browsers', (req, res) => {
   const browsers = [
     { id: 'chromium', name: 'Chromium' },
-    { id: 'firefox', name: 'Firefox' }
+    { id: 'firefox', name: 'Firefox' },
+    { id: 'edge', name: 'Microsoft Edge' }
   ];
 
   res.json(browsers);

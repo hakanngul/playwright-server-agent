@@ -4,10 +4,11 @@
 echo "Hangi tarayıcıda test çalıştırmak istiyorsunuz?"
 echo "1) Chromium"
 echo "2) Firefox"
-echo "3) Çıkış"
+echo "3) Microsoft Edge"
+echo "4) Çıkış"
 
 # Kullanıcı seçimini al
-read -p "Seçiminiz (1-3): " choice
+read -p "Seçiminiz (1-4): " choice
 
 # Headless modu seçimi
 echo -e "\nHeadless modunu seçin:"
@@ -35,11 +36,15 @@ case $choice in
     ./run-test.sh -b firefox -h $HEADLESS
     ;;
   3)
+    echo "Microsoft Edge tarayıcısında test çalıştırılıyor..."
+    ./run-test.sh -b edge -h $HEADLESS
+    ;;
+  4)
     echo "Çıkış yapılıyor..."
     exit 0
     ;;
   *)
-    echo "Geçersiz seçim. Lütfen 1-3 arasında bir sayı girin."
+    echo "Geçersiz seçim. Lütfen 1-4 arasında bir sayı girin."
     exit 1
     ;;
 esac
