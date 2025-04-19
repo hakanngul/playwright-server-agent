@@ -3,7 +3,7 @@
   "description": "Google'a git ve arama yap",
   "browserPreference": "chromium",
   "headless": true,
-  "takeScreenshots": true,
+  "takeScreenshots": false,
   "steps": [
     {
       "action": "navigate",

@@ -64,7 +64,21 @@ class TestAgent {
       switch (this.browserType) {
         case 'firefox':
           console.log('Using Firefox browser');
-          this.browser = await firefox.launch(launchOptions);
+          // Firefox için özel seçenekler
+          const firefoxOptions = {
+            ...launchOptions,
+            firefoxUserPrefs: {
+              // Firefox'un otomasyon belirteçlerini gizle
+              'dom.webdriver.enabled': false,
+              'privacy.trackingprotection.enabled': false,
+              'network.cookie.cookieBehavior': 0,
+              'browser.cache.disk.enable': true,
+              'browser.cache.memory.enable': true,
+              'permissions.default.image': 1,
+              'general.useragent.override': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0'
+            }
+          };
+          this.browser = await firefox.launch(firefoxOptions);
           break;
         case 'chromium':
         default:
@@ -75,10 +89,9 @@ class TestAgent {
 
       console.log('Browser launched successfully');
 
-      // Create a new browser context with viewport and user agent
-      this.context = await this.browser.newContext({
+      // Firefox için özel context ayarları
+      const contextOptions = {
         viewport: { width: 1920, height: 1080 },
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         locale: 'en-US',
         geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
         permissions: ['geolocation'],
@@ -103,7 +116,17 @@ class TestAgent {
           'sec-fetch-user': '?1',
           'upgrade-insecure-requests': '1'
         }
-      });
+      };
+
+      // Tarayıcı tipine göre user agent ayarla
+      if (this.browserType === 'firefox') {
+        contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0';
+      } else {
+        contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      }
+
+      // Create a new browser context with viewport and user agent
+      this.context = await this.browser.newContext(contextOptions);
 
       // Create a new page
       this.page = await this.context.newPage();
@@ -113,6 +136,21 @@ class TestAgent {
 
       // Add script to avoid bot detection (based on Puppeteer's successful configuration)
       await this.page.addInitScript(() => {
+        // Firefox için özel gizleme
+        if (navigator.userAgent.includes('Firefox')) {
+          // Firefox'ta window.navigator.webdriver'i gizle
+          Object.defineProperty(window, 'navigator', {
+            value: new Proxy(navigator, {
+              has: (target, key) => (key === 'webdriver' ? false : key in target),
+              get: (target, key) => {
+                if (key === 'webdriver') {
+                  return undefined;
+                }
+                return typeof target[key] === 'function' ? target[key].bind(target) : target[key];
+              }
+            })
+          });
+        }
         // Overwrite the 'webdriver' property to make it undefined
         Object.defineProperty(navigator, 'webdriver', {
           get: () => undefined
