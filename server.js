@@ -7,6 +7,10 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import { TestAgent } from './services/testAgent.js';
+import { BrowserPool } from './services/browser/index.js';
+
+// Global browser pool
+let browserPool = null;
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -211,8 +215,16 @@ app.post('/api/test/run', async (req, res) => {
     const headless = testPlan.headless !== undefined ? testPlan.headless : true;
     console.log(`Headless mode from request: ${headless}`);
 
+    // Get browser pool usage preference from test plan
+    const useBrowserPool = testPlan.useBrowserPool !== undefined ? testPlan.useBrowserPool : true;
+    console.log(`Browser pool usage from request: ${useBrowserPool}`);
+
     // Create test agent with browser preference and options
-    const testAgent = new TestAgent(browserPreference, { headless });
+    const testAgent = new TestAgent(browserPreference, {
+      headless,
+      useBrowserPool,
+      browserPool: useBrowserPool ? browserPool : null
+    });
 
     // Step completion callback
     testAgent.setStepCompletedCallback((result) => {
@@ -261,6 +273,73 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
+// Add browser pool configuration endpoint
+app.get('/api/browser-pool/stats', (_req, res) => {
+  if (!browserPool) {
+    return res.json({
+      enabled: false,
+      message: 'Browser pool is not enabled'
+    });
+  }
+
+  const stats = browserPool.getStats();
+  res.json({
+    enabled: true,
+    stats
+  });
+});
+
+// Add browser pool configuration endpoint
+app.post('/api/browser-pool/config', (req, res) => {
+  const config = req.body;
+
+  if (!config) {
+    return res.status(400).json({
+      error: 'Invalid configuration format'
+    });
+  }
+
+  // Close existing pool if it exists
+  if (browserPool) {
+    browserPool.close().catch(e => console.error('Error closing browser pool:', e));
+  }
+
+  // Create new pool with provided configuration
+  const { enabled, maxSize, minSize, idleTimeout } = config;
+
+  if (enabled) {
+    browserPool = new BrowserPool({
+      maxSize: maxSize || 5,
+      minSize: minSize || 2,
+      idleTimeout: idleTimeout || 300000,
+      browserOptions: {
+        headless: true // Default to headless for pool browsers
+      }
+    });
+
+    // Initialize the pool
+    browserPool.initialize().catch(e => console.error('Error initializing browser pool:', e));
+
+    res.json({
+      success: true,
+      message: 'Browser pool configured and enabled',
+      config: {
+        enabled: true,
+        maxSize: maxSize || 5,
+        minSize: minSize || 2,
+        idleTimeout: idleTimeout || 300000
+      }
+    });
+  } else {
+    browserPool = null;
+    res.json({
+      success: true,
+      message: 'Browser pool disabled',
+      config: { enabled: false }
+    });
+  }
+});
+
 // Start server
 server.listen(PORT, () => {
   console.log(`\n=== Playwright-Based Test Runner Server ===`);
@@ -268,5 +347,10 @@ server.listen(PORT, () => {
   console.log(`API server running at http://localhost:${PORT}`);
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
+
+  // Browser pool is disabled
+  browserPool = null;
+
+  console.log('Browser pool is disabled');
   console.log('Ready to run tests!');
 });

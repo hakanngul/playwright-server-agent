@@ -22,6 +22,7 @@ export class BrowserManager {
     this.context = null;
     this.page = null;
     this.initialized = false;
+    this.lastUsed = Date.now(); // Track when the browser was last used
 
     console.log(`BrowserManager created with browserType: ${browserType}, headless: ${this.headless}`);
   }
@@ -239,5 +240,20 @@ export class BrowserManager {
    */
   isInitialized() {
     return this.initialized;
+  }
+
+  /**
+   * Updates the last used timestamp
+   */
+  updateLastUsed() {
+    this.lastUsed = Date.now();
+  }
+
+  /**
+   * Gets the last used timestamp
+   * @returns {number} Last used timestamp
+   */
+  getLastUsed() {
+    return this.lastUsed;
   }
 }

@@ -4,6 +4,7 @@
  */
 
 import { BrowserManager } from './BrowserManager.js';
+import { BrowserPool } from './BrowserPool.js';
 import { StepExecutor } from './StepExecutor.js';
 
 /**
@@ -21,10 +22,14 @@ export class TestRunner {
     this.onStepCompleted = options.onStepCompleted || null;
     this.onTestCompleted = options.onTestCompleted || null;
 
-    this.browserManager = null;
+    // Browser management options
+    this.useBrowserPool = options.useBrowserPool !== undefined ? options.useBrowserPool : false;
+    this.browserPool = options.browserPool || null;
+    this.browserManager = options.browserManager || null;
     this.stepExecutor = null;
+    this.browserPoolId = null; // ID for browser acquired from pool
 
-    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}`);
+    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
   }
 
   /**
@@ -32,13 +37,27 @@ export class TestRunner {
    * @returns {Promise<void>}
    */
   async initialize() {
-    // Create browser manager
-    this.browserManager = new BrowserManager(this.browserType, {
-      headless: this.headless
-    });
+    if (this.useBrowserPool && this.browserPool) {
+      // Use browser from pool
+      console.log(`Acquiring ${this.browserType} browser from pool`);
+      const { browserManager, id } = await this.browserPool.acquireBrowser(this.browserType, {
+        headless: this.headless
+      });
+      this.browserManager = browserManager;
+      this.browserPoolId = id;
 
-    // Initialize browser
-    await this.browserManager.initialize();
+      // Update last used timestamp
+      this.browserManager.updateLastUsed();
+    } else if (!this.browserManager) {
+      // Create new browser manager
+      console.log(`Creating new ${this.browserType} browser`);
+      this.browserManager = new BrowserManager(this.browserType, {
+        headless: this.headless
+      });
+
+      // Initialize browser
+      await this.browserManager.initialize();
+    }
 
     // Create step executor
     this.stepExecutor = new StepExecutor(
@@ -61,6 +80,9 @@ export class TestRunner {
     // Initialize if not already initialized
     if (!this.browserManager || !this.browserManager.isInitialized()) {
       await this.initialize();
+    } else if (this.browserManager) {
+      // Update last used timestamp
+      this.browserManager.updateLastUsed();
     }
 
     const startTime = Date.now();
@@ -119,7 +141,22 @@ export class TestRunner {
    */
   async close() {
     console.log('Closing test runner and releasing resources...');
-    if (this.browserManager) {
+
+    if (this.useBrowserPool && this.browserPool && this.browserPoolId) {
+      // Release browser back to pool
+      console.log(`Releasing browser back to pool (ID: ${this.browserPoolId})`);
+      try {
+        await this.browserPool.releaseBrowser(this.browserPoolId);
+        console.log('Browser released back to pool successfully');
+      } catch (error) {
+        console.error('Error releasing browser back to pool:', error);
+      } finally {
+        this.browserManager = null;
+        this.browserPoolId = null;
+        this.stepExecutor = null;
+      }
+    } else if (this.browserManager) {
+      // Close browser directly
       try {
         await this.browserManager.close();
         console.log('Browser manager closed successfully');

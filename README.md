@@ -13,6 +13,7 @@ A server application for running automated browser tests using Playwright. This 
 - WebSocket real-time updates
 - RESTful API
 - Modular and extensible architecture
+- Browser pool for efficient resource management
 
 ## Project Structure
 
@@ -180,6 +181,7 @@ This script runs the test in all supported browsers sequentially.
   "description": "Navigate to Google and search for a term",
   "browserPreference": "chromium", // "chromium", "firefox", or "edge"
   "headless": true,               // true for headless mode, false for visible browser
+  "useBrowserPool": true,         // true to use browser pool, false for dedicated browser
   "takeScreenshots": true,
   "steps": [
     {
@@ -313,6 +315,30 @@ The server supports the following selector strategies for targeting elements:
 - **class**: Element class name (e.g., `search-box`)
 - **text**: Text content (Playwright-specific)
 - **role**: Accessibility role (Playwright-specific)
+
+## Browser Pool
+
+The server includes a browser pool mechanism for efficient resource management:
+
+- **Resource Optimization**: Reuses browser instances instead of creating new ones for each test
+- **Faster Test Execution**: Eliminates browser startup time for subsequent tests
+- **Parallel Testing**: Supports running multiple tests simultaneously
+- **Automatic Cleanup**: Manages browser lifecycle and cleans up idle browsers
+
+### Browser Pool API
+
+- **GET /api/browser-pool/stats**: Get current browser pool statistics
+- **POST /api/browser-pool/config**: Configure the browser pool
+
+```javascript
+// Example configuration request body
+{
+  "enabled": true,
+  "maxSize": 5,    // Maximum number of browsers in the pool
+  "minSize": 2,    // Minimum number of browsers to keep ready
+  "idleTimeout": 300000  // Time in ms before closing idle browsers
+}
+```
 
 ## Anti-Detection Features
 
