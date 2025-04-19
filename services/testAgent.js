@@ -586,20 +586,18 @@ class TestAgent {
 
         // Screenshot actions
         case 'takeScreenshot':
-          if (takeScreenshots) {
+          try {
             console.log('Taking screenshot of the current page');
             screenshot = `screenshot_${Date.now()}.png`;
             await this.page.screenshot({ path: path.join(this.screenshotsDir, screenshot) });
             console.log(`Screenshot saved: ${screenshot}`);
-          } else {
-            console.log('Screenshot capture is disabled, skipping takeScreenshot action');
+          } catch (error) {
+            console.log('Screenshot capture is disabled, skipping takeScreenshot action '+ error);
           }
           break;
 
         case 'captureElement':
-          if (takeScreenshots) {
             console.log(`Capturing screenshot of element: ${target} using ${strategy}`);
-
             // Convert strategy and target to Playwright selector
             let captureSelector;
             switch (strategy) {
@@ -623,10 +621,8 @@ class TestAgent {
             screenshot = `element_${Date.now()}.png`;
             await captureElement.screenshot({ path: path.join(this.screenshotsDir, screenshot) });
             console.log(`Element screenshot saved: ${screenshot}`);
-          } else {
-            console.log('Screenshot capture is disabled, skipping captureElement action');
-          }
-          break;
+          
+            break;
 
         // Verification actions
         case 'assert':
