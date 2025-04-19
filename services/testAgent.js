@@ -8,15 +8,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 class TestAgent {
-  constructor(browserType = 'chromium') {
+  constructor(browserType = 'chromium', options = {}) {
     this.browser = null;
     this.context = null;
     this.page = null;
     this.screenshotsDir = path.join(__dirname, '../screenshots');
     this.browserType = browserType;
+    this.headless = options.headless !== undefined ? options.headless : true; // Varsayılan olarak headless mod
     this.onStepCompleted = null; // Callback for step completion
     // Başlangıçta initialized false olsun
     this.initialized = false;
+
+    console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}`);
   }
 
   async initialize() {
@@ -34,7 +37,7 @@ class TestAgent {
 
       // Launch options based on Puppeteer's successful configuration
       const launchOptions = {
-        headless: true, // Use headless mode for curl tests
+        headless: this.headless, // Use headless mode based on test plan
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

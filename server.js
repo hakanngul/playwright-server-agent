@@ -211,8 +211,12 @@ app.post('/api/test/run', async (req, res) => {
     const browserPreference = testPlan.browserPreference || 'chromium';
     console.log(`Browser preference from request: ${browserPreference}`);
 
-    // Create test agent with browser preference
-    const testAgent = new TestAgent(browserPreference);
+    // Get headless mode preference from test plan
+    const headless = testPlan.headless !== undefined ? testPlan.headless : true;
+    console.log(`Headless mode from request: ${headless}`);
+
+    // Create test agent with browser preference and options
+    const testAgent = new TestAgent(browserPreference, { headless });
 
     // Step completion callback
     testAgent.onStepCompleted = (step, result, index) => {
