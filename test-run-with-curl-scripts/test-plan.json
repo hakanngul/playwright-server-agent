@@ -2,7 +2,7 @@
   "name": "Google Arama Testi",
   "description": "Google'a git ve arama yap",
   "browserPreference": "chromium",
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "steps": [
     {
       "action": "navigate",

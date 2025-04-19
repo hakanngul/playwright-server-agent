@@ -30,8 +30,8 @@ const logSystemInfo = () => {
     } catch (e) {
       console.log('Chromium not found via chromium command');
 
-      // Check for WebKit/Safari on macOS
-      if (process.platform === 'darwin') {
+      // WebKit/Safari desteği kaldırıldı
+      if (false) {
         try {
           // Sadece versiyon bilgisini al, uygulamayı başlatma
           const safariVersion = execSync('defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString').toString().trim();
@@ -69,15 +69,7 @@ const logSystemInfo = () => {
     console.log('Firefox not found or version check failed');
   }
 
-  // Check for WebKit/Safari on macOS
-  if (process.platform === 'darwin') {
-    try {
-      const safariVersion = execSync('/Applications/Safari.app/Contents/MacOS/Safari --version').toString().trim();
-      console.log(`Safari Version: ${safariVersion}`);
-    } catch (e) {
-      console.log('Safari version check failed');
-    }
-  }
+  // WebKit/Safari desteği kaldırıldı
 
   console.log('------------------------\n');
 };
