@@ -4,7 +4,7 @@
   "browserPreference": "chromium",
   "headless": false,
   "useBrowserPool": false,
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "steps": [
     {
       "action": "navigate",
@@ -24,16 +24,12 @@
     },
     {
       "action": "wait",
-      "value": "2000",
+      "value": "500",
       "description": "Sonuçların yüklenmesini bekle"
     },
     {
-      "action": "takeScreenshot",
-      "description": "Arama sonuçlarının ekran görüntüsünü al"
-    },
-    {
       "action": "click",
-      "target": "//h3[text()='Playwright: Fast and reliable end-to-end testing for modern web apps']",
+      "target": "//h3[contains(text(),'Playwright: Fast and reliable end-to-end testing for modern')]",
       "strategy": "xpath",
       "description": "Playwright Sayfasını Aç"
     },
