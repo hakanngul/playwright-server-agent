@@ -1,0 +1,154 @@
+{
+  "name": "Gelişmiş Seçiciler ve Etkileşimler Test Planı",
+  "description": "Playwright'ın gelişmiş seçicileri ve etkileşimlerini test etmek için örnek plan",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://demo.playwright.dev/todomvc",
+      "description": "TodoMVC demo sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "clickByRole",
+      "role": "textbox",
+      "options": {
+        "name": "What needs to be done?"
+      },
+      "description": "Rol tabanlı seçici ile metin kutusuna tıkla"
+    },
+    {
+      "action": "type",
+      "target": ".new-todo",
+      "strategy": "css",
+      "value": "Rol tabanlı seçicileri öğren",
+      "description": "Yeni görev gir"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "type",
+      "target": ".new-todo",
+      "strategy": "css",
+      "value": "Sürükleme ve bırakma işlemlerini öğren",
+      "description": "Başka bir görev gir"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "type",
+      "target": ".new-todo",
+      "strategy": "css",
+      "value": "Hover menülerini öğren",
+      "description": "Üçüncü görevi gir"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "clickByText",
+      "text": "Rol tabanlı seçicileri öğren",
+      "description": "Metin tabanlı seçici ile ilk göreve tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "navigate",
+      "value": "https://demo.playwright.dev/react-spectrum",
+      "description": "React Spectrum demo sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "clickByRole",
+      "role": "button",
+      "options": {
+        "name": "Drag and Drop"
+      },
+      "description": "Sürükle ve bırak demo sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "dragAndDrop",
+      "sourceTarget": "[data-testid='draggable-item-0']",
+      "sourceStrategy": "css",
+      "targetTarget": "[data-testid='droppable-area']",
+      "targetStrategy": "css",
+      "description": "Test ID tabanlı seçicilerle sürükle ve bırak işlemi yap"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "navigate",
+      "value": "https://demo.playwright.dev/react-spectrum",
+      "description": "React Spectrum demo sayfasına geri dön"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "clickByRole",
+      "role": "button",
+      "options": {
+        "name": "Tooltip"
+      },
+      "description": "Tooltip demo sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "hoverAndVerifyTooltip",
+      "target": "button:has-text('Hover me')",
+      "strategy": "css",
+      "tooltipTarget": "[role='tooltip']",
+      "tooltipStrategy": "css",
+      "tooltipAppearDelay": 1000,
+      "getTooltipText": true,
+      "description": "Tooltip'i doğrula"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Son ekran görüntüsünü al"
+    }
+  ]
+}

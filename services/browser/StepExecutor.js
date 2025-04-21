@@ -115,6 +115,43 @@ export class StepExecutor {
         case 'hover':
           await this.elementHelper.hoverElement(step.target, step.strategy);
           break;
+        case 'hoverAndClickMenuItem':
+          await this.elementHelper.hoverAndClickMenuItem(
+            step.menuTrigger,
+            step.menuTriggerStrategy || step.strategy,
+            step.menuItem,
+            step.menuItemStrategy || step.strategy,
+            {
+              timeout: step.timeout,
+              menuAppearDelay: step.menuAppearDelay || 500
+            }
+          );
+          break;
+        case 'hoverAndVerifyTooltip':
+          await this.elementHelper.hoverAndVerifyTooltip(
+            step.target,
+            step.strategy,
+            step.tooltipTarget,
+            step.tooltipStrategy,
+            {
+              timeout: step.timeout,
+              tooltipAppearDelay: step.tooltipAppearDelay || 500,
+              getTooltipText: step.getTooltipText || false
+            }
+          );
+          break;
+        case 'dragAndDrop':
+          await this.elementHelper.dragAndDrop(
+            step.sourceTarget,
+            step.sourceStrategy || step.strategy,
+            step.targetTarget,
+            step.targetStrategy || step.strategy,
+            {
+              timeout: step.timeout,
+              method: step.method || 'auto'
+            }
+          );
+          break;
         case 'type':
           await this.elementHelper.typeText(step.target, step.strategy, step.value);
           break;
@@ -235,6 +272,34 @@ export class StepExecutor {
           if (!elementVisible) {
             throw new Error(`Element is not visible: ${step.target}`);
           }
+          break;
+
+        // Role-based actions
+        case 'clickByRole':
+          console.log(`Clicking element by role: ${step.role}`);
+          const roleOptions = step.options || {};
+          const element = await this.elementHelper.getElementByRole(step.role, roleOptions);
+          if (!element) {
+            throw new Error(`Element with role '${step.role}' not found`);
+          }
+          await element.click();
+          break;
+        case 'clickByText':
+          console.log(`Clicking element by text: ${step.text}`);
+          const textOptions = step.options || {};
+          const textElement = await this.elementHelper.getElementByText(step.text, textOptions);
+          if (!textElement) {
+            throw new Error(`Element with text '${step.text}' not found`);
+          }
+          await textElement.click();
+          break;
+        case 'clickByTestId':
+          console.log(`Clicking element by test ID: ${step.testId}`);
+          const testIdElement = await this.elementHelper.getElementByTestId(step.testId);
+          if (!testIdElement) {
+            throw new Error(`Element with test ID '${step.testId}' not found`);
+          }
+          await testIdElement.click();
           break;
 
         // Frame actions
