@@ -217,11 +217,17 @@ app.post('/api/test/run', async (req, res) => {
 
     // Get headless mode preference from test plan
     const headless = testPlan.headless !== undefined ? testPlan.headless : true;
-    console.log(`Headless mode from request: ${headless}`);
+    console.log(`Headless mode from request: ${headless} (${headless ? 'invisible browser' : 'visible browser'})`);
 
     // Get browser pool usage preference from test plan
     const useBrowserPool = testPlan.useBrowserPool !== undefined ? testPlan.useBrowserPool : true;
     console.log(`Browser pool usage from request: ${useBrowserPool}`);
+
+    // Browser pool kullanılıyorsa ve headless false ise uyarı ver
+    if (useBrowserPool && !headless) {
+      console.warn('WARNING: Browser pool is enabled but headless mode is false. This may cause issues with browser visibility.');
+      console.warn('For visible browsers, it is recommended to set useBrowserPool to false.');
+    }
 
     // Create test agent with browser preference and options
     const testAgent = new TestAgent(browserPreference, {

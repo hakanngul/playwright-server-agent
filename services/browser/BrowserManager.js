@@ -70,12 +70,17 @@ export class BrowserManager {
   async launchBrowser() {
     const launchOptions = this.getLaunchOptions();
 
+    // Headless modunu log'a yaz
+    console.log(`Launching browser with headless mode: ${this.headless ? 'true (invisible)' : 'false (visible)'}`);
+    console.log(`Launch options: ${JSON.stringify(launchOptions, null, 2)}`);
+
     switch (this.browserType) {
       case 'firefox':
         console.log('Using Firefox browser');
         // Firefox için özel seçenekler
         const firefoxOptions = {
           ...launchOptions,
+          headless: this.headless, // Headless modunu açıkça belirt
           firefoxUserPrefs: {
             // Firefox'un otomasyon belirteçlerini gizle
             'dom.webdriver.enabled': false,
@@ -84,7 +89,7 @@ export class BrowserManager {
             'browser.cache.disk.enable': true,
             'browser.cache.memory.enable': true,
             'permissions.default.image': 1,
-            'general.useragent.override': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0'
+            'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
           }
         };
         return await firefox.launch(firefoxOptions);
@@ -94,6 +99,7 @@ export class BrowserManager {
         // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
         const edgeOptions = {
           ...launchOptions,
+          headless: this.headless, // Headless modunu açıkça belirt
           channel: 'msedge', // Microsoft Edge kanalını kullan
           args: [
             ...launchOptions.args,
@@ -105,7 +111,11 @@ export class BrowserManager {
       case 'chromium':
       default:
         console.log('Using Chromium browser');
-        return await chromium.launch(launchOptions);
+        const chromiumOptions = {
+          ...launchOptions,
+          headless: this.headless // Headless modunu açıkça belirt
+        };
+        return await chromium.launch(chromiumOptions);
     }
   }
 
@@ -161,26 +171,48 @@ export class BrowserManager {
    * @private
    */
   getLaunchOptions() {
+    const args = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-blink-features=AutomationControlled', // Try to avoid detection
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-extensions',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-default-apps',
+      '--mute-audio',
+      '--window-size=1920,1080',
+      '--lang=en-US,en',
+      '--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"'
+    ];
+
+    // Headless modda değilse, ek argümanlar ekle
+    if (!this.headless) {
+      // Windows'ta tarayıcı penceresini görünür yapmak için ek argümanlar
+      args.push('--start-maximized');
+      // GPU hızlandırmasını etkinleştir
+      args.push('--enable-gpu');
+      // Scrollbar'ları göster
+      args.filter(arg => arg !== '--hide-scrollbars');
+    } else {
+      // Headless modda ise, GPU'yu devre dışı bırak ve scrollbar'ları gizle
+      args.push('--disable-gpu');
+      args.push('--hide-scrollbars');
+    }
+
+    console.log(`Launching browser with headless: ${this.headless}`);
+
+    // Playwright'in yeni sürümlerinde headless modu için yeni bir yapılandırma var
+    // headless: true -> Tamamen görünmez
+    // headless: 'new' -> Yeni headless modu (bazı görsel özellikler çalışır)
+    // headless: false -> Görünür tarayıcı
+    const headlessMode = this.headless === true ? true : false;
+
     return {
-      headless: this.headless,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled', // Try to avoid detection
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-default-apps',
-        '--mute-audio',
-        '--hide-scrollbars',
-        '--window-size=1920,1080',
-        '--lang=en-US,en',
-        '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"'
-      ],
+      headless: headlessMode,
+      args: args,
       ignoreDefaultArgs: ['--enable-automation'],
       timeout: 60000 // Increase timeout to 60 seconds
     };
