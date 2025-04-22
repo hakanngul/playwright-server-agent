@@ -1,6 +1,6 @@
 {
-  "name": "Google Arama Testi",
-  "description": "Google'a git ve arama yap",
+  "name": "Firefox Tam Ekran Testi",
+  "description": "Firefox'ta tam ekran modunu test et",
   "browserPreference": "firefox",
   "headless": false,
   "useBrowserPool": false,
@@ -16,10 +16,15 @@
       "description": "Google'a git"
     },
     {
+      "action": "wait",
+      "value": "2000",
+      "description": "Tam ekran modunun uygulanmasını bekle"
+    },
+    {
       "action": "type",
       "target": "APjFqb",
       "strategy": "id",
-      "value": "playwright",
+      "value": "firefox fullscreen test",
       "description": "Arama terimini yaz"
     },
     {
@@ -28,23 +33,30 @@
     },
     {
       "action": "wait",
-      "value": "500",
-      "description": "Sonuçların yüklenmesini bekle"
-    },
-    {
-      "action": "click",
-      "target": "//h3[contains(text(),'Playwright: Fast and reliable end-to-end testing for modern')]",
-      "strategy": "xpath",
-      "description": "Playwright Sayfasını Aç"
-    },
-    {
-      "action": "wait",
       "value": "2000",
       "description": "Sonuçların yüklenmesini bekle"
     },
     {
       "action": "takeScreenshot",
-      "description": "Playwright sayfasının ekran görüntüsünü al"
+      "description": "Tam ekran modunda ekran görüntüsü al"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Kısa bir bekleme"
+    },
+    {
+      "action": "exitFullScreen",
+      "description": "Tam ekran modundan çık"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Tam ekran modundan çıkışın uygulanmasını bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Normal modda ekran görüntüsü al"
     }
   ]
 }

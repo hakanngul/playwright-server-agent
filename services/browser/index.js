@@ -5,7 +5,6 @@
 
 import path from 'path';
 import { BrowserManager } from './BrowserManager.js';
-import { BrowserPool } from './BrowserPool.js';
 import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import { StepExecutor } from './StepExecutor.js';
@@ -32,45 +31,13 @@ export class TestAgent {
     this.onStepCompleted = null; // Callback for step completion
     this.initialized = false;
 
-    // Browser pool options
-    this.useBrowserPool = options.useBrowserPool !== undefined ? options.useBrowserPool : false;
-    this.browserPoolOptions = options.browserPoolOptions || {};
-    this._browserPool = null;
-
     // Create internal components
     this._testRunner = null;
 
-    console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
-
-    // Initialize browser pool if enabled
-    if (this.useBrowserPool) {
-      this.initBrowserPool();
-    }
+    console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}`);
   }
 
-  /**
-   * Initializes the browser pool
-   * @returns {void}
-   */
-  initBrowserPool() {
-    // Create browser pool with options
-    const poolOptions = {
-      maxSize: this.browserPoolOptions.maxSize || 5,
-      minSize: this.browserPoolOptions.minSize || 2,
-      idleTimeout: this.browserPoolOptions.idleTimeout || 300000,
-      browserOptions: {
-        headless: this.headless
-      }
-    };
 
-    this._browserPool = new BrowserPool(poolOptions);
-    console.log(`Browser pool created with maxSize=${poolOptions.maxSize}, minSize=${poolOptions.minSize}`);
-
-    // Initialize the pool in the background
-    this._browserPool.initialize().catch(error => {
-      console.error('Failed to initialize browser pool:', error);
-    });
-  }
 
   /**
    * Initializes the browser
@@ -88,9 +55,7 @@ export class TestAgent {
         browserType: this.browserType,
         headless: this.headless,
         screenshotsDir: this.screenshotsDir,
-        onStepCompleted: this.onStepCompleted,
-        useBrowserPool: this.useBrowserPool,
-        browserPool: this._browserPool
+        onStepCompleted: this.onStepCompleted
       });
 
       await this._testRunner.initialize();
@@ -195,30 +160,7 @@ export class TestAgent {
     }
   }
 
-  /**
-   * Closes the browser pool
-   * @returns {Promise<void>}
-   */
-  async closeBrowserPool() {
-    if (this._browserPool) {
-      console.log('Closing browser pool...');
-      await this._browserPool.close();
-      this._browserPool = null;
-      console.log('Browser pool closed');
-    }
-  }
 
-  /**
-   * Gets browser pool statistics
-   * @returns {Object|null} Pool statistics or null if pool is not enabled
-   */
-  getBrowserPoolStats() {
-    if (!this.useBrowserPool || !this._browserPool) {
-      return null;
-    }
-
-    return this._browserPool.getStats();
-  }
 
   /**
    * Sets the callback for step completion
@@ -237,7 +179,6 @@ export class TestAgent {
 // Export all components
 export {
   BrowserManager,
-  BrowserPool,
   ElementHelper,
   ScreenshotManager,
   StepExecutor,

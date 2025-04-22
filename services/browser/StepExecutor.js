@@ -4,6 +4,8 @@
  */
 
 import { ElementHelper } from './ElementHelper.js';
+import { AppError, NavigationError } from '../errors/index.js';
+import { retry } from '../utils/RetryHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import path from 'path';
 
@@ -55,11 +57,40 @@ export class StepExecutor {
         // Navigation actions
         case 'navigate':
         case 'navigateAndWait':
-          await this.page.goto(step.value, {
-            waitUntil: 'networkidle',
-            timeout: 60000
+          await retry(async () => {
+            try {
+              console.log(`Navigating to: ${step.value}`);
+              await this.page.goto(step.value, {
+                waitUntil: 'networkidle',
+                timeout: step.timeout || 60000
+              });
+              console.log('Navigation complete');
+              return true;
+            } catch (error) {
+              // Convert Playwright errors to our custom errors
+              if (error.name === 'TimeoutError') {
+                throw new NavigationError(
+                  `Timeout navigating to: ${step.value}`,
+                  step.value,
+                  true
+                );
+              }
+
+              throw new NavigationError(
+                `Failed to navigate to: ${step.value} - ${error.message}`,
+                step.value,
+                true
+              );
+            }
+          }, {
+            maxRetries: 2,
+            initialDelay: 1000,
+            factor: 2,
+            onRetry: ({ attempt, error, willRetry }) => {
+              console.log(`Retry ${attempt} navigating to: ${step.value} (${willRetry ? 'will retry' : 'giving up'})`);
+              console.error(`Error: ${error.message}`);
+            }
           });
-          console.log('Navigation complete');
           break;
         case 'goBack':
           await this.page.goBack();
@@ -83,6 +114,43 @@ export class StepExecutor {
           break;
         case 'hover':
           await this.elementHelper.hoverElement(step.target, step.strategy);
+          break;
+        case 'hoverAndClickMenuItem':
+          await this.elementHelper.hoverAndClickMenuItem(
+            step.menuTrigger,
+            step.menuTriggerStrategy || step.strategy,
+            step.menuItem,
+            step.menuItemStrategy || step.strategy,
+            {
+              timeout: step.timeout,
+              menuAppearDelay: step.menuAppearDelay || 500
+            }
+          );
+          break;
+        case 'hoverAndVerifyTooltip':
+          await this.elementHelper.hoverAndVerifyTooltip(
+            step.target,
+            step.strategy,
+            step.tooltipTarget,
+            step.tooltipStrategy,
+            {
+              timeout: step.timeout,
+              tooltipAppearDelay: step.tooltipAppearDelay || 500,
+              getTooltipText: step.getTooltipText || false
+            }
+          );
+          break;
+        case 'dragAndDrop':
+          await this.elementHelper.dragAndDrop(
+            step.sourceTarget,
+            step.sourceStrategy || step.strategy,
+            step.targetTarget,
+            step.targetStrategy || step.strategy,
+            {
+              timeout: step.timeout,
+              method: step.method || 'auto'
+            }
+          );
           break;
         case 'type':
           await this.elementHelper.typeText(step.target, step.strategy, step.value);
@@ -114,6 +182,11 @@ export class StepExecutor {
         case 'pressEscape':
           console.log('Pressing Escape key');
           await this.page.keyboard.press('Escape');
+          break;
+
+        case 'exitFullScreen':
+          console.log('Exiting fullscreen mode');
+          await this.elementHelper.exitFullScreen();
           break;
 
         // Wait actions
@@ -206,10 +279,124 @@ export class StepExecutor {
           }
           break;
 
+        // Role-based actions
+        case 'clickByRole':
+          console.log(`Clicking element by role: ${step.role}`);
+          const roleOptions = step.options || {};
+          const element = await this.elementHelper.getElementByRole(step.role, roleOptions);
+          if (!element) {
+            throw new Error(`Element with role '${step.role}' not found`);
+          }
+          await element.click();
+          break;
+        case 'clickByText':
+          console.log(`Clicking element by text: ${step.text}`);
+          const textOptions = step.options || {};
+          const textElement = await this.elementHelper.getElementByText(step.text, textOptions);
+          if (!textElement) {
+            throw new Error(`Element with text '${step.text}' not found`);
+          }
+          await textElement.click();
+          break;
+        case 'clickByTestId':
+          console.log(`Clicking element by test ID: ${step.testId}`);
+          const testIdElement = await this.elementHelper.getElementByTestId(step.testId);
+          if (!testIdElement) {
+            throw new Error(`Element with test ID '${step.testId}' not found`);
+          }
+          await testIdElement.click();
+          break;
+
         // Frame actions
         case 'clickInFrame':
           console.log(`Clicking element in frame: ${step.frameName}, target: ${step.target}`);
           await this.elementHelper.clickElementInFrame(step.frameName, step.target, step.strategy);
+          break;
+
+        // Browser window actions
+        case 'maximizeWindow':
+          console.log('Maximizing browser window');
+          try {
+            // Tarayıcı tipini belirle
+            const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+            console.log(`Browser type detected: ${browserType}`);
+
+            // Ekran boyutlarını al
+            const { width, height } = await this.page.evaluate(() => {
+              return {
+                width: window.screen.availWidth,
+                height: window.screen.availHeight
+              };
+            });
+
+            console.log(`Screen dimensions: ${width}x${height}`);
+
+            // Firefox için özel tam ekran modu
+            if (browserType === 'firefox') {
+              console.log('Using Firefox-specific fullscreen method');
+
+              // Firefox için önce viewport'u ayarla
+              await this.page.setViewportSize({ width, height });
+              console.log(`Firefox viewport size set to ${width}x${height}`);
+
+              // Firefox için tam ekran API'sini kullan
+              await this.page.evaluate(() => {
+                // Firefox'ta pencereyi maximize et
+                window.moveTo(0, 0);
+                window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+
+                // Firefox'ta tam ekran API'sini kullan
+                if (document.documentElement.mozRequestFullScreen) {
+                  document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen();
+                }
+              });
+              console.log('Firefox fullscreen API called');
+
+              // Firefox'ta tam ekran modunun uygulanması için daha uzun bir bekleme
+              await this.page.waitForTimeout(1000);
+            }
+            // Chromium tabanlı tarayıcılar için
+            else {
+              // Tarayıcı penceresini maximize et
+              await this.page.evaluate(() => {
+                window.moveTo(0, 0);
+                window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+              });
+              console.log('Browser window maximized using JavaScript');
+
+              // Tam ekran API'sini kullan
+              await this.page.evaluate(() => {
+                if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                  document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                  document.documentElement.msRequestFullscreen();
+                }
+              });
+              console.log('Used requestFullscreen API for Chromium');
+            }
+          } catch (error) {
+            console.error(`Error maximizing window: ${error.message}`);
+          }
+          break;
+
+        case 'clickFullscreenButton':
+          console.log('Clicking fullscreen button');
+          try {
+            // Tam ekran butonunu bulmak ve tıklamak için
+            if (step.target) {
+              await this.elementHelper.clickElement(step.target, step.strategy || 'css');
+              console.log('Clicked on fullscreen button');
+            } else {
+              throw new Error('Target selector for fullscreen button is required');
+            }
+          } catch (error) {
+            console.error(`Error clicking fullscreen button: ${error.message}`);
+            throw error;
+          }
           break;
 
         default:

@@ -3,6 +3,9 @@
  * Provides utilities for interacting with page elements
  */
 
+import { ElementError, TimeoutError } from '../errors/index.js';
+import { retry } from '../utils/RetryHelper.js';
+
 /**
  * Helper class for element interactions
  */
@@ -14,6 +17,27 @@ export class ElementHelper {
   constructor(page) {
     this.page = page;
     this.defaultTimeout = 10000; // 10 seconds default timeout
+
+    // Define common role values for role-based selectors
+    this.roles = {
+      BUTTON: 'button',
+      CHECKBOX: 'checkbox',
+      COMBOBOX: 'combobox',
+      DIALOG: 'dialog',
+      LINK: 'link',
+      LISTBOX: 'listbox',
+      MENU: 'menu',
+      MENUITEM: 'menuitem',
+      OPTION: 'option',
+      RADIO: 'radio',
+      SLIDER: 'slider',
+      SWITCH: 'switch',
+      TAB: 'tab',
+      TABPANEL: 'tabpanel',
+      TEXTBOX: 'textbox',
+      TREE: 'tree',
+      TREEITEM: 'treeitem'
+    };
   }
 
   /**
@@ -46,11 +70,67 @@ export class ElementHelper {
         case 'role':
           // Playwright's role selector (accessibility)
           return await this.page.$(`role=${target}`);
+        case 'testid':
+          // Playwright's test ID selector
+          return await this.page.$(`[data-testid="${target}"]`);
         default:
           throw new Error(`Unsupported selector strategy: ${strategy}`);
       }
     } catch (error) {
       console.error(`Error in getElementByStrategy: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Gets an element by role (accessibility API)
+   * @param {string} role - ARIA role
+   * @param {Object} options - Options for role selection
+   * @returns {Promise<ElementHandle|null>} Element handle or null if not found
+   */
+  async getElementByRole(role, options = {}) {
+    console.log(`Getting element by role: ${role}`);
+    try {
+      // Use Playwright's getByRole locator
+      const locator = this.page.getByRole(role, options);
+      return await locator.elementHandle();
+    } catch (error) {
+      console.error(`Error in getElementByRole: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Gets an element by test ID
+   * @param {string} testId - Test ID value
+   * @returns {Promise<ElementHandle|null>} Element handle or null if not found
+   */
+  async getElementByTestId(testId) {
+    console.log(`Getting element by test ID: ${testId}`);
+    try {
+      // Use Playwright's getByTestId locator
+      const locator = this.page.getByTestId(testId);
+      return await locator.elementHandle();
+    } catch (error) {
+      console.error(`Error in getElementByTestId: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Gets an element by text content
+   * @param {string} text - Text content to search for
+   * @param {Object} options - Options for text matching
+   * @returns {Promise<ElementHandle|null>} Element handle or null if not found
+   */
+  async getElementByText(text, options = {}) {
+    console.log(`Getting element by text: ${text}`);
+    try {
+      // Use Playwright's getByText locator
+      const locator = this.page.getByText(text, options);
+      return await locator.elementHandle();
+    } catch (error) {
+      console.error(`Error in getElementByText: ${error.message}`);
       return null;
     }
   }
@@ -102,6 +182,8 @@ export class ElementHelper {
         return `text=${target}`;
       case 'role':
         return `role=${target}`;
+      case 'testid':
+        return `[data-testid="${target}"]`;
       default:
         throw new Error(`Unsupported selector strategy: ${strategy}`);
     }
@@ -117,24 +199,71 @@ export class ElementHelper {
   async clickElement(target, strategy, options = {}) {
     console.log(`Finding element to click: ${target} using ${strategy}`);
 
-    // Playwright has built-in waiting, but we'll keep our explicit wait for compatibility
-    const clickElementVisible = await this.waitForElementByStrategy(target, strategy, 10000);
-    if (!clickElementVisible) {
-      throw new Error(`Element not visible or not found: ${target} using ${strategy}`);
+    const retryOptions = {
+      maxRetries: 3,
+      initialDelay: 500,
+      factor: 1.5,
+      onRetry: ({ attempt, error, willRetry }) => {
+        console.log(`Retry ${attempt} clicking element: ${target} (${willRetry ? 'will retry' : 'giving up'})`);
+        console.error(`Error: ${error.message}`);
+      }
+    };
+
+    try {
+      await retry(async () => {
+        try {
+          // Playwright has built-in waiting, but we'll keep our explicit wait for compatibility
+          const clickElementVisible = await this.waitForElementByStrategy(target, strategy, options.timeout || 10000);
+          if (!clickElementVisible) {
+            throw new ElementError(
+              `Element not visible or not found: ${target}`,
+              target,
+              'click',
+              true
+            );
+          }
+
+          const clickSelector = this.convertToSelector(target, strategy);
+
+          // Click with appropriate options
+          await this.page.click(clickSelector, {
+            force: options.force || false,
+            timeout: options.timeout || 10000,
+            delay: options.delay || 100 // Small delay for more human-like interaction
+          });
+
+          console.log('Click performed successfully');
+          return true;
+        } catch (error) {
+          // Convert Playwright errors to our custom errors
+          if (error.name === 'TimeoutError') {
+            throw new TimeoutError(
+              `Timeout waiting for element: ${target}`,
+              'clickElement',
+              options.timeout || 10000
+            );
+          }
+
+          // If it's already our custom error, just rethrow it
+          if (error instanceof ElementError || error instanceof TimeoutError) {
+            throw error;
+          }
+
+          // Otherwise, wrap it in our custom error
+          throw new ElementError(
+            `Failed to click element: ${error.message}`,
+            target,
+            'click',
+            true
+          );
+        }
+      }, retryOptions);
+
+      return true;
+    } catch (error) {
+      console.error(`Error clicking element after retries: ${error.message}`);
+      return false;
     }
-
-    const clickSelector = this.convertToSelector(target, strategy);
-
-    // Click with force:true to ensure the click happens even if the element
-    // is covered by another element
-    await this.page.click(clickSelector, {
-      force: options.force || false,
-      timeout: options.timeout || 10000,
-      delay: options.delay || 100 // Small delay for more human-like interaction
-    });
-
-    console.log('Click performed successfully');
-    return true;
   }
 
   /**
@@ -220,6 +349,144 @@ export class ElementHelper {
   }
 
   /**
+   * Hovers over an element and interacts with a menu item that appears
+   * @param {string} menuTriggerTarget - Menu trigger element target
+   * @param {string} menuTriggerStrategy - Menu trigger element strategy
+   * @param {string} menuItemTarget - Menu item element target
+   * @param {string} menuItemStrategy - Menu item element strategy
+   * @param {Object} options - Hover menu options
+   * @returns {Promise<boolean>} True if hover menu interaction was successful
+   */
+  async hoverAndClickMenuItem(menuTriggerTarget, menuTriggerStrategy, menuItemTarget, menuItemStrategy, options = {}) {
+    console.log(`Hovering over ${menuTriggerTarget} and clicking menu item ${menuItemTarget}`);
+
+    try {
+      // First hover over the menu trigger element
+      await this.hoverElement(menuTriggerTarget, menuTriggerStrategy, {
+        timeout: options.timeout || this.defaultTimeout,
+        position: options.triggerPosition
+      });
+
+      // Wait for the menu to appear
+      const waitTime = options.menuAppearDelay || 500;
+      console.log(`Waiting ${waitTime}ms for menu to appear`);
+      await this.page.waitForTimeout(waitTime);
+
+      // Wait for the menu item to be visible
+      const menuItemSelector = this.convertToSelector(menuItemTarget, menuItemStrategy);
+      await this.page.waitForSelector(menuItemSelector, {
+        state: 'visible',
+        timeout: options.timeout || this.defaultTimeout
+      });
+
+      // Click on the menu item
+      await this.page.click(menuItemSelector, {
+        force: options.force || false,
+        timeout: options.timeout || this.defaultTimeout,
+        delay: options.delay || 100
+      });
+
+      console.log('Hover menu interaction performed successfully');
+      return true;
+    } catch (error) {
+      console.error(`Error in hover menu interaction: ${error.message}`);
+
+      // Convert Playwright errors to our custom errors
+      if (error.name === 'TimeoutError') {
+        throw new TimeoutError(
+          `Timeout during hover menu interaction`,
+          'hoverAndClickMenuItem',
+          options.timeout || this.defaultTimeout
+        );
+      }
+
+      // If it's already our custom error, just rethrow it
+      if (error instanceof ElementError || error instanceof TimeoutError) {
+        throw error;
+      }
+
+      // Otherwise, wrap it in our custom error
+      throw new ElementError(
+        `Failed to perform hover menu interaction: ${error.message}`,
+        `${menuTriggerTarget} -> ${menuItemTarget}`,
+        'hoverAndClickMenuItem',
+        true
+      );
+    }
+  }
+
+  /**
+   * Performs a hover and wait operation to check for tooltips or other hover effects
+   * @param {string} target - Element target (selector, xpath, etc.)
+   * @param {string} strategy - Selection strategy (css, xpath, id, etc.)
+   * @param {string} tooltipTarget - Tooltip element target (optional)
+   * @param {string} tooltipStrategy - Tooltip element strategy (optional)
+   * @param {Object} options - Hover options
+   * @returns {Promise<boolean|string>} True if hover was successful, or tooltip text if requested
+   */
+  async hoverAndVerifyTooltip(target, strategy, tooltipTarget = null, tooltipStrategy = null, options = {}) {
+    console.log(`Hovering over ${target} to verify tooltip`);
+
+    try {
+      // First hover over the element
+      await this.hoverElement(target, strategy, {
+        timeout: options.timeout || this.defaultTimeout,
+        position: options.position
+      });
+
+      // Wait for the tooltip to appear
+      const waitTime = options.tooltipAppearDelay || 500;
+      console.log(`Waiting ${waitTime}ms for tooltip to appear`);
+      await this.page.waitForTimeout(waitTime);
+
+      // If tooltip selector is provided, verify it
+      if (tooltipTarget && tooltipStrategy) {
+        const tooltipSelector = this.convertToSelector(tooltipTarget, tooltipStrategy);
+
+        // Wait for the tooltip to be visible
+        await this.page.waitForSelector(tooltipSelector, {
+          state: 'visible',
+          timeout: options.timeout || this.defaultTimeout
+        });
+
+        // Get tooltip text if requested
+        if (options.getTooltipText) {
+          const tooltipText = await this.page.$eval(tooltipSelector, el => el.textContent.trim());
+          console.log(`Tooltip text: "${tooltipText}"`);
+          return tooltipText;
+        }
+      }
+
+      console.log('Tooltip verification successful');
+      return true;
+    } catch (error) {
+      console.error(`Error in tooltip verification: ${error.message}`);
+
+      // Convert Playwright errors to our custom errors
+      if (error.name === 'TimeoutError') {
+        throw new TimeoutError(
+          `Timeout during tooltip verification`,
+          'hoverAndVerifyTooltip',
+          options.timeout || this.defaultTimeout
+        );
+      }
+
+      // If it's already our custom error, just rethrow it
+      if (error instanceof ElementError || error instanceof TimeoutError) {
+        throw error;
+      }
+
+      // Otherwise, wrap it in our custom error
+      throw new ElementError(
+        `Failed to verify tooltip: ${error.message}`,
+        target,
+        'hoverAndVerifyTooltip',
+        true
+      );
+    }
+  }
+
+  /**
    * Double-clicks on an element
    * @param {string} target - Element target (selector, xpath, etc.)
    * @param {string} strategy - Selection strategy (css, xpath, id, etc.)
@@ -246,6 +513,110 @@ export class ElementHelper {
 
     console.log('Double-click performed successfully');
     return true;
+  }
+
+  /**
+   * Performs drag and drop operation
+   * @param {string} sourceTarget - Source element target
+   * @param {string} sourceStrategy - Source element strategy
+   * @param {string} targetTarget - Target element target
+   * @param {string} targetStrategy - Target element strategy
+   * @param {Object} options - Drag and drop options
+   * @returns {Promise<boolean>} True if drag and drop was successful
+   */
+  async dragAndDrop(sourceTarget, sourceStrategy, targetTarget, targetStrategy, options = {}) {
+    console.log(`Performing drag and drop from ${sourceTarget} to ${targetTarget}`);
+
+    try {
+      // Wait for source element to be visible
+      const sourceVisible = await this.waitForElementByStrategy(sourceTarget, sourceStrategy, options.timeout || this.defaultTimeout);
+      if (!sourceVisible) {
+        throw new ElementError(
+          `Source element not visible or not found: ${sourceTarget}`,
+          sourceTarget,
+          'dragAndDrop',
+          true
+        );
+      }
+
+      // Wait for target element to be visible
+      const targetVisible = await this.waitForElementByStrategy(targetTarget, targetStrategy, options.timeout || this.defaultTimeout);
+      if (!targetVisible) {
+        throw new ElementError(
+          `Target element not visible or not found: ${targetTarget}`,
+          targetTarget,
+          'dragAndDrop',
+          true
+        );
+      }
+
+      // Get selectors
+      const sourceSelector = this.convertToSelector(sourceTarget, sourceStrategy);
+      const targetSelector = this.convertToSelector(targetTarget, targetStrategy);
+
+      // Method 1: Using drag and drop API (preferred)
+      if (options.method !== 'manual') {
+        await this.page.dragAndDrop(sourceSelector, targetSelector, {
+          force: options.force || false,
+          timeout: options.timeout || this.defaultTimeout,
+          sourcePosition: options.sourcePosition,
+          targetPosition: options.targetPosition
+        });
+      }
+      // Method 2: Manual drag and drop (fallback)
+      else {
+        // Get source element bounding box
+        const sourceBoundingBox = await this.page.$eval(sourceSelector, el => {
+          const { x, y, width, height } = el.getBoundingClientRect();
+          return { x, y, width, height };
+        });
+
+        // Get target element bounding box
+        const targetBoundingBox = await this.page.$eval(targetSelector, el => {
+          const { x, y, width, height } = el.getBoundingClientRect();
+          return { x, y, width, height };
+        });
+
+        // Calculate source and target positions
+        const sourceX = sourceBoundingBox.x + (sourceBoundingBox.width / 2);
+        const sourceY = sourceBoundingBox.y + (sourceBoundingBox.height / 2);
+        const targetX = targetBoundingBox.x + (targetBoundingBox.width / 2);
+        const targetY = targetBoundingBox.y + (targetBoundingBox.height / 2);
+
+        // Perform manual drag and drop
+        await this.page.mouse.move(sourceX, sourceY);
+        await this.page.mouse.down();
+        await this.page.mouse.move(targetX, targetY, { steps: 10 }); // Move in steps for smoother drag
+        await this.page.mouse.up();
+      }
+
+      console.log('Drag and drop performed successfully');
+      return true;
+    } catch (error) {
+      console.error(`Error performing drag and drop: ${error.message}`);
+
+      // Convert Playwright errors to our custom errors
+      if (error.name === 'TimeoutError') {
+        throw new TimeoutError(
+          `Timeout during drag and drop operation`,
+          'dragAndDrop',
+          options.timeout || this.defaultTimeout
+        );
+      }
+
+      // If it's already our custom error, just rethrow it
+      if (error instanceof ElementError || error instanceof TimeoutError) {
+        throw error;
+      }
+
+      // Otherwise, wrap it in our custom error
+      throw new ElementError(
+        `Failed to perform drag and drop: ${error.message}`,
+        `${sourceTarget} to ${targetTarget}`,
+        'dragAndDrop',
+        true
+      );
+    }
   }
 
   /**
@@ -767,6 +1138,70 @@ export class ElementHelper {
     } catch (error) {
       console.error(`Error taking element screenshot: ${error.message}`);
       return null;
+    }
+  }
+
+  /**
+   * Toggles fullscreen mode for the page
+   * @returns {Promise<boolean>} True if successful
+   */
+  async toggleFullScreen() {
+    console.log('Toggling fullscreen mode');
+    try {
+      // Tarayıcı tipini belirle
+      const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+
+      if (browserType === 'firefox') {
+        // Firefox için JavaScript API kullan
+        await this.page.evaluate(() => {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          }
+        });
+        console.log('Firefox fullscreen mode toggled using API');
+      } else {
+        // Diğer tarayıcılar için F11 tuşunu kullan
+        await this.page.keyboard.press('F11');
+        console.log('Fullscreen mode toggled using F11 key');
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error toggling fullscreen mode: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Exits fullscreen mode
+   * @returns {Promise<boolean>} True if successful
+   */
+  async exitFullScreen() {
+    console.log('Exiting fullscreen mode');
+    try {
+      // Tarayıcı tipini belirle
+      const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+
+      if (browserType === 'firefox') {
+        // Firefox için JavaScript API kullan
+        await this.page.evaluate(() => {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          }
+        });
+        console.log('Firefox fullscreen mode exited using API');
+      } else {
+        // Diğer tarayıcılar için Escape tuşunu kullan
+        await this.page.keyboard.press('Escape');
+        console.log('Fullscreen mode exited using Escape key');
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error exiting fullscreen mode: ${error.message}`);
+      return false;
     }
   }
 }

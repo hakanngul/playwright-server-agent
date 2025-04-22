@@ -8,10 +8,6 @@ import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
 import { TestAgent } from './services/testAgent.js';
-import { BrowserPool } from './services/browser/index.js';
-
-// Global browser pool
-let browserPool = null;
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -217,17 +213,11 @@ app.post('/api/test/run', async (req, res) => {
 
     // Get headless mode preference from test plan
     const headless = testPlan.headless !== undefined ? testPlan.headless : true;
-    console.log(`Headless mode from request: ${headless}`);
-
-    // Get browser pool usage preference from test plan
-    const useBrowserPool = testPlan.useBrowserPool !== undefined ? testPlan.useBrowserPool : true;
-    console.log(`Browser pool usage from request: ${useBrowserPool}`);
+    console.log(`Headless mode from request: ${headless} (${headless ? 'invisible browser' : 'visible browser'})`);
 
     // Create test agent with browser preference and options
     const testAgent = new TestAgent(browserPreference, {
-      headless,
-      useBrowserPool,
-      browserPool: useBrowserPool ? browserPool : null
+      headless
     });
 
     // Step completion callback
@@ -273,76 +263,36 @@ app.post('/api/test/run', async (req, res) => {
 
 // Error handling middleware
 app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error', message: err.message });
-});
+  console.error('Error handling middleware caught an error:');
+  console.error(err);
 
-// Add browser pool configuration endpoint
-app.get('/api/browser-pool/stats', (_req, res) => {
-  if (!browserPool) {
-    return res.json({
-      enabled: false,
-      message: 'Browser pool is not enabled'
+  // Check if it's our custom error
+  if (err.toJSON && typeof err.toJSON === 'function') {
+    const errorJson = err.toJSON();
+    const statusCode = err.code === 'NOT_FOUND' ? 404 :
+                      err.code === 'VALIDATION_ERROR' ? 400 :
+                      err.code === 'UNAUTHORIZED' ? 401 :
+                      err.code === 'FORBIDDEN' ? 403 : 500;
+
+    return res.status(statusCode).json({
+      error: errorJson.message,
+      code: errorJson.code,
+      details: errorJson
     });
   }
 
-  const stats = browserPool.getStats();
-  res.json({
-    enabled: true,
-    stats
+  // For regular errors
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal server error';
+
+  res.status(statusCode).json({
+    error: message,
+    code: err.code || 'INTERNAL_ERROR',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// Add browser pool configuration endpoint
-app.post('/api/browser-pool/config', (req, res) => {
-  const config = req.body;
 
-  if (!config) {
-    return res.status(400).json({
-      error: 'Invalid configuration format'
-    });
-  }
-
-  // Close existing pool if it exists
-  if (browserPool) {
-    browserPool.close().catch(e => console.error('Error closing browser pool:', e));
-  }
-
-  // Create new pool with provided configuration
-  const { enabled, maxSize, minSize, idleTimeout } = config;
-
-  if (enabled) {
-    browserPool = new BrowserPool({
-      maxSize: maxSize || 5,
-      minSize: minSize || 2,
-      idleTimeout: idleTimeout || 300000,
-      browserOptions: {
-        headless: true // Default to headless for pool browsers
-      }
-    });
-
-    // Initialize the pool
-    browserPool.initialize().catch(e => console.error('Error initializing browser pool:', e));
-
-    res.json({
-      success: true,
-      message: 'Browser pool configured and enabled',
-      config: {
-        enabled: true,
-        maxSize: maxSize || 5,
-        minSize: minSize || 2,
-        idleTimeout: idleTimeout || 300000
-      }
-    });
-  } else {
-    browserPool = null;
-    res.json({
-      success: true,
-      message: 'Browser pool disabled',
-      config: { enabled: false }
-    });
-  }
-});
 
 // Start server
 server.listen(PORT, () => {
@@ -352,9 +302,6 @@ server.listen(PORT, () => {
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
 
-  // Browser pool is disabled
-  browserPool = null;
-
-  console.log('Browser pool is disabled');
+  console.log('Browser pool feature has been removed');
   console.log('Ready to run tests!');
 });

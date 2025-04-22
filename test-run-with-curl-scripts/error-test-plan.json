@@ -1,0 +1,29 @@
+{
+  "name": "Hata Test Planı",
+  "description": "Hata durumlarını test etmek için",
+  "browserPreference": "chromium",
+  "headless": true,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "value": "https://invalid-url-that-does-not-exist.xyz",
+      "description": "Geçersiz bir URL'ye git"
+    },
+    {
+      "step": 2,
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "step": 3,
+      "action": "click",
+      "target": "#non-existent-element",
+      "strategy": "css",
+      "description": "Var olmayan bir elemente tıkla"
+    }
+  ]
+}

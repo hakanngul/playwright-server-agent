@@ -70,12 +70,17 @@ export class BrowserManager {
   async launchBrowser() {
     const launchOptions = this.getLaunchOptions();
 
+    // Headless modunu log'a yaz
+    console.log(`Launching browser with headless mode: ${this.headless ? 'true (invisible)' : 'false (visible)'}`);
+    console.log(`Launch options: ${JSON.stringify(launchOptions, null, 2)}`);
+
     switch (this.browserType) {
       case 'firefox':
         console.log('Using Firefox browser');
         // Firefox için özel seçenekler
         const firefoxOptions = {
-          ...launchOptions,
+          headless: this.headless, // Headless modunu açıkça belirt
+          args: this.headless ? [] : ['--start-maximized', '--kiosk', '--full-screen'],
           firefoxUserPrefs: {
             // Firefox'un otomasyon belirteçlerini gizle
             'dom.webdriver.enabled': false,
@@ -84,8 +89,14 @@ export class BrowserManager {
             'browser.cache.disk.enable': true,
             'browser.cache.memory.enable': true,
             'permissions.default.image': 1,
-            'general.useragent.override': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0'
-          }
+            // Tam ekran izinlerini ayarla
+            'full-screen-api.enabled': true,
+            'full-screen-api.allow-trusted-requests-only': false,
+            'full-screen-api.warning.timeout': 0,
+            // Kullanıcı ajanını ayarla
+            'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
+          },
+          ignoreDefaultArgs: ['--enable-automation']
         };
         return await firefox.launch(firefoxOptions);
 
@@ -93,19 +104,22 @@ export class BrowserManager {
         console.log('Using Microsoft Edge browser');
         // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
         const edgeOptions = {
-          ...launchOptions,
+          headless: this.headless, // Headless modunu açıkça belirt
           channel: 'msedge', // Microsoft Edge kanalını kullan
-          args: [
-            ...launchOptions.args,
-            '--edge-webdriver'
-          ]
+          args: this.headless ? [] : ['--start-maximized', '--edge-webdriver'],
+          ignoreDefaultArgs: ['--enable-automation']
         };
         return await chromium.launch(edgeOptions);
 
       case 'chromium':
       default:
         console.log('Using Chromium browser');
-        return await chromium.launch(launchOptions);
+        const chromiumOptions = {
+          headless: this.headless, // Headless modunu açıkça belirt
+          args: this.headless ? [] : ['--start-maximized'],
+          ignoreDefaultArgs: ['--enable-automation']
+        };
+        return await chromium.launch(chromiumOptions);
     }
   }
 
@@ -116,12 +130,11 @@ export class BrowserManager {
    */
   async createBrowserContext() {
     const contextOptions = {
-      viewport: { width: 1920, height: 1080 },
+      viewport: null, // Viewport null olarak ayarlanarak tarayıcı penceresinin tam boyutunu kullanmasını sağlıyoruz
       locale: 'en-US',
       geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
       permissions: ['geolocation'],
       colorScheme: 'light',
-      deviceScaleFactor: 1,
       hasTouch: false,
       isMobile: false,
       javaScriptEnabled: true,
@@ -143,13 +156,22 @@ export class BrowserManager {
       }
     };
 
-    // Set user agent based on browser type
+    console.log('Creating browser context with viewport: null (for maximized window)');
+
+    // Set user agent and browser-specific options based on browser type
     if (this.browserType === 'firefox') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0';
+
+      // Firefox için özel ayarlar
+      if (!this.headless) {
+        // Firefox için tam ekran modunu desteklemek için viewport'u null olarak ayarla
+        contextOptions.viewport = null;
+        console.log('Firefox viewport set to null for fullscreen support');
+      }
     } else if (this.browserType === 'edge') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
     } else {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     }
 
     return await this.browser.newContext(contextOptions);
@@ -161,29 +183,9 @@ export class BrowserManager {
    * @private
    */
   getLaunchOptions() {
-    return {
-      headless: this.headless,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled', // Try to avoid detection
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-extensions',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-default-apps',
-        '--mute-audio',
-        '--hide-scrollbars',
-        '--window-size=1920,1080',
-        '--lang=en-US,en',
-        '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"'
-      ],
-      ignoreDefaultArgs: ['--enable-automation'],
-      timeout: 60000 // Increase timeout to 60 seconds
-    };
+    // Bu metod artık kullanılmıyor, doğrudan tarayıcı başlatma seçeneklerini kullanıyoruz
+    // Geriye dönük uyumluluk için boş bir nesne döndürüyoruz
+    return {};
   }
 
   /**

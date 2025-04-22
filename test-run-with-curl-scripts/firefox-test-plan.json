@@ -1,0 +1,65 @@
+{
+  "name": "Firefox Google Arama Testi",
+  "description": "Firefox'ta Google'a git ve arama yap",
+  "browserPreference": "firefox",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "evaluate",
+      "value": "document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : (document.documentElement.mozRequestFullScreen ? document.documentElement.mozRequestFullScreen() : null)",
+      "description": "Firefox için JavaScript ile tam ekran modu"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Tam ekran modunun uygulanmasını bekle"
+    },
+    {
+      "action": "type",
+      "target": "APjFqb",
+      "strategy": "id",
+      "value": "playwright firefox fullscreen",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Arama sonuçlarının ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "//h3[contains(text(),'Playwright')]",
+      "strategy": "xpath",
+      "description": "Playwright ile ilgili bir sonuca tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Playwright sayfasının ekran görüntüsünü al"
+    },
+    {
+      "action": "evaluate",
+      "value": "document.exitFullscreen ? document.exitFullscreen() : (document.mozCancelFullScreen ? document.mozCancelFullScreen() : null)",
+      "description": "Tam ekran modundan çık"
+    }
+  ]
+}
