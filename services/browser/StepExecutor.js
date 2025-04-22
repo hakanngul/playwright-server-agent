@@ -308,6 +308,66 @@ export class StepExecutor {
           await this.elementHelper.clickElementInFrame(step.frameName, step.target, step.strategy);
           break;
 
+        // Browser window actions
+        case 'maximizeWindow':
+          console.log('Maximizing browser window');
+          try {
+            // Ekran boyutlarını al
+            const { width, height } = await this.page.evaluate(() => {
+              return {
+                width: window.screen.availWidth,
+                height: window.screen.availHeight
+              };
+            });
+
+            console.log(`Screen dimensions: ${width}x${height}`);
+
+            // Tarayıcı penceresini maximize et
+            await this.page.evaluate(() => {
+              window.moveTo(0, 0);
+              window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+            });
+
+            console.log('Browser window maximized using JavaScript');
+
+            // Tam ekran moduna geçmek için F11 tuşuna basma
+            if (this.page.context().browser()) {
+              await this.page.keyboard.press('F11');
+              console.log('Entered fullscreen mode with F11 key');
+
+              // Alternatif olarak document.documentElement.requestFullscreen() metodunu da kullanabiliriz
+              await this.page.evaluate(() => {
+                if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                  document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                  document.documentElement.msRequestFullscreen();
+                }
+              });
+              console.log('Also tried requestFullscreen API');
+            }
+          } catch (error) {
+            console.error(`Error maximizing window: ${error.message}`);
+          }
+          break;
+
+        case 'clickFullscreenButton':
+          console.log('Clicking fullscreen button');
+          try {
+            // Tam ekran butonunu bulmak ve tıklamak için
+            if (step.target) {
+              await this.elementHelper.clickElement(step.target, step.strategy || 'css');
+              console.log('Clicked on fullscreen button');
+            } else {
+              throw new Error('Target selector for fullscreen button is required');
+            }
+          } catch (error) {
+            console.error(`Error clicking fullscreen button: ${error.message}`);
+            throw error;
+          }
+          break;
+
         default:
           throw new Error(`Unsupported action: ${step.action}`);
       }

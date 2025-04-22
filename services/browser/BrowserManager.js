@@ -79,8 +79,8 @@ export class BrowserManager {
         console.log('Using Firefox browser');
         // Firefox için özel seçenekler
         const firefoxOptions = {
-          ...launchOptions,
           headless: this.headless, // Headless modunu açıkça belirt
+          args: this.headless ? [] : ['--start-maximized'],
           firefoxUserPrefs: {
             // Firefox'un otomasyon belirteçlerini gizle
             'dom.webdriver.enabled': false,
@@ -90,7 +90,8 @@ export class BrowserManager {
             'browser.cache.memory.enable': true,
             'permissions.default.image': 1,
             'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
-          }
+          },
+          ignoreDefaultArgs: ['--enable-automation']
         };
         return await firefox.launch(firefoxOptions);
 
@@ -98,13 +99,10 @@ export class BrowserManager {
         console.log('Using Microsoft Edge browser');
         // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
         const edgeOptions = {
-          ...launchOptions,
           headless: this.headless, // Headless modunu açıkça belirt
           channel: 'msedge', // Microsoft Edge kanalını kullan
-          args: [
-            ...launchOptions.args,
-            '--edge-webdriver'
-          ]
+          args: this.headless ? [] : ['--start-maximized', '--edge-webdriver'],
+          ignoreDefaultArgs: ['--enable-automation']
         };
         return await chromium.launch(edgeOptions);
 
@@ -112,8 +110,9 @@ export class BrowserManager {
       default:
         console.log('Using Chromium browser');
         const chromiumOptions = {
-          ...launchOptions,
-          headless: this.headless // Headless modunu açıkça belirt
+          headless: this.headless, // Headless modunu açıkça belirt
+          args: this.headless ? [] : ['--start-maximized'],
+          ignoreDefaultArgs: ['--enable-automation']
         };
         return await chromium.launch(chromiumOptions);
     }
@@ -126,12 +125,11 @@ export class BrowserManager {
    */
   async createBrowserContext() {
     const contextOptions = {
-      viewport: { width: 1920, height: 1080 },
+      viewport: null, // Viewport null olarak ayarlanarak tarayıcı penceresinin tam boyutunu kullanmasını sağlıyoruz
       locale: 'en-US',
       geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
       permissions: ['geolocation'],
       colorScheme: 'light',
-      deviceScaleFactor: 1,
       hasTouch: false,
       isMobile: false,
       javaScriptEnabled: true,
@@ -153,6 +151,8 @@ export class BrowserManager {
       }
     };
 
+    console.log('Creating browser context with viewport: null (for maximized window)');
+
     // Set user agent based on browser type
     if (this.browserType === 'firefox') {
       contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0';
@@ -171,51 +171,9 @@ export class BrowserManager {
    * @private
    */
   getLaunchOptions() {
-    const args = [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-blink-features=AutomationControlled', // Try to avoid detection
-      '--disable-features=IsolateOrigins,site-per-process',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-extensions',
-      '--disable-component-extensions-with-background-pages',
-      '--disable-default-apps',
-      '--mute-audio',
-      '--window-size=1920,1080',
-      '--lang=en-US,en',
-      '--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"'
-    ];
-
-    // Headless modda değilse, ek argümanlar ekle
-    if (!this.headless) {
-      // Windows'ta tarayıcı penceresini görünür yapmak için ek argümanlar
-      args.push('--start-maximized');
-      // GPU hızlandırmasını etkinleştir
-      args.push('--enable-gpu');
-      // Scrollbar'ları göster
-      args.filter(arg => arg !== '--hide-scrollbars');
-    } else {
-      // Headless modda ise, GPU'yu devre dışı bırak ve scrollbar'ları gizle
-      args.push('--disable-gpu');
-      args.push('--hide-scrollbars');
-    }
-
-    console.log(`Launching browser with headless: ${this.headless}`);
-
-    // Playwright'in yeni sürümlerinde headless modu için yeni bir yapılandırma var
-    // headless: true -> Tamamen görünmez
-    // headless: 'new' -> Yeni headless modu (bazı görsel özellikler çalışır)
-    // headless: false -> Görünür tarayıcı
-    const headlessMode = this.headless === true ? true : false;
-
-    return {
-      headless: headlessMode,
-      args: args,
-      ignoreDefaultArgs: ['--enable-automation'],
-      timeout: 60000 // Increase timeout to 60 seconds
-    };
+    // Bu metod artık kullanılmıyor, doğrudan tarayıcı başlatma seçeneklerini kullanıyoruz
+    // Geriye dönük uyumluluk için boş bir nesne döndürüyoruz
+    return {};
   }
 
   /**

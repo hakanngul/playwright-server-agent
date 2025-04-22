@@ -1140,4 +1140,21 @@ export class ElementHelper {
       return null;
     }
   }
+
+  /**
+   * Toggles fullscreen mode for the page
+   * @returns {Promise<boolean>} True if successful
+   */
+  async toggleFullScreen() {
+    console.log('Toggling fullscreen mode');
+    try {
+      // F11 tuşuna basarak tam ekran modunu aç/kapat
+      await this.page.keyboard.press('F11');
+      console.log('Fullscreen mode toggled');
+      return true;
+    } catch (error) {
+      console.error(`Error toggling fullscreen mode: ${error.message}`);
+      return false;
+    }
+  }
 }
