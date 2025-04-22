@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
 import { TestAgent } from './services/testAgent.js';
+import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
+import os from 'os';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -191,6 +193,58 @@ app.get('/api/browsers', (_req, res) => {
   ];
 
   res.json(browsers);
+});
+
+// Create parallel test manager
+const parallelTestManager = new ParallelTestManager({
+  workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : os.cpus().length,
+  headless: process.env.HEADLESS !== 'false',
+  screenshotsDir: path.join(__dirname, 'screenshots'),
+  browserTypes: ['chromium', 'firefox']
+});
+
+// Add parallel test execution endpoint
+app.post('/api/test/run-parallel', async (req, res) => {
+  console.log('\n--- Received parallel test run request ---');
+  try {
+    const { testPlans } = req.body;
+
+    if (!testPlans || !Array.isArray(testPlans) || testPlans.length === 0) {
+      console.error('Invalid test plans format');
+      return res.status(400).json({
+        error: 'Invalid test plans format. Request must include an array of test plans.'
+      });
+    }
+
+    console.log(`Received ${testPlans.length} test plans for parallel execution`);
+
+    // Set test completion callback
+    parallelTestManager.setTestCompletedCallback((result) => {
+      console.log(`Test completed: ${result.name}, success: ${result.success}`);
+
+      // Send test completion message via WebSocket
+      broadcastMessage({
+        type: 'test_completed',
+        testName: result.name,
+        result: result
+      });
+    });
+
+    // Run tests in parallel
+    const results = await parallelTestManager.runTests(testPlans);
+
+    console.log(`All ${testPlans.length} tests completed, sending results to client`);
+    res.json({
+      success: true,
+      results: results
+    });
+  } catch (error) {
+    console.error('Error running parallel tests:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
 });
 
 app.post('/api/test/run', async (req, res) => {
