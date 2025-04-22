@@ -39,6 +39,24 @@
     {
       "action": "takeScreenshot",
       "description": "Tam ekran modunda ekran görüntüsü al"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Kısa bir bekleme"
+    },
+    {
+      "action": "exitFullScreen",
+      "description": "Tam ekran modundan çık"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Tam ekran modundan çıkışın uygulanmasını bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Normal modda ekran görüntüsü al"
     }
   ]
 }

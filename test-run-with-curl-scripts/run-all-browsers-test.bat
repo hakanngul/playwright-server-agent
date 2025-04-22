@@ -4,12 +4,7 @@ echo =============================================
 echo.
 
 REM Headless modunu sec
-set /p HEADLESS="Headless modu (true/false): "
-if not "%HEADLESS%"=="true" if not "%HEADLESS%"=="false" (
-    echo Hatali headless degeri: %HEADLESS%
-    echo Gecerli headless degerleri: true, false
-    exit /b 1
-)
+set /p HEADLESS="true"
 
 echo.
 echo Chromium tarayicisinda test calistiriliyor...

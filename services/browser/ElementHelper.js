@@ -1148,12 +1148,59 @@ export class ElementHelper {
   async toggleFullScreen() {
     console.log('Toggling fullscreen mode');
     try {
-      // F11 tuşuna basarak tam ekran modunu aç/kapat
-      await this.page.keyboard.press('F11');
-      console.log('Fullscreen mode toggled');
+      // Tarayıcı tipini belirle
+      const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+
+      if (browserType === 'firefox') {
+        // Firefox için JavaScript API kullan
+        await this.page.evaluate(() => {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          }
+        });
+        console.log('Firefox fullscreen mode toggled using API');
+      } else {
+        // Diğer tarayıcılar için F11 tuşunu kullan
+        await this.page.keyboard.press('F11');
+        console.log('Fullscreen mode toggled using F11 key');
+      }
       return true;
     } catch (error) {
       console.error(`Error toggling fullscreen mode: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Exits fullscreen mode
+   * @returns {Promise<boolean>} True if successful
+   */
+  async exitFullScreen() {
+    console.log('Exiting fullscreen mode');
+    try {
+      // Tarayıcı tipini belirle
+      const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+
+      if (browserType === 'firefox') {
+        // Firefox için JavaScript API kullan
+        await this.page.evaluate(() => {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          }
+        });
+        console.log('Firefox fullscreen mode exited using API');
+      } else {
+        // Diğer tarayıcılar için Escape tuşunu kullan
+        await this.page.keyboard.press('Escape');
+        console.log('Fullscreen mode exited using Escape key');
+      }
+      return true;
+    } catch (error) {
+      console.error(`Error exiting fullscreen mode: ${error.message}`);
       return false;
     }
   }

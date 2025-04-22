@@ -1,7 +1,7 @@
 {
   "name": "Google Arama Testi",
   "description": "Google'a git ve arama yap",
-  "browserPreference": "chromium",
+  "browserPreference": "firefox",
   "headless": false,
   "useBrowserPool": false,
   "takeScreenshots": true,
