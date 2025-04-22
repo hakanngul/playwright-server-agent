@@ -420,6 +420,87 @@ router.get('/results/:id/performance', async (req, res) => {
   }
 });
 
+// Rapor ID'si ile ağ performans metriklerine erişim endpoint'i
+router.get('/reports/:id/network-metrics', async (req, res) => {
+  try {
+    const reportId = req.params.id;
+
+    // Rapor dosyasını oku
+    let reportData;
+    try {
+      // Rapor dosyasını bulmak için find komutunu kullan
+      const { execSync } = await import('child_process');
+      const findCommand = `find data/reports -name "${reportId}.json"`;
+      const reportPath = execSync(findCommand).toString().trim();
+
+      if (!reportPath) {
+        throw new Error(`Report file not found: ${reportId}.json`);
+      }
+      const fs = await import('fs');
+      const reportContent = fs.readFileSync(reportPath, 'utf8');
+      reportData = JSON.parse(reportContent);
+    } catch (err) {
+      console.warn('Error reading report file:', err);
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    if (!reportData) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    // Network metriklerini çıkar
+    const networkMetrics = reportData.performance?.networkMetrics;
+    const networkTimeline = reportData.performance?.networkTimeline || reportData.networkTimeline;
+    const networkAnalysis = reportData.performance?.networkAnalysis || reportData.networkAnalysis;
+    const uncacheableResources = reportData.performance?.uncacheableResources || reportData.uncacheableResources;
+    const largeResources = reportData.performance?.largeResources || reportData.largeResources;
+    const timingMetrics = reportData.performance?.timingMetrics || reportData.timingMetrics;
+
+    if (!networkMetrics) {
+      return res.status(404).json({ error: 'Network metrics not found for this report' });
+    }
+
+    // Kaynak türü istatistiklerini düzenle
+    const resourceStats = [];
+    if (networkMetrics.statsByType) {
+      Object.entries(networkMetrics.statsByType).forEach(([type, stats]) => {
+        resourceStats.push({
+          type,
+          count: stats.count,
+          totalSize: stats.totalSize,
+          averageDuration: stats.averageDuration,
+          slowCount: stats.slowCount || 0,
+          largeCount: stats.largeCount || 0
+        });
+      });
+    }
+
+    res.json({
+      id: reportId,
+      name: reportData.name || 'Test Report',
+      url: reportData.steps && reportData.steps.length > 0 ? reportData.steps[0].value : null,
+      timestamp: reportData.timestamp,
+      networkMetrics: {
+        totalRequests: networkMetrics.totalRequests,
+        totalSize: networkMetrics.totalSize,
+        averageDuration: networkMetrics.averageDuration,
+        slowRequests: networkMetrics.slowRequests || [],
+        failedRequests: networkMetrics.failedRequests || [],
+        resourceStats: resourceStats,
+        timingMetrics: timingMetrics || {},
+        uncacheableResources: uncacheableResources || [],
+        largeResources: largeResources || []
+      },
+      networkAnalysis: networkAnalysis || { issues: [], recommendations: [] },
+      timeline: networkTimeline || [],
+      recommendations: reportData.recommendations || []
+    });
+  } catch (error) {
+    console.error(`Error getting network metrics for report ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get network metrics for report ${req.params.id}` });
+  }
+});
+
 // Eski endpoint'i de koru (geriye dönük uyumluluk için)
 router.get('/reports/:id/performance', async (req, res) => {
   try {
@@ -458,6 +539,114 @@ router.get('/reports/:id/performance', async (req, res) => {
   } catch (error) {
     console.error(`Error getting performance report for ${req.params.id}:`, error);
     res.status(500).json({ error: `Failed to get performance report for ${req.params.id}` });
+  }
+});
+
+// Network Metrics endpoint'i
+router.get('/results/:id/network-metrics', async (req, res) => {
+  try {
+    const resultId = req.params.id;
+
+    // Önce test sonucunu al
+    let result;
+    try {
+      result = testResultService.getTestResultById(resultId);
+    } catch (err) {
+      console.warn('Error using testResultService:', err);
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    if (!result) {
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    // Network metriklerini çıkar
+    let networkMetrics = null;
+    let timingMetrics = null;
+    let networkTimeline = null;
+    let networkAnalysis = null;
+    let uncacheableResources = null;
+    let largeResources = null;
+
+    if (result.custom_data) {
+      try {
+        // custom_data bir string veya nesne olabilir
+        const customData = typeof result.custom_data === 'string' ?
+          JSON.parse(result.custom_data) : result.custom_data;
+
+        // Doğrudan networkMetrics alanını kontrol et
+        if (customData.networkMetrics) {
+          networkMetrics = customData.networkMetrics;
+        }
+        // Eğer yoksa, performance.networkMetrics alanını kontrol et
+        else if (customData.performance && customData.performance.networkMetrics) {
+          networkMetrics = customData.performance.networkMetrics;
+        }
+
+        // Diğer ağ metriklerini kontrol et
+        if (customData.performance) {
+          timingMetrics = customData.performance.timingMetrics;
+          networkTimeline = customData.performance.networkTimeline;
+          networkAnalysis = customData.performance.networkAnalysis;
+          uncacheableResources = customData.performance.uncacheableResources;
+          largeResources = customData.performance.largeResources;
+        }
+      } catch (parseErr) {
+        console.warn('Error parsing custom_data:', parseErr);
+      }
+    }
+
+    if (!networkMetrics) {
+      return res.status(404).json({ error: 'Network metrics not found for this test result' });
+    }
+
+    // URL bilgisini al
+    let url = null;
+    if (result.steps && Array.isArray(result.steps) && result.steps.length > 0) {
+      const navigateStep = result.steps.find(step => step.action_type === 'navigate');
+      if (navigateStep) {
+        url = navigateStep.action_value;
+      }
+    }
+
+    // Kaynak türü istatistiklerini düzenle
+    const resourceStats = [];
+    if (networkMetrics.statsByType) {
+      Object.entries(networkMetrics.statsByType).forEach(([type, stats]) => {
+        resourceStats.push({
+          type,
+          count: stats.count,
+          totalSize: stats.totalSize,
+          averageDuration: stats.averageDuration,
+          slowCount: stats.slowCount || 0,
+          largeCount: stats.largeCount || 0
+        });
+      });
+    }
+
+    res.json({
+      id: result.id,
+      name: result.name || 'Test Result',
+      url: url,
+      timestamp: result.start_time,
+      networkMetrics: {
+        totalRequests: networkMetrics.totalRequests,
+        totalSize: networkMetrics.totalSize,
+        averageDuration: networkMetrics.averageDuration,
+        slowRequests: networkMetrics.slowRequests || [],
+        failedRequests: networkMetrics.failedRequests || [],
+        resourceStats: resourceStats,
+        timingMetrics: timingMetrics || {},
+        uncacheableResources: uncacheableResources || [],
+        largeResources: largeResources || []
+      },
+      networkAnalysis: networkAnalysis || { issues: [], recommendations: [] },
+      timeline: networkTimeline || [],
+      recommendations: result.recommendations || []
+    });
+  } catch (error) {
+    console.error(`Error getting network metrics for ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get network metrics for ${req.params.id}` });
   }
 });
 

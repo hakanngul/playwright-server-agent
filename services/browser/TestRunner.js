@@ -207,32 +207,49 @@ export class TestRunner {
     }
 
     // Collect Web Vitals and network metrics if enabled
-    if (this.collectPerformanceMetrics && this.performanceHelper && this.networkMonitor) {
+    if (this.collectPerformanceMetrics && this.performanceHelper) {
       try {
         console.log('Collecting Web Vitals and network metrics...');
 
-        // Capture Web Vitals
-        const webVitals = await this.performanceHelper.captureWebVitals();
-        results.performance.webVitals = webVitals;
+        // Capture all performance metrics (Web Vitals and network metrics)
+        const performanceData = await this.performanceHelper.captureAllMetrics(this.networkMonitor);
 
-        // Capture network metrics
-        const networkMetrics = this.networkMonitor.getNetworkStats();
-        results.performance.networkMetrics = networkMetrics;
+        // Add performance data to results
+        results.performance.webVitals = performanceData.webVitals;
+        results.performance.networkMetrics = performanceData.networkMetrics;
+        results.performance.webVitalsAnalysis = performanceData.webVitalsAnalysis;
 
-        // Analyze Web Vitals
-        if (webVitals && Object.keys(webVitals).length > 0) {
-          const webVitalsAnalysis = this.performanceHelper.analyzeWebVitals(webVitals);
-          results.performance.webVitalsAnalysis = webVitalsAnalysis;
+        // Add network analysis if available
+        if (performanceData.networkMetrics && performanceData.networkMetrics.networkAnalysis) {
+          results.performance.networkAnalysis = performanceData.networkMetrics.networkAnalysis;
         }
 
-        // Analyze network performance
-        const networkAnalysis = this.networkMonitor.analyzeNetworkPerformance();
-        results.performance.networkAnalysis = networkAnalysis.analysis;
+        // Add warnings
+        if (performanceData.warnings && performanceData.warnings.length > 0) {
+          results.performance.warnings = performanceData.warnings;
+        }
+
+        // Add detailed network metrics
+        if (this.networkMonitor) {
+          // Get detailed network timeline
+          results.performance.networkTimeline = this.networkMonitor.getNetworkStats().requestTimeline;
+
+          // Get timing metrics
+          results.performance.timingMetrics = this.networkMonitor.getNetworkStats().timingMetrics;
+
+          // Get uncacheable resources
+          results.performance.uncacheableResources = this.networkMonitor.getNetworkStats().uncacheableRequests;
+
+          // Get large resources
+          results.performance.largeResources = this.networkMonitor.getNetworkStats().largeResources;
+        }
 
         // Save performance report
         const reportResult = this.performanceReporter.saveReport(testPlan.name, {
-          webVitals,
-          networkMetrics,
+          webVitals: performanceData.webVitals,
+          networkMetrics: performanceData.networkMetrics,
+          webVitalsAnalysis: performanceData.webVitalsAnalysis,
+          warnings: performanceData.warnings,
           systemMetrics: {
             memory: {
               initial: results.performance.initialMemory,
@@ -241,13 +258,17 @@ export class TestRunner {
             },
             cpu: results.performance.cpuUsage
           },
-          stepStats: results.performance.stepStats
+          stepStats: results.performance.stepStats,
+          timingMetrics: results.performance.timingMetrics
         });
 
-        // Add warnings to results
-        if (reportResult.warnings.length > 0) {
+        // Add warnings to results if not already added
+        if (reportResult.warnings.length > 0 && (!results.performance.warnings || results.performance.warnings.length === 0)) {
           results.performance.warnings = reportResult.warnings;
-          console.warn(`Found ${reportResult.warnings.length} performance warnings`);
+        }
+
+        if (results.performance.warnings && results.performance.warnings.length > 0) {
+          console.warn(`Found ${results.performance.warnings.length} performance warnings`);
         }
       } catch (error) {
         console.error('Error collecting performance metrics:', error.message);
@@ -324,12 +345,32 @@ export class TestRunner {
       console.log(`Total Size: ${this.formatBytes(networkMetrics.totalSize)}`);
       console.log(`Average Request Duration: ${networkMetrics.averageDuration.toFixed(2)}ms`);
 
+      // Log resource type statistics
+      if (networkMetrics.statsByType) {
+        const statsByType = networkMetrics.statsByType;
+        Object.entries(statsByType).forEach(([type, stats]) => {
+          if (stats.count > 0) {
+            console.log(`${type}: ${stats.count} requests, ${this.formatBytes(stats.totalSize)}`);
+          }
+        });
+      }
+
       if (networkMetrics.slowRequests && networkMetrics.slowRequests.length > 0) {
         console.log(`Slow Requests (>1s): ${networkMetrics.slowRequests.length}`);
       }
 
       if (networkMetrics.failedRequests && networkMetrics.failedRequests.length > 0) {
         console.log(`Failed Requests: ${networkMetrics.failedRequests.length}`);
+      }
+
+      if (results.performance.timingMetrics) {
+        const timing = results.performance.timingMetrics;
+        console.log('\nTiming Metrics:');
+        if (timing.dnsLookup) console.log(`DNS Lookup: ${timing.dnsLookup.toFixed(2)}ms`);
+        if (timing.tcpConnect) console.log(`TCP Connect: ${timing.tcpConnect.toFixed(2)}ms`);
+        if (timing.sslHandshake) console.log(`SSL Handshake: ${timing.sslHandshake.toFixed(2)}ms`);
+        if (timing.ttfb) console.log(`TTFB: ${timing.ttfb.toFixed(2)}ms`);
+        if (timing.download) console.log(`Download: ${timing.download.toFixed(2)}ms`);
       }
     }
 

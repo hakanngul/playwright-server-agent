@@ -23,7 +23,7 @@ export class PerformanceHelper {
     await this.page.addInitScript(() => {
       // Initialize CLS tracking
       window.cls = 0;
-      
+
       // Track CLS
       new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
@@ -32,7 +32,7 @@ export class PerformanceHelper {
           }
         }
       }).observe({ type: 'layout-shift', buffered: true });
-      
+
       // Track FID
       window.fid = null;
       new PerformanceObserver((entryList) => {
@@ -42,7 +42,7 @@ export class PerformanceHelper {
           }
         }
       }).observe({ type: 'first-input', buffered: true });
-      
+
       // Track LCP
       window.lcp = null;
       new PerformanceObserver((entryList) => {
@@ -51,7 +51,7 @@ export class PerformanceHelper {
         window.lcp = lastEntry.startTime;
       }).observe({ type: 'largest-contentful-paint', buffered: true });
     });
-    
+
     console.log('Performance observers set up in the page');
   }
 
@@ -61,11 +61,11 @@ export class PerformanceHelper {
    */
   async captureWebVitals() {
     console.log('Capturing Web Vitals metrics...');
-    
+
     try {
       const webVitals = await this.page.evaluate(() => {
         const vitals = {};
-        
+
         // FCP - First Contentful Paint
         const fcpEntries = performance.getEntriesByName('first-contentful-paint');
         if (fcpEntries.length > 0) {
@@ -78,26 +78,26 @@ export class PerformanceHelper {
             vitals.fcp = firstPaint.startTime;
           }
         }
-        
+
         // LCP - Largest Contentful Paint
         vitals.lcp = window.lcp;
-        
+
         // CLS - Cumulative Layout Shift
         vitals.cls = window.cls;
-        
+
         // FID - First Input Delay
         vitals.fid = window.fid;
-        
+
         // TTI - Time to Interactive (approximation)
         const loadEventEnd = performance.timing.loadEventEnd - performance.timing.navigationStart;
         vitals.tti = loadEventEnd;
-        
+
         // TTFB - Time to First Byte
         vitals.ttfb = performance.timing.responseStart - performance.timing.navigationStart;
-        
+
         return vitals;
       });
-      
+
       console.log('Web Vitals captured:', webVitals);
       return webVitals;
     } catch (error) {
@@ -110,15 +110,28 @@ export class PerformanceHelper {
 
   /**
    * Captures network performance metrics
+   * @param {NetworkMonitor} networkMonitor - Network monitor instance
    * @returns {Promise<Object>} Network metrics
    */
-  async captureNetworkMetrics() {
+  async captureNetworkMetrics(networkMonitor) {
     console.log('Capturing network metrics...');
-    
+
     try {
+      // If a NetworkMonitor instance is provided, use it
+      if (networkMonitor) {
+        const networkStats = networkMonitor.getNetworkStats();
+        const networkAnalysis = networkMonitor.analyzeNetworkPerformance().analysis;
+
+        return {
+          ...networkStats,
+          networkAnalysis
+        };
+      }
+
+      // Fallback to browser-based metrics if no NetworkMonitor is provided
       const networkMetrics = await this.page.evaluate(() => {
         const resources = performance.getEntriesByType('resource');
-        
+
         // Group resources by type
         const resourcesByType = resources.reduce((acc, resource) => {
           const type = resource.initiatorType || 'other';
@@ -133,30 +146,53 @@ export class PerformanceHelper {
           });
           return acc;
         }, {});
-        
+
         // Calculate totals
-        const totalResources = resources.length;
+        const totalRequests = resources.length;
         const totalSize = resources.reduce((sum, resource) => sum + (resource.transferSize || 0), 0);
-        const totalDuration = resources.reduce((max, resource) => Math.max(max, resource.responseEnd), 0);
-        
+        const averageDuration = resources.length > 0
+          ? resources.reduce((sum, resource) => sum + resource.duration, 0) / resources.length
+          : 0;
+
         // Find slow resources (taking more than 1 second)
-        const slowResources = resources
+        const slowRequests = resources
           .filter(resource => resource.duration > 1000)
           .map(resource => ({
-            name: resource.name,
+            url: resource.name,
+            duration: resource.duration,
+            size: resource.transferSize || 0,
+            initiatorType: resource.initiatorType
+          }));
+
+        // Calculate stats by resource type
+        const statsByType = {};
+        Object.entries(resourcesByType).forEach(([type, resources]) => {
+          statsByType[type] = {
+            count: resources.length,
+            totalSize: resources.reduce((sum, resource) => sum + resource.size, 0),
+            averageDuration: resources.length > 0
+              ? resources.reduce((sum, resource) => sum + resource.duration, 0) / resources.length
+              : 0
+          };
+        });
+
+        return {
+          totalRequests,
+          totalSize,
+          averageDuration,
+          slowRequests,
+          statsByType,
+          requestTimeline: resources.map(resource => ({
+            url: resource.name,
+            resourceType: resource.initiatorType,
+            startTime: resource.startTime,
+            endTime: resource.responseEnd,
             duration: resource.duration,
             size: resource.transferSize || 0
-          }));
-        
-        return {
-          totalResources,
-          totalSize,
-          totalDuration,
-          resourcesByType,
-          slowResources
+          })).sort((a, b) => a.startTime - b.startTime)
         };
       });
-      
+
       console.log('Network metrics captured');
       return networkMetrics;
     } catch (error) {
@@ -169,19 +205,71 @@ export class PerformanceHelper {
 
   /**
    * Captures all performance metrics
+   * @param {NetworkMonitor} networkMonitor - Network monitor instance
    * @returns {Promise<Object>} All performance metrics
    */
-  async captureAllMetrics() {
+  async captureAllMetrics(networkMonitor) {
     const webVitals = await this.captureWebVitals();
-    const networkMetrics = await this.captureNetworkMetrics();
-    
+    const networkMetrics = await this.captureNetworkMetrics(networkMonitor);
+
+    // Analyze Web Vitals
+    const webVitalsAnalysis = this.analyzeWebVitals(webVitals);
+
+    // Combine all metrics and analysis
     return {
       webVitals,
       networkMetrics,
-      timestamp: new Date().toISOString()
+      webVitalsAnalysis,
+      timestamp: new Date().toISOString(),
+      warnings: [
+        // Add Web Vitals warnings
+        ...Object.entries(webVitalsAnalysis.scores)
+          .filter(([metric, score]) => score !== 'good')
+          .map(([metric, score]) => {
+            const thresholds = {
+              fcp: 1000,
+              lcp: 2500,
+              cls: 0.1,
+              fid: 100,
+              ttfb: 600
+            };
+
+            return {
+              type: metric,
+              message: `${this.getMetricFullName(metric)} (${webVitals[metric]}${metric === 'cls' ? '' : 'ms'}) ${score === 'needs-improvement' ? 'needs improvement' : 'is poor'}`,
+              value: webVitals[metric],
+              threshold: thresholds[metric]
+            };
+          }),
+
+        // Add network warnings if available
+        ...(networkMetrics.networkAnalysis?.issues || []).map(issue => ({
+          type: 'network',
+          message: issue
+        }))
+      ]
     };
   }
-  
+
+  /**
+   * Gets the full name of a Web Vital metric
+   * @param {string} metric - Metric code
+   * @returns {string} Full name
+   * @private
+   */
+  getMetricFullName(metric) {
+    const metricNames = {
+      fcp: 'First Contentful Paint',
+      lcp: 'Largest Contentful Paint',
+      cls: 'Cumulative Layout Shift',
+      fid: 'First Input Delay',
+      ttfb: 'Time to First Byte',
+      tti: 'Time to Interactive'
+    };
+
+    return metricNames[metric] || metric.toUpperCase();
+  }
+
   /**
    * Analyzes Web Vitals metrics and provides recommendations
    * @param {Object} webVitals - Web Vitals metrics
@@ -193,7 +281,7 @@ export class PerformanceHelper {
       issues: [],
       recommendations: []
     };
-    
+
     // FCP analysis
     if (webVitals.fcp) {
       if (webVitals.fcp < 1000) {
@@ -208,7 +296,7 @@ export class PerformanceHelper {
         analysis.recommendations.push('Reduce server response time, eliminate render-blocking resources, optimize CSS');
       }
     }
-    
+
     // LCP analysis
     if (webVitals.lcp) {
       if (webVitals.lcp < 2500) {
@@ -223,7 +311,7 @@ export class PerformanceHelper {
         analysis.recommendations.push('Implement lazy loading, optimize images, use CDN, preload critical resources');
       }
     }
-    
+
     // CLS analysis
     if (webVitals.cls !== undefined) {
       if (webVitals.cls < 0.1) {
@@ -238,7 +326,7 @@ export class PerformanceHelper {
         analysis.recommendations.push('Always include size attributes on images/videos, reserve space for ads, avoid adding dynamic content');
       }
     }
-    
+
     // FID analysis
     if (webVitals.fid) {
       if (webVitals.fid < 100) {
@@ -253,7 +341,7 @@ export class PerformanceHelper {
         analysis.recommendations.push('Minimize main thread work, reduce JavaScript execution time, defer non-critical JavaScript');
       }
     }
-    
+
     return analysis;
   }
 }
