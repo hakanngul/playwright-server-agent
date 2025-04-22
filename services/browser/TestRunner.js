@@ -246,6 +246,7 @@ export class TestRunner {
 
         // Save performance report
         const reportResult = this.performanceReporter.saveReport(testPlan.name, {
+          testDuration: results.duration,
           webVitals: performanceData.webVitals,
           networkMetrics: performanceData.networkMetrics,
           webVitalsAnalysis: performanceData.webVitalsAnalysis,
@@ -326,6 +327,13 @@ export class TestRunner {
     console.log('\n===== Performance Metrics =====');
     console.log(`Test Duration: ${results.duration}ms`);
 
+    // Test süresi eşiği kontrolü
+    if (this.performanceReporter && this.performanceReporter.thresholds && this.performanceReporter.thresholds.testDuration) {
+      if (results.duration > this.performanceReporter.thresholds.testDuration) {
+        console.warn(`\n\u26A0️ Test süresi eşiği aşıldı: ${results.duration}ms > ${this.performanceReporter.thresholds.testDuration}ms`);
+      }
+    }
+
     // Log Web Vitals if available
     if (results.performance.webVitals) {
       const webVitals = results.performance.webVitals;
@@ -335,6 +343,13 @@ export class TestRunner {
       if (webVitals.cls !== undefined) console.log(`Cumulative Layout Shift (CLS): ${webVitals.cls.toFixed(3)}`);
       if (webVitals.fid) console.log(`First Input Delay (FID): ${webVitals.fid.toFixed(2)}ms`);
       if (webVitals.ttfb) console.log(`Time to First Byte (TTFB): ${webVitals.ttfb.toFixed(2)}ms`);
+
+      // Sayfa yükleme süresi eşiği kontrolü (LCP kullanarak)
+      if (this.performanceReporter && this.performanceReporter.thresholds && this.performanceReporter.thresholds.pageDuration) {
+        if (webVitals.lcp && webVitals.lcp > this.performanceReporter.thresholds.pageDuration) {
+          console.warn(`\n\u26A0️ Sayfa yükleme süresi eşiği aşıldı: ${webVitals.lcp.toFixed(2)}ms > ${this.performanceReporter.thresholds.pageDuration}ms`);
+        }
+      }
     }
 
     // Log network metrics if available

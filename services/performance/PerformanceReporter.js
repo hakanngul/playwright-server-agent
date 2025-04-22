@@ -27,9 +27,11 @@ export class PerformanceReporter {
       cls: 0.1,     // 0.1
       fid: 100,     // 100ms
       ttfb: 600,    // 600ms
-      requestDuration: 1000 // 1 second
+      requestDuration: 1000, // 1 second
+      testDuration: 10000,   // 10 saniye
+      pageDuration: 5000     // 5 saniye
     };
-    
+
     // Ensure reports directory exists
     this.ensureDirectoryExists(this.reportsDir);
   }
@@ -55,10 +57,10 @@ export class PerformanceReporter {
     const timestamp = new Date().toISOString().replace(/:/g, '-');
     const filename = `${testName.replace(/\\s+/g, '-')}_${timestamp}.json`;
     const filePath = path.join(this.reportsDir, filename);
-    
+
     // Check for threshold violations
     const warnings = this.checkThresholds(performanceData);
-    
+
     // Create report object
     const reportData = {
       testName,
@@ -67,12 +69,12 @@ export class PerformanceReporter {
       warnings,
       recommendations: this.generateRecommendations(performanceData, warnings)
     };
-    
+
     // Save report
     fs.writeFileSync(filePath, JSON.stringify(reportData, null, 2));
-    
+
     console.log(`Performance report saved to: ${filePath}`);
-    
+
     return {
       filePath,
       warnings
@@ -87,11 +89,11 @@ export class PerformanceReporter {
    */
   checkThresholds(performanceData) {
     const warnings = [];
-    
+
     // Check Web Vitals thresholds
     if (performanceData.webVitals) {
       const { webVitals } = performanceData;
-      
+
       // Check FCP
       if (webVitals.fcp && webVitals.fcp > this.thresholds.fcp) {
         warnings.push({
@@ -101,7 +103,7 @@ export class PerformanceReporter {
           threshold: this.thresholds.fcp
         });
       }
-      
+
       // Check LCP
       if (webVitals.lcp && webVitals.lcp > this.thresholds.lcp) {
         warnings.push({
@@ -111,7 +113,7 @@ export class PerformanceReporter {
           threshold: this.thresholds.lcp
         });
       }
-      
+
       // Check CLS
       if (webVitals.cls !== undefined && webVitals.cls > this.thresholds.cls) {
         warnings.push({
@@ -121,7 +123,7 @@ export class PerformanceReporter {
           threshold: this.thresholds.cls
         });
       }
-      
+
       // Check FID
       if (webVitals.fid && webVitals.fid > this.thresholds.fid) {
         warnings.push({
@@ -131,7 +133,7 @@ export class PerformanceReporter {
           threshold: this.thresholds.fid
         });
       }
-      
+
       // Check TTFB
       if (webVitals.ttfb && webVitals.ttfb > this.thresholds.ttfb) {
         warnings.push({
@@ -142,11 +144,31 @@ export class PerformanceReporter {
         });
       }
     }
-    
+
+    // Check test duration
+    if (performanceData.testDuration && performanceData.testDuration > this.thresholds.testDuration) {
+      warnings.push({
+        type: 'testDuration',
+        message: `Test süresi eşiği aşıldı: ${performanceData.testDuration}ms > ${this.thresholds.testDuration}ms`,
+        value: performanceData.testDuration,
+        threshold: this.thresholds.testDuration
+      });
+    }
+
+    // Check page duration (using LCP as an indicator if available)
+    if (performanceData.webVitals && performanceData.webVitals.lcp > this.thresholds.pageDuration) {
+      warnings.push({
+        type: 'pageDuration',
+        message: `Sayfa yükleme süresi eşiği aşıldı: ${performanceData.webVitals.lcp}ms > ${this.thresholds.pageDuration}ms`,
+        value: performanceData.webVitals.lcp,
+        threshold: this.thresholds.pageDuration
+      });
+    }
+
     // Check network metrics
     if (performanceData.networkMetrics) {
       const { networkMetrics } = performanceData;
-      
+
       // Check slow requests
       if (networkMetrics.slowRequests && networkMetrics.slowRequests.length > 0) {
         warnings.push({
@@ -156,7 +178,7 @@ export class PerformanceReporter {
           details: networkMetrics.slowRequests
         });
       }
-      
+
       // Check failed requests
       if (networkMetrics.failedRequests && networkMetrics.failedRequests.length > 0) {
         warnings.push({
@@ -166,7 +188,7 @@ export class PerformanceReporter {
           details: networkMetrics.failedRequests
         });
       }
-      
+
       // Check total page size
       if (networkMetrics.totalSize && networkMetrics.totalSize > 5000000) { // 5MB
         warnings.push({
@@ -176,7 +198,7 @@ export class PerformanceReporter {
           threshold: 5000000
         });
       }
-      
+
       // Check number of requests
       if (networkMetrics.totalRequests && networkMetrics.totalRequests > 100) {
         warnings.push({
@@ -187,7 +209,7 @@ export class PerformanceReporter {
         });
       }
     }
-    
+
     return warnings;
   }
 
@@ -200,7 +222,7 @@ export class PerformanceReporter {
    */
   generateRecommendations(performanceData, warnings) {
     const recommendations = [];
-    
+
     // Add recommendations based on warnings
     for (const warning of warnings) {
       switch (warning.type) {
@@ -219,6 +241,12 @@ export class PerformanceReporter {
         case 'ttfb':
           recommendations.push('Improve server response time, use CDN, optimize backend');
           break;
+        case 'testDuration':
+          recommendations.push('Test süresini azaltmak için test adımlarını optimize edin veya gereksiz adımları kaldırın');
+          break;
+        case 'pageDuration':
+          recommendations.push('Sayfa yükleme süresini azaltmak için sayfa içeriğini optimize edin, gereksiz kaynakları kaldırın');
+          break;
         case 'slowRequests':
           recommendations.push('Optimize slow resources, consider using CDN, implement caching');
           break;
@@ -233,7 +261,7 @@ export class PerformanceReporter {
           break;
       }
     }
-    
+
     // Remove duplicates
     return [...new Set(recommendations)];
   }
@@ -251,11 +279,11 @@ export class PerformanceReporter {
       .sort()
       .reverse()
       .slice(0, limit);
-    
+
     const trendData = files.map(file => {
       const filePath = path.join(this.reportsDir, file);
       const reportData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      
+
       return {
         timestamp: reportData.timestamp,
         webVitals: reportData.performanceData.webVitals,
@@ -267,7 +295,7 @@ export class PerformanceReporter {
         warnings: reportData.warnings.length
       };
     });
-    
+
     return trendData;
   }
 }

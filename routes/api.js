@@ -650,6 +650,32 @@ router.get('/results/:id/network-metrics', async (req, res) => {
   }
 });
 
+// Performans trend raporu endpoint'i
+router.get('/performance/trend/:testName', async (req, res) => {
+  try {
+    const testName = req.params.testName;
+    const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+
+    // services/performance klasöründen PerformanceReporter'ı import et
+    const { PerformanceReporter } = await import('../services/performance/PerformanceReporter.js');
+
+    // PerformanceReporter örneği oluştur
+    const performanceReporter = new PerformanceReporter();
+
+    // Trend raporunu oluştur
+    const trendData = performanceReporter.generateTrendReport(testName, limit);
+
+    res.json({
+      testName,
+      limit,
+      trendData
+    });
+  } catch (error) {
+    console.error(`Error generating trend report for ${req.params.testName}:`, error);
+    res.status(500).json({ error: `Failed to generate trend report for ${req.params.testName}` });
+  }
+});
+
 // Web Vitals endpoint'i
 router.get('/results/:id/web-vitals', async (req, res) => {
   try {
