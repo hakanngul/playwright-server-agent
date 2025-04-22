@@ -37,11 +37,29 @@ const testResultService = {
         testResult.video_path || null,
         testResult.trace_path || null,
         testResult.retry_count || 0,
-        testResult.custom_data ? JSON.stringify(testResult.custom_data) :
-        (testResult.performance ? JSON.stringify({
-          metrics: testResult.metrics || {},
-          performance: testResult.performance
-        }) : null)
+        (() => {
+          // Performans verilerini JSON olarak hazırla
+          const customData = {
+            metrics: testResult.metrics || {},
+            performance: testResult.performance || {},
+            webVitals: testResult.performance?.webVitals || null,
+            networkMetrics: testResult.performance?.networkMetrics || null,
+            warnings: testResult.performance?.warnings || [],
+            recommendations: [
+              ...(testResult.performance?.webVitalsAnalysis?.recommendations || []),
+              ...(testResult.performance?.networkAnalysis?.recommendations || [])
+            ],
+            reportId: testResult.report_id || null
+          };
+
+          // JSON'u string'e dönüştür
+          const customDataStr = JSON.stringify(customData);
+
+          // Konsola yazdır (debug için)
+          console.log('Saving test result with custom_data:', customDataStr.substring(0, 100) + '...');
+
+          return customDataStr;
+        })()
       );
 
       const resultId = resultInfo.lastInsertRowid;

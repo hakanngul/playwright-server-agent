@@ -2,7 +2,7 @@
   "name": "Kapsamlı Stratejiler Testi",
   "description": "Only Testing Blog üzerinde tüm stratejileri test eder",
   "browserPreference": "chromium",
-  "headless": false,
+  "headless": true,
   "useBrowserPool": false,
   "takeScreenshots": false,
   "steps": [

@@ -2,7 +2,7 @@
   "name": "Doğrulama İşlemleri Testi",
   "description": "Only Testing Blog üzerinde doğrulama işlemlerini test eder",
   "browserPreference": "chromium",
-  "headless": false,
+  "headless": true,
   "useBrowserPool": false,
   "takeScreenshots": false,
   "steps": [

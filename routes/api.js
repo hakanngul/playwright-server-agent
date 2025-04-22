@@ -181,9 +181,21 @@ router.get('/results/recent', (req, res) => {
         results = results.map(result => {
           if (result.custom_data) {
             try {
-              const customData = JSON.parse(result.custom_data);
-              if (customData.performance) {
-                result.performance = customData.performance;
+              // custom_data bir string veya nesne olabilir
+              const customData = typeof result.custom_data === 'string' ?
+                JSON.parse(result.custom_data) : result.custom_data;
+
+              // Tüm custom_data içeriğini result nesnesine ekle
+              if (customData) {
+                result.metrics = customData.metrics || {};
+                result.performance = customData.performance || {};
+                result.webVitals = customData.webVitals || customData.performance?.webVitals || null;
+                result.networkMetrics = customData.networkMetrics || customData.performance?.networkMetrics || null;
+                result.warnings = customData.warnings || customData.performance?.warnings || [];
+                result.recommendations = customData.recommendations || [
+                  ...(customData.performance?.webVitalsAnalysis?.recommendations || []),
+                  ...(customData.performance?.networkAnalysis?.recommendations || [])
+                ];
               }
             } catch (parseErr) {
               console.warn('Error parsing custom_data:', parseErr);
@@ -224,9 +236,21 @@ router.get('/results/:id', (req, res) => {
       // Performans metriklerini ekle
       if (result && result.custom_data) {
         try {
-          const customData = JSON.parse(result.custom_data);
-          if (customData.performance) {
-            result.performance = customData.performance;
+          // custom_data bir string veya nesne olabilir
+          const customData = typeof result.custom_data === 'string' ?
+            JSON.parse(result.custom_data) : result.custom_data;
+
+          // Tüm custom_data içeriğini result nesnesine ekle
+          if (customData) {
+            result.metrics = customData.metrics || {};
+            result.performance = customData.performance || {};
+            result.webVitals = customData.webVitals || customData.performance?.webVitals || null;
+            result.networkMetrics = customData.networkMetrics || customData.performance?.networkMetrics || null;
+            result.warnings = customData.warnings || customData.performance?.warnings || [];
+            result.recommendations = customData.recommendations || [
+              ...(customData.performance?.webVitalsAnalysis?.recommendations || []),
+              ...(customData.performance?.networkAnalysis?.recommendations || [])
+            ];
           }
         } catch (parseErr) {
           console.warn('Error parsing custom_data:', parseErr);
@@ -315,14 +339,14 @@ router.get('/reports/file/:date', async (req, res) => {
 });
 
 // Performans raporu endpoint'i
-router.get('/reports/:id/performance', async (req, res) => {
+router.get('/results/:id/performance', async (req, res) => {
   try {
-    const reportId = req.params.id;
+    const resultId = req.params.id;
 
     // Önce test sonucunu al
     let result;
     try {
-      result = testResultService.getTestResultById(reportId);
+      result = testResultService.getTestResultById(resultId);
     } catch (err) {
       console.warn('Error using testResultService:', err);
       return res.status(404).json({ error: 'Test result not found' });
@@ -334,29 +358,61 @@ router.get('/reports/:id/performance', async (req, res) => {
 
     // Performans metriklerini çıkar
     let performanceData = null;
+    let webVitals = null;
+    let networkMetrics = null;
 
     if (result.custom_data) {
       try {
-        const customData = JSON.parse(result.custom_data);
+        // custom_data bir string veya nesne olabilir
+        const customData = typeof result.custom_data === 'string' ?
+          JSON.parse(result.custom_data) : result.custom_data;
+        // Doğrudan performance alanını kontrol et
         if (customData.performance) {
           performanceData = customData.performance;
+        }
+        // Doğrudan webVitals ve networkMetrics alanlarını kontrol et
+        if (customData.webVitals) {
+          webVitals = customData.webVitals;
+        }
+        if (customData.networkMetrics) {
+          networkMetrics = customData.networkMetrics;
         }
       } catch (parseErr) {
         console.warn('Error parsing custom_data:', parseErr);
       }
     }
 
+    // Eğer performanceData yoksa ama webVitals veya networkMetrics varsa, performanceData oluştur
+    if (!performanceData && (webVitals || networkMetrics)) {
+      performanceData = {};
+      if (webVitals) performanceData.webVitals = webVitals;
+      if (networkMetrics) performanceData.networkMetrics = networkMetrics;
+    }
+
     if (!performanceData) {
       return res.status(404).json({ error: 'Performance data not found for this test result' });
     }
 
+    // URL bilgisini al
+    let url = null;
+    if (result.steps && Array.isArray(result.steps) && result.steps.length > 0) {
+      const navigateStep = result.steps.find(step => step.action_type === 'navigate');
+      if (navigateStep) {
+        url = navigateStep.action_value;
+      }
+    }
+
     res.json({
       id: result.id,
-      name: result.name,
+      name: result.name || 'Test Result',
+      url: url,
       startTime: result.start_time,
       endTime: result.end_time,
       duration: result.duration_ms,
-      performance: performanceData
+      performance: performanceData,
+      webVitals: webVitals,
+      networkMetrics: networkMetrics,
+      recommendations: result.recommendations || []
     });
   } catch (error) {
     console.error(`Error getting performance report for ${req.params.id}:`, error);
@@ -364,15 +420,56 @@ router.get('/reports/:id/performance', async (req, res) => {
   }
 });
 
-// Web Vitals endpoint'i
-router.get('/reports/:id/web-vitals', async (req, res) => {
+// Eski endpoint'i de koru (geriye dönük uyumluluk için)
+router.get('/reports/:id/performance', async (req, res) => {
   try {
+    // Rapor ID'sini test sonuç ID'sine çevir
     const reportId = req.params.id;
+
+    // Rapor ID'si ile test sonuç ID'sini bul
+    let testResultId = null;
+
+    // Veritabanından tüm test sonuçlarını al
+    const allResults = testResultService.getAllTestResults({ limit: 100 });
+
+    // Rapor ID'sine sahip test sonucunu bul
+    for (const result of allResults) {
+      if (result.custom_data) {
+        try {
+          // custom_data bir string veya nesne olabilir
+          const customData = typeof result.custom_data === 'string' ?
+            JSON.parse(result.custom_data) : result.custom_data;
+          if (customData.reportId === reportId) {
+            testResultId = result.id;
+            break;
+          }
+        } catch (parseErr) {
+          console.warn('Error parsing custom_data:', parseErr);
+        }
+      }
+    }
+
+    if (!testResultId) {
+      return res.status(404).json({ error: 'Test result not found for this report ID' });
+    }
+
+    // Test sonuç ID'si ile Performance endpoint'ine yönlendir
+    res.redirect(`/api/results/${testResultId}/performance`);
+  } catch (error) {
+    console.error(`Error getting performance report for ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get performance report for ${req.params.id}` });
+  }
+});
+
+// Web Vitals endpoint'i
+router.get('/results/:id/web-vitals', async (req, res) => {
+  try {
+    const resultId = req.params.id;
 
     // Önce test sonucunu al
     let result;
     try {
-      result = testResultService.getTestResultById(reportId);
+      result = testResultService.getTestResultById(resultId);
     } catch (err) {
       console.warn('Error using testResultService:', err);
       return res.status(404).json({ error: 'Test result not found' });
@@ -383,14 +480,19 @@ router.get('/reports/:id/web-vitals', async (req, res) => {
     }
 
     // Web Vitals metriklerini çıkar
-    let performanceData = null;
     let webVitals = null;
 
     if (result.custom_data) {
       try {
-        const customData = JSON.parse(result.custom_data);
-        if (customData.performance && customData.performance.webVitals) {
-          performanceData = customData.performance;
+        // custom_data bir string veya nesne olabilir
+        const customData = typeof result.custom_data === 'string' ?
+          JSON.parse(result.custom_data) : result.custom_data;
+        // Doğrudan webVitals alanını kontrol et
+        if (customData.webVitals) {
+          webVitals = customData.webVitals;
+        }
+        // Eğer yoksa, performance.webVitals alanını kontrol et
+        else if (customData.performance && customData.performance.webVitals) {
           webVitals = customData.performance.webVitals;
         }
       } catch (parseErr) {
@@ -461,20 +563,25 @@ router.get('/reports/:id/web-vitals', async (req, res) => {
     }
 
     // Önerileri ekle
-    const recommendations = [];
+    let recommendations = [];
 
-    if (performanceData.webVitalsAnalysis && performanceData.webVitalsAnalysis.recommendations) {
-      recommendations.push(...performanceData.webVitalsAnalysis.recommendations);
+    if (result.recommendations && Array.isArray(result.recommendations)) {
+      recommendations = result.recommendations;
     }
 
-    if (performanceData.networkAnalysis && performanceData.networkAnalysis.recommendations) {
-      recommendations.push(...performanceData.networkAnalysis.recommendations);
+    // URL bilgisini al
+    let url = null;
+    if (result.steps && Array.isArray(result.steps) && result.steps.length > 0) {
+      const navigateStep = result.steps.find(step => step.action_type === 'navigate');
+      if (navigateStep) {
+        url = navigateStep.action_value;
+      }
     }
 
     res.json({
       id: result.id,
-      name: result.name,
-      url: result.steps && result.steps.length > 0 && result.steps[0].action_value,
+      name: result.name || 'Test Result',
+      url: url,
       timestamp: result.start_time,
       webVitals,
       scores,
@@ -483,6 +590,47 @@ router.get('/reports/:id/web-vitals', async (req, res) => {
   } catch (error) {
     console.error(`Error getting Web Vitals for ${req.params.id}:`, error);
     res.status(500).json({ error: `Failed to get Web Vitals for ${req.params.id}` });
+  }
+});
+
+// Eski endpoint'i de koru (geriye dönük uyumluluk için)
+router.get('/reports/:id/web-vitals', async (req, res) => {
+  try {
+    // Rapor ID'sini test sonuç ID'sine çevir
+    const reportId = req.params.id;
+
+    // Rapor ID'si ile test sonuç ID'sini bul
+    let testResultId = null;
+
+    // Veritabanından tüm test sonuçlarını al
+    const allResults = testResultService.getAllTestResults({ limit: 100 });
+
+    // Rapor ID'sine sahip test sonucunu bul
+    for (const result of allResults) {
+      if (result.custom_data) {
+        try {
+          // custom_data bir string veya nesne olabilir
+          const customData = typeof result.custom_data === 'string' ?
+            JSON.parse(result.custom_data) : result.custom_data;
+          if (customData.reportId === reportId) {
+            testResultId = result.id;
+            break;
+          }
+        } catch (parseErr) {
+          console.warn('Error parsing custom_data:', parseErr);
+        }
+      }
+    }
+
+    if (!testResultId) {
+      return res.status(404).json({ error: 'Test result not found for this report ID' });
+    }
+
+    // Test sonuç ID'si ile Web Vitals endpoint'ine yönlendir
+    res.redirect(`/api/results/${testResultId}/web-vitals`);
+  } catch (error) {
+    console.error(`Error getting Web Vitals for report ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get Web Vitals for report ${req.params.id}` });
   }
 });
 
