@@ -203,7 +203,7 @@ export class BrowserManager {
       // Firefox için özel ayarlar
       // Tam ekran modunu kaldırdık, sabit bir viewport kullanıyoruz
       contextOptions.viewport = { width: 1024, height: 768 };
-      console.log('Firefox viewport set to 1366x768');
+      console.log('Firefox viewport set to 1024x768');
     } else if (this.browserType === 'edge') {
       contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
     } else {
