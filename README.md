@@ -2,6 +2,31 @@
 
 A server application for running automated browser tests using Playwright. This server allows you to execute browser automation tests through a REST API and provides real-time updates via WebSockets.
 
+## TODO : Features
+0. Database will be change to MongoDB
+1. Kapsamlı Dokümantasyon:
+    * Projenin mimarisi, kullanımı ve genişletilmesi hakkında Türkçe ve İngilizce dokümantasyon hazırlayın.
+    * Örnek kullanım senaryoları ve en iyi uygulamalar ekleyin.
+2. Veritabanı Entegrasyonu:
+    * Test sonuçlarını ve verileri saklamak için veritabanı entegrasyonunu tamamlayın.
+    * Belirttiğiniz şema yapısını uygulayın (TestRun, TestResult, TestSuite vb. tablolar).
+3. Paralelleştirme Desteği:
+    * Testleri paralel çalıştırmak için bir mekanizma ekleyin.
+    * Tarayıcı havuzu yönetimini geliştirin.
+4. CI/CD Entegrasyonu:
+    * Popüler CI/CD sistemleri için hazır yapılandırmalar ve örnekler ekleyin.
+    * GitHub Actions, Jenkins, GitLab CI için workflow örnekleri hazırlayın.
+5. Ek Stratejiler:
+    * Mobil görünüm testleri için stratejiler ekleyin.
+    * Erişilebilirlik testleri için stratejiler geliştirin.
+    * API testleri için stratejiler ekleyin.
+6. Güvenlik Testleri:
+    * XSS, CSRF gibi güvenlik testleri için stratejiler ekleyin.
+7. Performans İzleme:
+    * Test performansını izleyen ve raporlayan bir sistem ekleyin.
+    * Yavaş çalışan testleri tespit eden ve optimize eden araçlar geliştirin.
+8. Çoklu Dil Desteği:
+    * Test planları ve raporlar için çoklu dil desteği ekleyin.
 ## Features
 
 - Run tests in Chromium, Firefox, or Microsoft Edge
