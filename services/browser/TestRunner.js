@@ -6,6 +6,43 @@
 import { BrowserManager } from './BrowserManager.js';
 import { StepExecutor } from './StepExecutor.js';
 import { JsonReporter } from '../reporting/index.js';
+import { ElementHelper } from './ElementHelper.js';
+import { ScreenshotManager } from './ScreenshotManager.js';
+
+/**
+ * Interface for browser manager
+ * @interface
+ */
+class IBrowserManager {
+  /**
+   * Initializes the browser
+   * @returns {Promise<void>}
+   */
+  async initialize() {}
+
+  /**
+   * Gets the current page
+   * @returns {Page|null} Playwright page object
+   */
+  getPage() {}
+
+  /**
+   * Checks if the browser is initialized
+   * @returns {boolean} True if initialized
+   */
+  isInitialized() {}
+
+  /**
+   * Updates the last used timestamp
+   */
+  updateLastUsed() {}
+
+  /**
+   * Closes the browser and cleans up resources
+   * @returns {Promise<void>}
+   */
+  async close() {}
+}
 
 /**
  * Runs test plans
@@ -22,12 +59,10 @@ export class TestRunner {
     this.onStepCompleted = options.onStepCompleted || null;
     this.onTestCompleted = options.onTestCompleted || null;
 
-    // Browser management options
+    // Dependencies (can be injected)
     this.browserManager = options.browserManager || null;
-    this.stepExecutor = null;
-
-    // JSON reporter for test results
-    this.jsonReporter = new JsonReporter({
+    this.stepExecutor = options.stepExecutor || null;
+    this.jsonReporter = options.jsonReporter || new JsonReporter({
       reportsDir: options.reportsDir || './data/reports',
       screenshotsDir: this.screenshotsDir
     });
@@ -51,12 +86,23 @@ export class TestRunner {
       await this.browserManager.initialize();
     }
 
-    // Create step executor
-    this.stepExecutor = new StepExecutor(
-      this.browserManager.getPage(),
-      this.screenshotsDir,
-      this.onStepCompleted
-    );
+    // Create step executor if not provided
+    if (!this.stepExecutor) {
+      const page = this.browserManager.getPage();
+
+      // Create helper components
+      const elementHelper = new ElementHelper(page);
+      const screenshotManager = new ScreenshotManager(page, this.screenshotsDir);
+
+      // Create step executor with dependencies
+      this.stepExecutor = new StepExecutor(
+        page,
+        this.screenshotsDir,
+        this.onStepCompleted,
+        elementHelper,
+        screenshotManager
+      );
+    }
 
     console.log('TestRunner initialized');
   }

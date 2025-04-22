@@ -1,13 +1,13 @@
 /**
  * Browser management module
- * Handles browser initialization, configuration and cleanup
+ * Handles browser initialization, configuration and cleanup using Factory Pattern
  */
 
-import { chromium, firefox } from 'playwright';
 import { applyAntiDetectionMeasures } from './AntiDetection.js';
+import { BrowserFactoryProducer } from '../factories/BrowserFactoryProducer.js';
 
 /**
- * Manages browser instances and configurations
+ * Manages browser instances and configurations using Factory Pattern
  */
 export class BrowserManager {
   /**
@@ -24,6 +24,9 @@ export class BrowserManager {
     this.initialized = false;
     this.lastUsed = Date.now(); // Track when the browser was last used
 
+    // Get the appropriate browser factory
+    this.browserFactory = BrowserFactoryProducer.getFactory(this.browserType);
+
     console.log(`BrowserManager created with browserType: ${browserType}, headless: ${this.headless}`);
   }
 
@@ -38,7 +41,7 @@ export class BrowserManager {
 
     console.log(`Initializing browser (type: ${this.browserType})...`);
     try {
-      // Launch the browser
+      // Launch the browser using factory
       this.browser = await this.launchBrowser();
       console.log('Browser launched successfully');
 
@@ -63,102 +66,15 @@ export class BrowserManager {
   }
 
   /**
-   * Launches the appropriate browser based on browserType
+   * Launches the browser using factory pattern
    * @returns {Promise<Browser>} Playwright browser instance
    * @private
    */
   async launchBrowser() {
-    const launchOptions = this.getLaunchOptions();
-
-    // Headless modunu log'a yaz
-    console.log(`Launching browser with headless mode: ${this.headless ? 'true (invisible)' : 'false (visible)'}`);
-    console.log(`Launch options: ${JSON.stringify(launchOptions, null, 2)}`);
-
-    switch (this.browserType) {
-      case 'firefox':
-        console.log('Using Firefox browser');
-        // Firefox için özel seçenekler
-        const firefoxOptions = {
-          headless: this.headless, // Headless modunu açıkça belirt
-          args: [], // Firefox için tam ekran komutlarını kaldırdık
-          firefoxUserPrefs: {
-            // Otomasyon algılamasını devre dışı bırakma
-            'dom.webdriver.enabled': false,
-            'dom.automation.enabled': false,
-
-            // Gizli mod için ayarlar
-            'browser.privatebrowsing.autostart': true,
-
-            // CAPTCHA algılamasını azaltmak için izleme koruması ve çerez ayarları
-            'privacy.trackingprotection.enabled': false,
-            'network.cookie.cookieBehavior': 0,
-            'network.cookie.lifetimePolicy': 0,
-
-            // Önbellek ayarları
-            'browser.cache.disk.enable': true,
-            'browser.cache.memory.enable': true,
-
-            // Medya ve WebRTC ayarları
-            'media.navigator.enabled': false,
-            'media.peerconnection.enabled': false,
-
-            // Pencere boyutu için varsayılan ayarlar
-            'browser.window.width': 1366,
-            'browser.window.height': 768,
-            'browser.window.screenX': 0,
-            'browser.window.screenY': 0,
-
-            // Otomatik doldurma ve form geçmişi
-            'signon.autofillForms': false,
-            'browser.formfill.enable': false,
-
-            // Gerçekçi kullanıcı ajanı
-            'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-
-            // İndirme ayarları
-            'browser.download.folderList': 2,
-            'browser.download.manager.showWhenStarting': false,
-            'browser.helperApps.alwaysAsk.force': false,
-
-            // Ek performans ayarları
-            'gfx.webrender.all': true,
-            'layers.acceleration.force-enabled': true,
-
-            // Bildirimleri devre dışı bırakma
-            'dom.push.enabled': false,
-            'permissions.default.desktop-notification': 2
-          },
-          ignoreDefaultArgs: ['--enable-automation'],
-          firefoxOptions: {
-            prefs: {},
-            log: {
-              level: 'warn'
-            }
-          }
-        };
-        return await firefox.launch(firefoxOptions);
-
-      case 'edge':
-        console.log('Using Microsoft Edge browser');
-        // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
-        const edgeOptions = {
-          headless: this.headless, // Headless modunu açıkça belirt
-          channel: 'msedge', // Microsoft Edge kanalını kullan
-          args: this.headless ? [] : ['--start-maximized', '--edge-webdriver'],
-          ignoreDefaultArgs: ['--enable-automation']
-        };
-        return await chromium.launch(edgeOptions);
-
-      case 'chromium':
-      default:
-        console.log('Using Chromium browser');
-        const chromiumOptions = {
-          headless: this.headless, // Headless modunu açıkça belirt
-          args: this.headless ? [] : ['--start-maximized'],
-          ignoreDefaultArgs: ['--enable-automation']
-        };
-        return await chromium.launch(chromiumOptions);
-    }
+    // Use the factory to create the browser
+    return await this.browserFactory.createBrowser({
+      headless: this.headless
+    });
   }
 
   /**
@@ -167,61 +83,12 @@ export class BrowserManager {
    * @private
    */
   async createBrowserContext() {
-    const contextOptions = {
-      viewport: null, // Viewport null olarak ayarlanarak tarayıcı penceresinin tam boyutunu kullanmasını sağlıyoruz
-      locale: 'en-US',
-      geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
-      permissions: ['geolocation'],
-      colorScheme: 'light',
-      hasTouch: false,
-      isMobile: false,
-      javaScriptEnabled: true,
-      // Avoid bot detection
-      bypassCSP: true,
-      ignoreHTTPSErrors: true,
-      extraHTTPHeaders: {
-        'Accept-Language': 'en-US,en;q=0.9,tr;q=0.8',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'sec-ch-ua': '"Google Chrome";v="120", "Chromium";v="120", "Not-A.Brand";v="24"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"macOS"',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'none',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1'
-      }
-    };
+    // Get context options from the factory
+    const contextOptions = this.browserFactory.createContextOptions();
 
-    console.log('Creating browser context with viewport: null (for maximized window)');
-
-    // Set user agent and browser-specific options based on browser type
-    if (this.browserType === 'firefox') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0';
-
-      // Firefox için özel ayarlar
-      // Tam ekran modunu kaldırdık, sabit bir viewport kullanıyoruz
-      contextOptions.viewport = { width: 1024, height: 768 };
-      console.log('Firefox viewport set to 1024x768');
-    } else if (this.browserType === 'edge') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
-    } else {
-      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    }
+    console.log(`Creating browser context for ${this.browserType}`);
 
     return await this.browser.newContext(contextOptions);
-  }
-
-  /**
-   * Gets launch options for the browser
-   * @returns {Object} Browser launch options
-   * @private
-   */
-  getLaunchOptions() {
-    // Bu metod artık kullanılmıyor, doğrudan tarayıcı başlatma seçeneklerini kullanıyoruz
-    // Geriye dönük uyumluluk için boş bir nesne döndürüyoruz
-    return {};
   }
 
   /**

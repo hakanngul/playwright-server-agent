@@ -1,16 +1,15 @@
 /**
  * Step executor module
- * Executes test steps based on their type
+ * Executes test steps based on their type using Strategy Pattern
  */
 
 import { ElementHelper } from './ElementHelper.js';
-import { AppError, NavigationError } from '../errors/index.js';
-import { retry } from '../utils/RetryHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import path from 'path';
+import { StepStrategyFactory } from '../strategies/StepStrategyFactory.js';
 
 /**
- * Executes test steps
+ * Executes test steps using Strategy Pattern
  */
 export class StepExecutor {
   /**
@@ -18,16 +17,19 @@ export class StepExecutor {
    * @param {Page} page - Playwright page object
    * @param {string} screenshotsDir - Directory to save screenshots
    * @param {Function} onStepCompleted - Callback for step completion
+   * @param {ElementHelper} elementHelper - Optional ElementHelper instance (for dependency injection)
+   * @param {ScreenshotManager} screenshotManager - Optional ScreenshotManager instance (for dependency injection)
    */
-  constructor(page, screenshotsDir, onStepCompleted = null) {
+  constructor(page, screenshotsDir, onStepCompleted = null, elementHelper = null, screenshotManager = null) {
     this.page = page;
-    this.elementHelper = new ElementHelper(page);
-    this.screenshotManager = new ScreenshotManager(page, screenshotsDir);
+    this.elementHelper = elementHelper || new ElementHelper(page);
+    this.screenshotManager = screenshotManager || new ScreenshotManager(page, screenshotsDir);
     this.onStepCompleted = onStepCompleted;
+    this.screenshotsDir = screenshotsDir;
   }
 
   /**
-   * Executes a test step
+   * Executes a test step using Strategy Pattern
    * @param {Object} step - Test step to execute
    * @param {number} index - Step index
    * @returns {Promise<Object>} Step result
@@ -53,357 +55,41 @@ export class StepExecutor {
     };
 
     try {
-      switch (step.action) {
-        // Navigation actions
-        case 'navigate':
-        case 'navigateAndWait':
-          await retry(async () => {
-            try {
-              console.log(`Navigating to: ${step.value}`);
-              await this.page.goto(step.value, {
-                waitUntil: 'networkidle',
-                timeout: step.timeout || 60000
-              });
-              console.log('Navigation complete');
-              return true;
-            } catch (error) {
-              // Convert Playwright errors to our custom errors
-              if (error.name === 'TimeoutError') {
-                throw new NavigationError(
-                  `Timeout navigating to: ${step.value}`,
-                  step.value,
-                  true
-                );
-              }
+      // Create execution context with all dependencies
+      const context = {
+        page: this.page,
+        elementHelper: this.elementHelper,
+        screenshotManager: this.screenshotManager,
+        screenshotsDir: this.screenshotsDir
+      };
 
-              throw new NavigationError(
-                `Failed to navigate to: ${step.value} - ${error.message}`,
-                step.value,
-                true
-              );
-            }
-          }, {
-            maxRetries: 2,
-            initialDelay: 1000,
-            factor: 2,
-            onRetry: ({ attempt, error, willRetry }) => {
-              console.log(`Retry ${attempt} navigating to: ${step.value} (${willRetry ? 'will retry' : 'giving up'})`);
-              console.error(`Error: ${error.message}`);
-            }
-          });
-          break;
-        case 'goBack':
-          await this.page.goBack();
-          console.log('Navigated back');
-          break;
-        case 'goForward':
-          await this.page.goForward();
-          console.log('Navigated forward');
-          break;
-        case 'refresh':
-          await this.page.reload();
-          console.log('Page refreshed');
-          break;
+      // Get appropriate strategy for the step type
+      try {
+        const stepStrategy = StepStrategyFactory.getStrategy(step.action);
 
-        // Element interaction actions
-        case 'click':
-          await this.elementHelper.clickElement(step.target, step.strategy);
-          break;
-        case 'doubleClick':
-          await this.elementHelper.doubleClickElement(step.target, step.strategy);
-          break;
-        case 'hover':
-          await this.elementHelper.hoverElement(step.target, step.strategy);
-          break;
-        case 'hoverAndClickMenuItem':
-          await this.elementHelper.hoverAndClickMenuItem(
-            step.menuTrigger,
-            step.menuTriggerStrategy || step.strategy,
-            step.menuItem,
-            step.menuItemStrategy || step.strategy,
-            {
-              timeout: step.timeout,
-              menuAppearDelay: step.menuAppearDelay || 500
-            }
-          );
-          break;
-        case 'hoverAndVerifyTooltip':
-          await this.elementHelper.hoverAndVerifyTooltip(
-            step.target,
-            step.strategy,
-            step.tooltipTarget,
-            step.tooltipStrategy,
-            {
-              timeout: step.timeout,
-              tooltipAppearDelay: step.tooltipAppearDelay || 500,
-              getTooltipText: step.getTooltipText || false
-            }
-          );
-          break;
-        case 'dragAndDrop':
-          await this.elementHelper.dragAndDrop(
-            step.sourceTarget,
-            step.sourceStrategy || step.strategy,
-            step.targetTarget,
-            step.targetStrategy || step.strategy,
-            {
-              timeout: step.timeout,
-              method: step.method || 'auto'
-            }
-          );
-          break;
-        case 'type':
-          await this.elementHelper.typeText(step.target, step.strategy, step.value);
-          break;
-        case 'select':
-          await this.elementHelper.selectOption(step.target, step.strategy, step.value);
-          break;
-        case 'check':
-          await this.elementHelper.checkElement(step.target, step.strategy, true);
-          break;
-        case 'uncheck':
-          await this.elementHelper.checkElement(step.target, step.strategy, false);
-          break;
-        case 'upload':
-          await this.elementHelper.uploadFile(step.target, step.strategy, step.value);
-          break;
+        // Execute the strategy
+        const strategyResult = await stepStrategy.execute(step, context);
 
-        // Keyboard actions
-        case 'pressEnter':
-          console.log('Pressing Enter key');
-          await this.page.keyboard.press('Enter');
-          console.log('Enter key pressed, waiting for page to load...');
-          await this.page.waitForLoadState('networkidle');
-          break;
-        case 'pressTab':
-          console.log('Pressing Tab key');
-          await this.page.keyboard.press('Tab');
-          break;
-        case 'pressEscape':
-          console.log('Pressing Escape key');
-          await this.page.keyboard.press('Escape');
-          break;
-
-        case 'exitFullScreen':
-          console.log('Exiting fullscreen mode');
-          await this.elementHelper.exitFullScreen();
-          break;
-
-        // Wait actions
-        case 'wait':
-          const waitTime = parseInt(step.value) || 1000;
-          console.log(`Waiting for ${waitTime}ms`);
-          await this.page.waitForTimeout(waitTime);
-          console.log('Wait complete');
-          break;
-        case 'waitForElement':
-          console.log(`Waiting for element: ${step.target}`);
-          await this.elementHelper.waitForElementByStrategy(step.target, step.strategy, parseInt(step.timeout) || 30000);
-          console.log('Element found');
-          break;
-        case 'waitForElementToDisappear':
-          console.log(`Waiting for element to disappear: ${step.target}`);
-          await this.elementHelper.waitForElementToDisappear(step.target, step.strategy);
-          console.log('Element disappeared');
-          break;
-        case 'waitForNavigation':
-          console.log('Waiting for navigation to complete');
-          await this.elementHelper.waitForNavigation();
-          console.log('Navigation complete');
-          break;
-        case 'waitForURL':
-          console.log(`Waiting for URL: ${step.value}`);
-          await this.elementHelper.waitForURL(step.value);
-          console.log('URL reached');
-          break;
-
-        // Screenshot actions
-        case 'takeScreenshot':
-          try {
-            console.log('Taking screenshot of the current page');
-            const screenshot = `screenshot_${Date.now()}.png`;
-            await this.page.screenshot({ path: path.join(this.screenshotManager.screenshotsDir, screenshot), type: 'png' });
-            console.log(`Screenshot saved: ${screenshot}`);
-            result.screenshot = screenshot;
-          } catch (error) {
-            console.log('Screenshot capture is disabled, skipping takeScreenshot action');
+        // Update result with strategy result
+        if (strategyResult) {
+          if (strategyResult.screenshot) {
+            result.screenshot = strategyResult.screenshot;
           }
-          break;
-        case 'takeElementScreenshot':
-          try {
-            console.log(`Taking screenshot of element: ${step.target}`);
-            const elementScreenshot = `element_${Date.now()}.png`;
-            const screenshotPath = path.join(this.screenshotManager.screenshotsDir, elementScreenshot);
-            await this.elementHelper.takeElementScreenshot(step.target, step.strategy, screenshotPath);
-            console.log(`Element screenshot saved: ${elementScreenshot}`);
-            result.screenshot = elementScreenshot;
-          } catch (error) {
-            console.log(`Error taking element screenshot: ${error.message}`);
+          if (strategyResult.message) {
+            result.message = strategyResult.message;
           }
-          break;
+        }
 
-        // Verification actions
-        case 'verifyText':
-          console.log(`Verifying text: ${step.value}`);
-          const textPresent = await this.elementHelper.verifyTextPresent(step.value);
-          if (!textPresent) {
-            throw new Error(`Text not found: ${step.value}`);
-          }
-          break;
-        case 'verifyTitle':
-          console.log(`Verifying title: ${step.value}`);
-          const titleMatches = await this.elementHelper.verifyTitle(step.value, step.exactMatch);
-          if (!titleMatches) {
-            throw new Error(`Title verification failed: ${step.value}`);
-          }
-          break;
-        case 'verifyURL':
-          console.log(`Verifying URL: ${step.value}`);
-          const urlMatches = await this.elementHelper.verifyURL(step.value, step.exactMatch);
-          if (!urlMatches) {
-            throw new Error(`URL verification failed: ${step.value}`);
-          }
-          break;
-        case 'verifyElementExists':
-          console.log(`Verifying element exists: ${step.target}`);
-          const elementExists = await this.elementHelper.doesElementExist(step.target, step.strategy);
-          if (!elementExists) {
-            throw new Error(`Element does not exist: ${step.target}`);
-          }
-          break;
-        case 'verifyElementVisible':
-          console.log(`Verifying element is visible: ${step.target}`);
-          const elementVisible = await this.elementHelper.isElementVisible(step.target, step.strategy);
-          if (!elementVisible) {
-            throw new Error(`Element is not visible: ${step.target}`);
-          }
-          break;
-
-        // Role-based actions
-        case 'clickByRole':
-          console.log(`Clicking element by role: ${step.role}`);
-          const roleOptions = step.options || {};
-          const element = await this.elementHelper.getElementByRole(step.role, roleOptions);
-          if (!element) {
-            throw new Error(`Element with role '${step.role}' not found`);
-          }
-          await element.click();
-          break;
-        case 'clickByText':
-          console.log(`Clicking element by text: ${step.text}`);
-          const textOptions = step.options || {};
-          const textElement = await this.elementHelper.getElementByText(step.text, textOptions);
-          if (!textElement) {
-            throw new Error(`Element with text '${step.text}' not found`);
-          }
-          await textElement.click();
-          break;
-        case 'clickByTestId':
-          console.log(`Clicking element by test ID: ${step.testId}`);
-          const testIdElement = await this.elementHelper.getElementByTestId(step.testId);
-          if (!testIdElement) {
-            throw new Error(`Element with test ID '${step.testId}' not found`);
-          }
-          await testIdElement.click();
-          break;
-
-        // Frame actions
-        case 'clickInFrame':
-          console.log(`Clicking element in frame: ${step.frameName}, target: ${step.target}`);
-          await this.elementHelper.clickElementInFrame(step.frameName, step.target, step.strategy);
-          break;
-
-        // Browser window actions
-        case 'maximizeWindow':
-          console.log('Maximizing browser window');
-          try {
-            // Tarayıcı tipini belirle
-            const browserType = this.page.context().browser()._initializer.name.toLowerCase();
-            console.log(`Browser type detected: ${browserType}`);
-
-            // Ekran boyutlarını al
-            const { width, height } = await this.page.evaluate(() => {
-              return {
-                width: window.screen.availWidth,
-                height: window.screen.availHeight
-              };
-            });
-
-            console.log(`Screen dimensions: ${width}x${height}`);
-
-            // Firefox için özel tam ekran modu
-            if (browserType === 'firefox') {
-              console.log('Using Firefox-specific fullscreen method');
-
-              // Firefox için önce viewport'u ayarla
-              await this.page.setViewportSize({ width, height });
-              console.log(`Firefox viewport size set to ${width}x${height}`);
-
-              // Firefox için tam ekran API'sini kullan
-              await this.page.evaluate(() => {
-                // Firefox'ta pencereyi maximize et
-                window.moveTo(0, 0);
-                window.resizeTo(window.screen.availWidth, window.screen.availHeight);
-
-                // Firefox'ta tam ekran API'sini kullan
-                if (document.documentElement.mozRequestFullScreen) {
-                  document.documentElement.mozRequestFullScreen();
-                } else if (document.documentElement.requestFullscreen) {
-                  document.documentElement.requestFullscreen();
-                }
-              });
-              console.log('Firefox fullscreen API called');
-
-              // Firefox'ta tam ekran modunun uygulanması için daha uzun bir bekleme
-              await this.page.waitForTimeout(1000);
-            }
-            // Chromium tabanlı tarayıcılar için
-            else {
-              // Tarayıcı penceresini maximize et
-              await this.page.evaluate(() => {
-                window.moveTo(0, 0);
-                window.resizeTo(window.screen.availWidth, window.screen.availHeight);
-              });
-              console.log('Browser window maximized using JavaScript');
-
-              // Tam ekran API'sini kullan
-              await this.page.evaluate(() => {
-                if (document.documentElement.requestFullscreen) {
-                  document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                  document.documentElement.webkitRequestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) {
-                  document.documentElement.msRequestFullscreen();
-                }
-              });
-              console.log('Used requestFullscreen API for Chromium');
-            }
-          } catch (error) {
-            console.error(`Error maximizing window: ${error.message}`);
-          }
-          break;
-
-        case 'clickFullscreenButton':
-          console.log('Clicking fullscreen button');
-          try {
-            // Tam ekran butonunu bulmak ve tıklamak için
-            if (step.target) {
-              await this.elementHelper.clickElement(step.target, step.strategy || 'css');
-              console.log('Clicked on fullscreen button');
-            } else {
-              throw new Error('Target selector for fullscreen button is required');
-            }
-          } catch (error) {
-            console.error(`Error clicking fullscreen button: ${error.message}`);
-            throw error;
-          }
-          break;
-
-        default:
+        result.success = true;
+      } catch (error) {
+        if (error.message.includes('Unsupported step type')) {
+          console.warn(`No strategy found for action: ${step.action}. Using legacy execution.`);
+          // Handle unsupported actions (for backward compatibility)
           throw new Error(`Unsupported action: ${step.action}`);
+        } else {
+          throw error;
+        }
       }
-
-      result.success = true;
     } catch (error) {
       console.error(`Error executing step ${index + 1}: ${error.message}`);
       result.success = false;
@@ -429,6 +115,4 @@ export class StepExecutor {
 
     return result;
   }
-
-
 }
