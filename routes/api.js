@@ -1,5 +1,6 @@
 import express from 'express';
 import { elementService, scenarioService, resultService } from '../database/index.js';
+import reportImportService from '../database/reportImportService.js';
 
 const router = express.Router();
 
@@ -220,6 +221,45 @@ router.delete('/results/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting test result:', error);
     res.status(500).json({ error: 'Failed to delete test result' });
+  }
+});
+
+// Report import routes
+router.post('/reports/import/all', async (req, res) => {
+  try {
+    const result = await reportImportService.importAllDailyReports();
+    res.json(result);
+  } catch (error) {
+    console.error('Error importing all reports:', error);
+    res.status(500).json({ error: 'Failed to import all reports' });
+  }
+});
+
+router.post('/reports/import/:date', async (req, res) => {
+  try {
+    const date = req.params.date;
+    const result = await reportImportService.importReportsForDate(date);
+    res.json(result);
+  } catch (error) {
+    console.error(`Error importing reports for ${req.params.date}:`, error);
+    res.status(500).json({ error: `Failed to import reports for ${req.params.date}` });
+  }
+});
+
+router.get('/reports/file/:date', async (req, res) => {
+  try {
+    const date = req.params.date;
+    const result = await reportImportService.importReportsForDate(date);
+
+    // Raporları veritabanından al
+    const testResults = reportImportService.getRecentTestResults(100);
+    res.json({
+      importResult: result,
+      testResults
+    });
+  } catch (error) {
+    console.error(`Error getting reports for ${req.params.date}:`, error);
+    res.status(500).json({ error: `Failed to get reports for ${req.params.date}` });
   }
 });
 
