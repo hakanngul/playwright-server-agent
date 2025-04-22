@@ -30,6 +30,19 @@ import { GoBackStepStrategy } from './GoBackStepStrategy.js';
 import { GoForwardStepStrategy } from './GoForwardStepStrategy.js';
 import { RefreshStepStrategy } from './RefreshStepStrategy.js';
 
+// Additional strategies for complex interactions
+import { HoverAndClickMenuItemStepStrategy } from './HoverAndClickMenuItemStepStrategy.js';
+import { HoverAndVerifyTooltipStepStrategy } from './HoverAndVerifyTooltipStepStrategy.js';
+import { DragAndDropStepStrategy } from './DragAndDropStepStrategy.js';
+import { ClickByRoleStepStrategy } from './ClickByRoleStepStrategy.js';
+import { ClickByTextStepStrategy } from './ClickByTextStepStrategy.js';
+import { ClickByTestIdStepStrategy } from './ClickByTestIdStepStrategy.js';
+import { ClickInFrameStepStrategy } from './ClickInFrameStepStrategy.js';
+import { MaximizeWindowStepStrategy } from './MaximizeWindowStepStrategy.js';
+import { ClickFullscreenButtonStepStrategy } from './ClickFullscreenButtonStepStrategy.js';
+import { ExitFullScreenStepStrategy } from './ExitFullScreenStepStrategy.js';
+import { TakeElementScreenshotStepStrategy } from './TakeElementScreenshotStepStrategy.js';
+
 /**
  * Factory for creating step execution strategies
  */
@@ -70,6 +83,34 @@ export class StepStrategyFactory {
       case 'upload':
         return new UploadStepStrategy();
 
+      // Complex interaction actions
+      case 'hoverAndClickMenuItem':
+        return new HoverAndClickMenuItemStepStrategy();
+      case 'hoverAndVerifyTooltip':
+        return new HoverAndVerifyTooltipStepStrategy();
+      case 'dragAndDrop':
+        return new DragAndDropStepStrategy();
+
+      // Role-based actions
+      case 'clickByRole':
+        return new ClickByRoleStepStrategy();
+      case 'clickByText':
+        return new ClickByTextStepStrategy();
+      case 'clickByTestId':
+        return new ClickByTestIdStepStrategy();
+
+      // Frame actions
+      case 'clickInFrame':
+        return new ClickInFrameStepStrategy();
+
+      // Browser window actions
+      case 'maximizeWindow':
+        return new MaximizeWindowStepStrategy();
+      case 'clickFullscreenButton':
+        return new ClickFullscreenButtonStepStrategy();
+      case 'exitFullScreen':
+        return new ExitFullScreenStepStrategy();
+
       // Keyboard actions
       case 'pressEnter':
         return new PressEnterStepStrategy();
@@ -93,6 +134,8 @@ export class StepStrategyFactory {
       // Screenshot actions
       case 'takeScreenshot':
         return new TakeScreenshotStepStrategy();
+      case 'takeElementScreenshot':
+        return new TakeElementScreenshotStepStrategy();
 
       // Verification actions
       case 'verifyText':
