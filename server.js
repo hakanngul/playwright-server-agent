@@ -8,10 +8,6 @@ import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
 import { TestAgent } from './services/testAgent.js';
-import { BrowserPool } from './services/browser/index.js';
-
-// Global browser pool
-let browserPool = null;
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -73,7 +69,7 @@ function logSystemInfo() {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3003;
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -219,21 +215,9 @@ app.post('/api/test/run', async (req, res) => {
     const headless = testPlan.headless !== undefined ? testPlan.headless : true;
     console.log(`Headless mode from request: ${headless} (${headless ? 'invisible browser' : 'visible browser'})`);
 
-    // Get browser pool usage preference from test plan
-    const useBrowserPool = testPlan.useBrowserPool !== undefined ? testPlan.useBrowserPool : true;
-    console.log(`Browser pool usage from request: ${useBrowserPool}`);
-
-    // Browser pool kullanılıyorsa ve headless false ise uyarı ver
-    if (useBrowserPool && !headless) {
-      console.warn('WARNING: Browser pool is enabled but headless mode is false. This may cause issues with browser visibility.');
-      console.warn('For visible browsers, it is recommended to set useBrowserPool to false.');
-    }
-
     // Create test agent with browser preference and options
     const testAgent = new TestAgent(browserPreference, {
-      headless,
-      useBrowserPool,
-      browserPool: useBrowserPool ? browserPool : null
+      headless
     });
 
     // Step completion callback
@@ -308,72 +292,7 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// Add browser pool configuration endpoint
-app.get('/api/browser-pool/stats', (_req, res) => {
-  if (!browserPool) {
-    return res.json({
-      enabled: false,
-      message: 'Browser pool is not enabled'
-    });
-  }
 
-  const stats = browserPool.getStats();
-  res.json({
-    enabled: true,
-    stats
-  });
-});
-
-// Add browser pool configuration endpoint
-app.post('/api/browser-pool/config', (req, res) => {
-  const config = req.body;
-
-  if (!config) {
-    return res.status(400).json({
-      error: 'Invalid configuration format'
-    });
-  }
-
-  // Close existing pool if it exists
-  if (browserPool) {
-    browserPool.close().catch(e => console.error('Error closing browser pool:', e));
-  }
-
-  // Create new pool with provided configuration
-  const { enabled, maxSize, minSize, idleTimeout } = config;
-
-  if (enabled) {
-    browserPool = new BrowserPool({
-      maxSize: maxSize || 5,
-      minSize: minSize || 2,
-      idleTimeout: idleTimeout || 300000,
-      browserOptions: {
-        headless: true // Default to headless for pool browsers
-      }
-    });
-
-    // Initialize the pool
-    browserPool.initialize().catch(e => console.error('Error initializing browser pool:', e));
-
-    res.json({
-      success: true,
-      message: 'Browser pool configured and enabled',
-      config: {
-        enabled: true,
-        maxSize: maxSize || 5,
-        minSize: minSize || 2,
-        idleTimeout: idleTimeout || 300000
-      }
-    });
-  } else {
-    browserPool = null;
-    res.json({
-      success: true,
-      message: 'Browser pool disabled',
-      config: { enabled: false }
-    });
-  }
-});
 
 // Start server
 server.listen(PORT, () => {
@@ -383,9 +302,6 @@ server.listen(PORT, () => {
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
 
-  // Browser pool is disabled
-  browserPool = null;
-
-  console.log('Browser pool is disabled');
+  console.log('Browser pool feature has been removed');
   console.log('Ready to run tests!');
 });

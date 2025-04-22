@@ -4,7 +4,6 @@
  */
 
 import { BrowserManager } from './BrowserManager.js';
-import { BrowserPool } from './BrowserPool.js';
 import { StepExecutor } from './StepExecutor.js';
 import { JsonReporter } from '../reporting/index.js';
 
@@ -24,11 +23,8 @@ export class TestRunner {
     this.onTestCompleted = options.onTestCompleted || null;
 
     // Browser management options
-    this.useBrowserPool = options.useBrowserPool !== undefined ? options.useBrowserPool : false;
-    this.browserPool = options.browserPool || null;
     this.browserManager = options.browserManager || null;
     this.stepExecutor = null;
-    this.browserPoolId = null; // ID for browser acquired from pool
 
     // JSON reporter for test results
     this.jsonReporter = new JsonReporter({
@@ -36,7 +32,7 @@ export class TestRunner {
       screenshotsDir: this.screenshotsDir
     });
 
-    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
+    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}`);
   }
 
   /**
@@ -44,18 +40,7 @@ export class TestRunner {
    * @returns {Promise<void>}
    */
   async initialize() {
-    if (this.useBrowserPool && this.browserPool) {
-      // Use browser from pool
-      console.log(`Acquiring ${this.browserType} browser from pool`);
-      const { browserManager, id } = await this.browserPool.acquireBrowser(this.browserType, {
-        headless: this.headless
-      });
-      this.browserManager = browserManager;
-      this.browserPoolId = id;
-
-      // Update last used timestamp
-      this.browserManager.updateLastUsed();
-    } else if (!this.browserManager) {
+    if (!this.browserManager) {
       // Create new browser manager
       console.log(`Creating new ${this.browserType} browser`);
       this.browserManager = new BrowserManager(this.browserType, {
@@ -158,20 +143,7 @@ export class TestRunner {
   async close() {
     console.log('Closing test runner and releasing resources...');
 
-    if (this.useBrowserPool && this.browserPool && this.browserPoolId) {
-      // Release browser back to pool
-      console.log(`Releasing browser back to pool (ID: ${this.browserPoolId})`);
-      try {
-        await this.browserPool.releaseBrowser(this.browserPoolId);
-        console.log('Browser released back to pool successfully');
-      } catch (error) {
-        console.error('Error releasing browser back to pool:', error);
-      } finally {
-        this.browserManager = null;
-        this.browserPoolId = null;
-        this.stepExecutor = null;
-      }
-    } else if (this.browserManager) {
+    if (this.browserManager) {
       // Close browser directly
       try {
         await this.browserManager.close();
