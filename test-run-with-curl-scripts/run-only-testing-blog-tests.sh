@@ -2,7 +2,7 @@
 
 # Default values
 BROWSER="chromium"
-HEADLESS="false"
+HEADLESS="true"
 SERVER_URL="http://localhost:3002/api/test/run"
 TEST_PLAN_FILE="test-plans/basic-interactions.json"
 
