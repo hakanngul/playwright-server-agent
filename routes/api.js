@@ -364,4 +364,126 @@ router.get('/reports/:id/performance', async (req, res) => {
   }
 });
 
+// Web Vitals endpoint'i
+router.get('/reports/:id/web-vitals', async (req, res) => {
+  try {
+    const reportId = req.params.id;
+
+    // Önce test sonucunu al
+    let result;
+    try {
+      result = testResultService.getTestResultById(reportId);
+    } catch (err) {
+      console.warn('Error using testResultService:', err);
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    if (!result) {
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    // Web Vitals metriklerini çıkar
+    let performanceData = null;
+    let webVitals = null;
+
+    if (result.custom_data) {
+      try {
+        const customData = JSON.parse(result.custom_data);
+        if (customData.performance && customData.performance.webVitals) {
+          performanceData = customData.performance;
+          webVitals = customData.performance.webVitals;
+        }
+      } catch (parseErr) {
+        console.warn('Error parsing custom_data:', parseErr);
+      }
+    }
+
+    if (!webVitals) {
+      return res.status(404).json({ error: 'Web Vitals data not found for this test result' });
+    }
+
+    // Web Vitals skorlarını hesapla
+    const scores = {};
+
+    // FCP skoru
+    if (webVitals.fcp) {
+      if (webVitals.fcp < 1000) {
+        scores.fcp = { score: 'good', value: webVitals.fcp };
+      } else if (webVitals.fcp < 3000) {
+        scores.fcp = { score: 'needs-improvement', value: webVitals.fcp };
+      } else {
+        scores.fcp = { score: 'poor', value: webVitals.fcp };
+      }
+    }
+
+    // LCP skoru
+    if (webVitals.lcp) {
+      if (webVitals.lcp < 2500) {
+        scores.lcp = { score: 'good', value: webVitals.lcp };
+      } else if (webVitals.lcp < 4000) {
+        scores.lcp = { score: 'needs-improvement', value: webVitals.lcp };
+      } else {
+        scores.lcp = { score: 'poor', value: webVitals.lcp };
+      }
+    }
+
+    // CLS skoru
+    if (webVitals.cls !== undefined) {
+      if (webVitals.cls < 0.1) {
+        scores.cls = { score: 'good', value: webVitals.cls };
+      } else if (webVitals.cls < 0.25) {
+        scores.cls = { score: 'needs-improvement', value: webVitals.cls };
+      } else {
+        scores.cls = { score: 'poor', value: webVitals.cls };
+      }
+    }
+
+    // FID skoru
+    if (webVitals.fid) {
+      if (webVitals.fid < 100) {
+        scores.fid = { score: 'good', value: webVitals.fid };
+      } else if (webVitals.fid < 300) {
+        scores.fid = { score: 'needs-improvement', value: webVitals.fid };
+      } else {
+        scores.fid = { score: 'poor', value: webVitals.fid };
+      }
+    }
+
+    // TTFB skoru
+    if (webVitals.ttfb) {
+      if (webVitals.ttfb < 600) {
+        scores.ttfb = { score: 'good', value: webVitals.ttfb };
+      } else if (webVitals.ttfb < 1000) {
+        scores.ttfb = { score: 'needs-improvement', value: webVitals.ttfb };
+      } else {
+        scores.ttfb = { score: 'poor', value: webVitals.ttfb };
+      }
+    }
+
+    // Önerileri ekle
+    const recommendations = [];
+
+    if (performanceData.webVitalsAnalysis && performanceData.webVitalsAnalysis.recommendations) {
+      recommendations.push(...performanceData.webVitalsAnalysis.recommendations);
+    }
+
+    if (performanceData.networkAnalysis && performanceData.networkAnalysis.recommendations) {
+      recommendations.push(...performanceData.networkAnalysis.recommendations);
+    }
+
+    res.json({
+      id: result.id,
+      name: result.name,
+      url: result.steps && result.steps.length > 0 && result.steps[0].action_value,
+      timestamp: result.start_time,
+      webVitals,
+      scores,
+      recommendations: [...new Set(recommendations)] // Duplicate'leri kaldır
+    });
+  } catch (error) {
+    console.error(`Error getting Web Vitals for ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get Web Vitals for ${req.params.id}` });
+  }
+});
+
 export default router;

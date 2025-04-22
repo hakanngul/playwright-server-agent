@@ -8,6 +8,7 @@ import { StepExecutor } from './StepExecutor.js';
 import { JsonReporter } from '../reporting/index.js';
 import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
+import { PerformanceHelper, NetworkMonitor, PerformanceReporter } from '../performance/index.js';
 
 /**
  * Runs test plans
@@ -24,12 +25,24 @@ export class TestRunner {
     this.onStepCompleted = options.onStepCompleted || null;
     this.onTestCompleted = options.onTestCompleted || null;
 
+    // Performance monitoring options
+    this.collectPerformanceMetrics = options.collectPerformanceMetrics !== undefined ? options.collectPerformanceMetrics : true;
+    this.performanceReportsDir = options.performanceReportsDir || './data/performance-reports';
+
     // Dependencies (can be injected)
     this.browserManager = options.browserManager || null;
     this.stepExecutor = options.stepExecutor || null;
     this.jsonReporter = options.jsonReporter || new JsonReporter({
       reportsDir: options.reportsDir || './data/reports',
       screenshotsDir: this.screenshotsDir
+    });
+
+    // Performance monitoring components
+    this.performanceHelper = null;
+    this.networkMonitor = null;
+    this.performanceReporter = new PerformanceReporter({
+      reportsDir: this.performanceReportsDir,
+      thresholds: options.performanceThresholds
     });
 
     console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}`);
@@ -67,6 +80,16 @@ export class TestRunner {
         elementHelper,
         screenshotManager
       );
+
+      // Initialize performance monitoring components if enabled
+      if (this.collectPerformanceMetrics) {
+        this.performanceHelper = new PerformanceHelper(page);
+        this.networkMonitor = new NetworkMonitor(page);
+
+        // Set up performance observers
+        await this.performanceHelper.setupPerformanceObservers();
+        console.log('Performance monitoring initialized');
+      }
     }
 
     console.log('TestRunner initialized');
@@ -183,6 +206,54 @@ export class TestRunner {
       };
     }
 
+    // Collect Web Vitals and network metrics if enabled
+    if (this.collectPerformanceMetrics && this.performanceHelper && this.networkMonitor) {
+      try {
+        console.log('Collecting Web Vitals and network metrics...');
+
+        // Capture Web Vitals
+        const webVitals = await this.performanceHelper.captureWebVitals();
+        results.performance.webVitals = webVitals;
+
+        // Capture network metrics
+        const networkMetrics = this.networkMonitor.getNetworkStats();
+        results.performance.networkMetrics = networkMetrics;
+
+        // Analyze Web Vitals
+        if (webVitals && Object.keys(webVitals).length > 0) {
+          const webVitalsAnalysis = this.performanceHelper.analyzeWebVitals(webVitals);
+          results.performance.webVitalsAnalysis = webVitalsAnalysis;
+        }
+
+        // Analyze network performance
+        const networkAnalysis = this.networkMonitor.analyzeNetworkPerformance();
+        results.performance.networkAnalysis = networkAnalysis.analysis;
+
+        // Save performance report
+        const reportResult = this.performanceReporter.saveReport(testPlan.name, {
+          webVitals,
+          networkMetrics,
+          systemMetrics: {
+            memory: {
+              initial: results.performance.initialMemory,
+              final: results.performance.finalMemory,
+              diff: results.performance.memoryDiff
+            },
+            cpu: results.performance.cpuUsage
+          },
+          stepStats: results.performance.stepStats
+        });
+
+        // Add warnings to results
+        if (reportResult.warnings.length > 0) {
+          results.performance.warnings = reportResult.warnings;
+          console.warn(`Found ${reportResult.warnings.length} performance warnings`);
+        }
+      } catch (error) {
+        console.error('Error collecting performance metrics:', error.message);
+      }
+    }
+
     // Generate JSON report
     try {
       const reportId = await this.jsonReporter.generateReport(results);
@@ -234,6 +305,35 @@ export class TestRunner {
     console.log('\n===== Performance Metrics =====');
     console.log(`Test Duration: ${results.duration}ms`);
 
+    // Log Web Vitals if available
+    if (results.performance.webVitals) {
+      const webVitals = results.performance.webVitals;
+      console.log('\nWeb Vitals:');
+      if (webVitals.fcp) console.log(`First Contentful Paint (FCP): ${webVitals.fcp.toFixed(2)}ms`);
+      if (webVitals.lcp) console.log(`Largest Contentful Paint (LCP): ${webVitals.lcp.toFixed(2)}ms`);
+      if (webVitals.cls !== undefined) console.log(`Cumulative Layout Shift (CLS): ${webVitals.cls.toFixed(3)}`);
+      if (webVitals.fid) console.log(`First Input Delay (FID): ${webVitals.fid.toFixed(2)}ms`);
+      if (webVitals.ttfb) console.log(`Time to First Byte (TTFB): ${webVitals.ttfb.toFixed(2)}ms`);
+    }
+
+    // Log network metrics if available
+    if (results.performance.networkMetrics) {
+      const networkMetrics = results.performance.networkMetrics;
+      console.log('\nNetwork Metrics:');
+      console.log(`Total Requests: ${networkMetrics.totalRequests}`);
+      console.log(`Total Size: ${this.formatBytes(networkMetrics.totalSize)}`);
+      console.log(`Average Request Duration: ${networkMetrics.averageDuration.toFixed(2)}ms`);
+
+      if (networkMetrics.slowRequests && networkMetrics.slowRequests.length > 0) {
+        console.log(`Slow Requests (>1s): ${networkMetrics.slowRequests.length}`);
+      }
+
+      if (networkMetrics.failedRequests && networkMetrics.failedRequests.length > 0) {
+        console.log(`Failed Requests: ${networkMetrics.failedRequests.length}`);
+      }
+    }
+
+    // Log step statistics
     if (results.performance.stepStats) {
       const stats = results.performance.stepStats;
       console.log('\nStep Statistics:');
@@ -257,6 +357,14 @@ export class TestRunner {
       console.log(`RSS Diff: ${this.formatBytes(memDiff.rss)}`);
       console.log(`Heap Total Diff: ${this.formatBytes(memDiff.heapTotal)}`);
       console.log(`Heap Used Diff: ${this.formatBytes(memDiff.heapUsed)}`);
+    }
+
+    // Log performance warnings if any
+    if (results.performance.warnings && results.performance.warnings.length > 0) {
+      console.log('\nPerformance Warnings:');
+      results.performance.warnings.forEach(warning => {
+        console.log(`- ${warning.message}`);
+      });
     }
 
     console.log('===============================\n');
