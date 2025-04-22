@@ -5,7 +5,7 @@
 
 import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
-import path from 'path';
+
 import { StepStrategyFactory } from '../strategies/StepStrategyFactory.js';
 
 /**
@@ -38,6 +38,8 @@ export class StepExecutor {
     console.log(`Executing step ${index + 1}: ${step.action} on ${step.target || step.value}`);
 
     const startTime = Date.now();
+    const memoryBefore = process.memoryUsage();
+
     let result = {
       step: index + 1,
       action: step.action,
@@ -51,7 +53,15 @@ export class StepExecutor {
       screenshot: null,
       startTime: new Date().toISOString(),
       endTime: null,
-      duration: 0
+      duration: 0,
+      performance: {
+        memoryBefore: {
+          rss: memoryBefore.rss,
+          heapTotal: memoryBefore.heapTotal,
+          heapUsed: memoryBefore.heapUsed,
+          external: memoryBefore.external
+        }
+      }
     };
 
     try {
@@ -105,8 +115,36 @@ export class StepExecutor {
     }
 
     // Set end time and calculate duration
+    const endTime = Date.now();
+    const memoryAfter = process.memoryUsage();
+
     result.endTime = new Date().toISOString();
-    result.duration = Date.now() - startTime;
+    result.duration = endTime - startTime;
+
+    // Add memory usage after execution
+    result.performance.memoryAfter = {
+      rss: memoryAfter.rss,
+      heapTotal: memoryAfter.heapTotal,
+      heapUsed: memoryAfter.heapUsed,
+      external: memoryAfter.external
+    };
+
+    // Calculate memory differences
+    result.performance.memoryDiff = {
+      rss: memoryAfter.rss - memoryBefore.rss,
+      heapTotal: memoryAfter.heapTotal - memoryBefore.heapTotal,
+      heapUsed: memoryAfter.heapUsed - memoryBefore.heapUsed,
+      external: memoryAfter.external - memoryBefore.external
+    };
+
+    // Add CPU usage if available (Node.js v12.x+)
+    try {
+      if (typeof process.cpuUsage === 'function') {
+        result.performance.cpuUsage = process.cpuUsage();
+      }
+    } catch (e) {
+      console.warn('CPU usage metrics not available:', e.message);
+    }
 
     // Call the step completed callback if provided
     if (this.onStepCompleted) {

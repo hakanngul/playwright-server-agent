@@ -4,7 +4,7 @@
   "browserPreference": "chromium",
   "headless": false,
   "useBrowserPool": false,
-  "takeScreenshots": true,
+  "takeScreenshots": false,
   "steps": [
     {
       "action": "navigate",

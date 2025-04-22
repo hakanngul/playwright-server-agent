@@ -76,12 +76,25 @@ export class JsonReporter {
     const totalDuration = testResult.steps.reduce((sum, step) => sum + step.duration, 0);
     const averageStepDuration = totalSteps > 0 ? totalDuration / totalSteps : 0;
 
+    // Adım sürelerine göre en yavaş adımı bul
+    let slowestStepIndex = -1;
+    let maxDuration = 0;
+
+    testResult.steps.forEach((step, index) => {
+      if (step.duration > maxDuration) {
+        maxDuration = step.duration;
+        slowestStepIndex = index;
+      }
+    });
+
     return {
       totalSteps,
       successfulSteps,
       failedSteps,
       successRate,
-      averageStepDuration
+      averageStepDuration,
+      slowestStepIndex: slowestStepIndex >= 0 ? slowestStepIndex : null,
+      maxStepDuration: maxDuration
     };
   }
 
@@ -121,9 +134,11 @@ export class JsonReporter {
           success: step.success,
           error: step.error,
           duration: step.duration,
-          screenshot: step.screenshot
+          screenshot: step.screenshot,
+          performance: step.performance || null
         })),
         metrics,
+        performance: testResult.performance || null,
         tags: [] // Can be populated later
       };
 

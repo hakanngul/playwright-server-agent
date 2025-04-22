@@ -10,41 +10,6 @@ import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 
 /**
- * Interface for browser manager
- * @interface
- */
-class IBrowserManager {
-  /**
-   * Initializes the browser
-   * @returns {Promise<void>}
-   */
-  async initialize() {}
-
-  /**
-   * Gets the current page
-   * @returns {Page|null} Playwright page object
-   */
-  getPage() {}
-
-  /**
-   * Checks if the browser is initialized
-   * @returns {boolean} True if initialized
-   */
-  isInitialized() {}
-
-  /**
-   * Updates the last used timestamp
-   */
-  updateLastUsed() {}
-
-  /**
-   * Closes the browser and cleans up resources
-   * @returns {Promise<void>}
-   */
-  async close() {}
-}
-
-/**
  * Runs test plans
  */
 export class TestRunner {
@@ -124,6 +89,8 @@ export class TestRunner {
     }
 
     const startTime = Date.now();
+    const initialMemory = process.memoryUsage();
+
     const results = {
       name: testPlan.name,
       description: testPlan.description,
@@ -134,7 +101,18 @@ export class TestRunner {
       duration: 0,
       steps: [],
       success: false,
-      error: null
+      error: null,
+      performance: {
+        initialMemory: {
+          rss: initialMemory.rss,
+          heapTotal: initialMemory.heapTotal,
+          heapUsed: initialMemory.heapUsed,
+          external: initialMemory.external
+        },
+        finalMemory: null,
+        memoryDiff: null,
+        cpuUsage: null
+      }
     };
 
     try {
@@ -162,8 +140,48 @@ export class TestRunner {
     }
 
     // Calculate duration and set end time
+    const endTime = Date.now();
+    const finalMemory = process.memoryUsage();
+
     results.endTime = new Date().toISOString();
-    results.duration = Date.now() - startTime;
+    results.duration = endTime - startTime;
+
+    // Add final memory metrics
+    results.performance.finalMemory = {
+      rss: finalMemory.rss,
+      heapTotal: finalMemory.heapTotal,
+      heapUsed: finalMemory.heapUsed,
+      external: finalMemory.external
+    };
+
+    // Calculate memory differences
+    results.performance.memoryDiff = {
+      rss: finalMemory.rss - initialMemory.rss,
+      heapTotal: finalMemory.heapTotal - initialMemory.heapTotal,
+      heapUsed: finalMemory.heapUsed - initialMemory.heapUsed,
+      external: finalMemory.external - initialMemory.external
+    };
+
+    // Add CPU usage if available
+    try {
+      if (typeof process.cpuUsage === 'function') {
+        results.performance.cpuUsage = process.cpuUsage();
+      }
+    } catch (e) {
+      console.warn('CPU usage metrics not available:', e.message);
+    }
+
+    // Calculate performance statistics for steps
+    if (results.steps.length > 0) {
+      const stepDurations = results.steps.map(step => step.duration);
+      results.performance.stepStats = {
+        totalSteps: results.steps.length,
+        averageStepDuration: stepDurations.reduce((a, b) => a + b, 0) / stepDurations.length,
+        minStepDuration: Math.min(...stepDurations),
+        maxStepDuration: Math.max(...stepDurations),
+        slowestStepIndex: stepDurations.indexOf(Math.max(...stepDurations))
+      };
+    }
 
     // Generate JSON report
     try {
@@ -173,6 +191,9 @@ export class TestRunner {
     } catch (error) {
       console.error(`Error generating JSON report: ${error.message}`);
     }
+
+    // Log performance metrics
+    this.logPerformanceMetrics(results);
 
     // Call the test completed callback if provided
     if (this.onTestCompleted) {
@@ -201,5 +222,61 @@ export class TestRunner {
         this.stepExecutor = null;
       }
     }
+  }
+
+  /**
+   * Logs performance metrics to console
+   * @param {Object} results - Test results with performance metrics
+   */
+  logPerformanceMetrics(results) {
+    if (!results.performance) return;
+
+    console.log('\n===== Performance Metrics =====');
+    console.log(`Test Duration: ${results.duration}ms`);
+
+    if (results.performance.stepStats) {
+      const stats = results.performance.stepStats;
+      console.log('\nStep Statistics:');
+      console.log(`Total Steps: ${stats.totalSteps}`);
+      console.log(`Average Step Duration: ${stats.averageStepDuration.toFixed(2)}ms`);
+      console.log(`Min Step Duration: ${stats.minStepDuration}ms`);
+      console.log(`Max Step Duration: ${stats.maxStepDuration}ms`);
+
+      // Log slowest step
+      if (stats.slowestStepIndex >= 0 && results.steps[stats.slowestStepIndex]) {
+        const slowestStep = results.steps[stats.slowestStepIndex];
+        console.log(`\nSlowest Step: #${slowestStep.step} - ${slowestStep.action} (${slowestStep.duration}ms)`);
+        console.log(`Description: ${slowestStep.description || 'N/A'}`);
+      }
+    }
+
+    // Log memory usage
+    if (results.performance.memoryDiff) {
+      const memDiff = results.performance.memoryDiff;
+      console.log('\nMemory Usage (bytes):');
+      console.log(`RSS Diff: ${this.formatBytes(memDiff.rss)}`);
+      console.log(`Heap Total Diff: ${this.formatBytes(memDiff.heapTotal)}`);
+      console.log(`Heap Used Diff: ${this.formatBytes(memDiff.heapUsed)}`);
+    }
+
+    console.log('===============================\n');
+  }
+
+  /**
+   * Formats bytes to a human-readable string
+   * @param {number} bytes - Bytes to format
+   * @param {number} decimals - Number of decimal places
+   * @returns {string} Formatted string
+   */
+  formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+
+    const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 }

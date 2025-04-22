@@ -37,7 +37,11 @@ const testResultService = {
         testResult.video_path || null,
         testResult.trace_path || null,
         testResult.retry_count || 0,
-        testResult.custom_data ? JSON.stringify(testResult.custom_data) : null
+        testResult.custom_data ? JSON.stringify(testResult.custom_data) :
+        (testResult.performance ? JSON.stringify({
+          metrics: testResult.metrics || {},
+          performance: testResult.performance
+        }) : null)
       );
 
       const resultId = resultInfo.lastInsertRowid;

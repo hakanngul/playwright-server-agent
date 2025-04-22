@@ -175,6 +175,23 @@ router.get('/results/recent', (req, res) => {
     let results;
     try {
       results = testResultService.getAllTestResults({ limit });
+
+      // Performans metriklerini ekle
+      if (results && Array.isArray(results)) {
+        results = results.map(result => {
+          if (result.custom_data) {
+            try {
+              const customData = JSON.parse(result.custom_data);
+              if (customData.performance) {
+                result.performance = customData.performance;
+              }
+            } catch (parseErr) {
+              console.warn('Error parsing custom_data:', parseErr);
+            }
+          }
+          return result;
+        });
+      }
     } catch (err) {
       console.warn('Error using testResultService, falling back to resultService:', err);
       results = resultService.getRecentTestResults(limit);
@@ -203,6 +220,18 @@ router.get('/results/:id', (req, res) => {
     let result;
     try {
       result = testResultService.getTestResultById(req.params.id);
+
+      // Performans metriklerini ekle
+      if (result && result.custom_data) {
+        try {
+          const customData = JSON.parse(result.custom_data);
+          if (customData.performance) {
+            result.performance = customData.performance;
+          }
+        } catch (parseErr) {
+          console.warn('Error parsing custom_data:', parseErr);
+        }
+      }
     } catch (err) {
       console.warn('Error using testResultService:', err);
       // If there's an error with testResultService, try resultService
@@ -282,6 +311,56 @@ router.get('/reports/file/:date', async (req, res) => {
   } catch (error) {
     console.error(`Error getting reports for ${req.params.date}:`, error);
     res.status(500).json({ error: `Failed to get reports for ${req.params.date}` });
+  }
+});
+
+// Performans raporu endpoint'i
+router.get('/reports/:id/performance', async (req, res) => {
+  try {
+    const reportId = req.params.id;
+
+    // Önce test sonucunu al
+    let result;
+    try {
+      result = testResultService.getTestResultById(reportId);
+    } catch (err) {
+      console.warn('Error using testResultService:', err);
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    if (!result) {
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    // Performans metriklerini çıkar
+    let performanceData = null;
+
+    if (result.custom_data) {
+      try {
+        const customData = JSON.parse(result.custom_data);
+        if (customData.performance) {
+          performanceData = customData.performance;
+        }
+      } catch (parseErr) {
+        console.warn('Error parsing custom_data:', parseErr);
+      }
+    }
+
+    if (!performanceData) {
+      return res.status(404).json({ error: 'Performance data not found for this test result' });
+    }
+
+    res.json({
+      id: result.id,
+      name: result.name,
+      startTime: result.start_time,
+      endTime: result.end_time,
+      duration: result.duration_ms,
+      performance: performanceData
+    });
+  } catch (error) {
+    console.error(`Error getting performance report for ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to get performance report for ${req.params.id}` });
   }
 });
 
