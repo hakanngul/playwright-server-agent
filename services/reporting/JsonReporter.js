@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { testRunService, testResultService } from '../../database/index.js';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -23,14 +24,14 @@ export class JsonReporter {
   constructor(options = {}) {
     this.reportsDir = options.reportsDir || path.join(process.cwd(), 'data/reports');
     this.screenshotsDir = options.screenshotsDir || path.join(process.cwd(), 'screenshots');
-    
+
     // Ensure directories exist
     this.ensureDirectoryExists(this.reportsDir);
     this.ensureDirectoryExists(path.join(this.reportsDir, 'daily'));
     this.ensureDirectoryExists(path.join(this.reportsDir, 'weekly'));
     this.ensureDirectoryExists(path.join(this.reportsDir, 'monthly'));
   }
-  
+
   /**
    * Ensures a directory exists
    * @param {string} dir - Directory path
@@ -41,7 +42,7 @@ export class JsonReporter {
       fs.mkdirSync(dir, { recursive: true });
     }
   }
-  
+
   /**
    * Generates a unique ID for a report
    * @returns {string} Unique ID
@@ -50,7 +51,7 @@ export class JsonReporter {
   generateReportId() {
     return `test-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   }
-  
+
   /**
    * Formats a date as YYYY-MM-DD
    * @param {Date} date - Date to format
@@ -60,7 +61,7 @@ export class JsonReporter {
   formatDate(date = new Date()) {
     return date.toISOString().split('T')[0];
   }
-  
+
   /**
    * Calculates test metrics
    * @param {Object} testResult - Test result
@@ -74,7 +75,7 @@ export class JsonReporter {
     const successRate = totalSteps > 0 ? (successfulSteps / totalSteps) * 100 : 0;
     const totalDuration = testResult.steps.reduce((sum, step) => sum + step.duration, 0);
     const averageStepDuration = totalSteps > 0 ? totalDuration / totalSteps : 0;
-    
+
     return {
       totalSteps,
       successfulSteps,
@@ -83,7 +84,7 @@ export class JsonReporter {
       averageStepDuration
     };
   }
-  
+
   /**
    * Generates a report for a test result
    * @param {Object} testResult - Test result object
@@ -91,14 +92,14 @@ export class JsonReporter {
    */
   async generateReport(testResult) {
     console.log('Generating JSON report...');
-    
+
     try {
       // Generate a unique ID for the report
       const reportId = this.generateReportId();
-      
+
       // Calculate metrics
       const metrics = this.calculateMetrics(testResult);
-      
+
       // Create report object
       const report = {
         id: reportId,
@@ -125,34 +126,37 @@ export class JsonReporter {
         metrics,
         tags: [] // Can be populated later
       };
-      
+
       // Save report to daily directory
       const date = new Date(testResult.startTime);
       const formattedDate = this.formatDate(date);
       const dailyDir = path.join(this.reportsDir, 'daily', formattedDate);
       this.ensureDirectoryExists(dailyDir);
-      
+
       const reportPath = path.join(dailyDir, `${reportId}.json`);
       await fs.promises.writeFile(reportPath, JSON.stringify(report, null, 2));
-      
+
       console.log(`JSON report saved to: ${reportPath}`);
-      
+
       // Update daily summary
       await this.updateSummary('daily', date, report);
-      
+
       // Update weekly summary
       await this.updateSummary('weekly', date, report);
-      
+
       // Update monthly summary
       await this.updateSummary('monthly', date, report);
-      
+
+      // Veritabanına kaydet
+      await this.saveToDatabase(report, testResult);
+
       return reportId;
     } catch (error) {
       console.error(`Error generating JSON report: ${error.message}`);
       throw error;
     }
   }
-  
+
   /**
    * Updates a summary report
    * @param {string} period - Period (daily, weekly, monthly)
@@ -164,7 +168,7 @@ export class JsonReporter {
   async updateSummary(period, date, report) {
     try {
       let summaryDate;
-      
+
       if (period === 'daily') {
         summaryDate = this.formatDate(date);
       } else if (period === 'weekly') {
@@ -176,12 +180,12 @@ export class JsonReporter {
         // Get the first day of the month
         summaryDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       }
-      
+
       const summaryDir = path.join(this.reportsDir, period);
       this.ensureDirectoryExists(summaryDir);
-      
+
       const summaryPath = path.join(summaryDir, `${summaryDate}.json`);
-      
+
       let summary = {
         period,
         date: summaryDate,
@@ -193,13 +197,13 @@ export class JsonReporter {
         tests: [],
         browsers: {}
       };
-      
+
       // Load existing summary if it exists
       if (fs.existsSync(summaryPath)) {
         const summaryContent = await fs.promises.readFile(summaryPath, 'utf8');
         summary = JSON.parse(summaryContent);
       }
-      
+
       // Add test to summary
       summary.tests.push({
         id: report.id,
@@ -207,29 +211,98 @@ export class JsonReporter {
         success: report.success,
         duration: report.duration
       });
-      
+
       // Update browser count
       summary.browsers[report.browserType] = (summary.browsers[report.browserType] || 0) + 1;
-      
+
       // Update summary metrics
       summary.totalTests = summary.tests.length;
       summary.successfulTests = summary.tests.filter(test => test.success).length;
       summary.failedTests = summary.totalTests - summary.successfulTests;
-      summary.successRate = summary.totalTests > 0 
-        ? (summary.successfulTests / summary.totalTests) * 100 
+      summary.successRate = summary.totalTests > 0
+        ? (summary.successfulTests / summary.totalTests) * 100
         : 0;
-      
+
       const totalDuration = summary.tests.reduce((sum, test) => sum + test.duration, 0);
-      summary.averageDuration = summary.totalTests > 0 
-        ? totalDuration / summary.totalTests 
+      summary.averageDuration = summary.totalTests > 0
+        ? totalDuration / summary.totalTests
         : 0;
-      
+
       // Save updated summary
       await fs.promises.writeFile(summaryPath, JSON.stringify(summary, null, 2));
-      
+
       console.log(`Updated ${period} summary at: ${summaryPath}`);
     } catch (error) {
       console.error(`Error updating ${period} summary: ${error.message}`);
+    }
+  }
+
+  /**
+   * Veritabanına test sonucunu kaydeder
+   * @param {Object} report - JSON rapor nesnesi
+   * @param {Object} testResult - Test sonuç nesnesi
+   * @returns {Promise<void>}
+   * @private
+   */
+  async saveToDatabase(report, originalTestResult) {
+    try {
+      console.log('Saving test results to database...');
+
+      // 1. Test çalıştırmasını oluştur
+      const testRun = await testRunService.createTestRun({
+        name: report.name,
+        description: report.description,
+        status: report.success ? 'PASSED' : 'FAILED',
+        start_time: report.timestamp,
+        end_time: new Date(new Date(report.timestamp).getTime() + report.duration).toISOString(),
+        duration_ms: report.duration,
+        browser: report.browserType,
+        browser_version: null, // Tarayıcı sürümü bilgisi eklenebilir
+        operating_system: null, // İşletim sistemi bilgisi eklenebilir
+        viewport_size: null, // Görüntü alanı boyutu eklenebilir
+        environment: 'TEST', // Ortam bilgisi eklenebilir
+        created_by: 'system',
+        tags: report.tags
+      });
+
+      console.log(`Test run created with ID: ${testRun.id}`);
+
+      // 2. Test sonucunu oluştur
+      const testResult = await testResultService.createTestResult({
+        test_run_id: testRun.id,
+        test_suite_id: null, // Test suite ID'si eklenebilir
+        test_case_id: null, // Test case ID'si eklenebilir
+        status: report.success ? 'PASSED' : 'FAILED',
+        start_time: report.timestamp,
+        end_time: new Date(new Date(report.timestamp).getTime() + report.duration).toISOString(),
+        duration_ms: report.duration,
+        error_message: report.error,
+        error_stack: null,
+        screenshot_path: report.steps.find(step => step.screenshot)?.screenshot || null,
+        video_path: null,
+        trace_path: null,
+        retry_count: 0,
+        custom_data: JSON.stringify(report.metrics),
+        steps: report.steps.map((step, index) => ({
+          order_number: step.step,
+          description: step.description || `${step.action} on ${step.target || step.value}`,
+          status: step.success ? 'PASSED' : 'FAILED',
+          start_time: new Date(new Date(report.timestamp).getTime() + (index > 0 ? report.steps.slice(0, index).reduce((sum, s) => sum + s.duration, 0) : 0)).toISOString(),
+          end_time: new Date(new Date(report.timestamp).getTime() + (index > 0 ? report.steps.slice(0, index + 1).reduce((sum, s) => sum + s.duration, 0) : step.duration)).toISOString(),
+          duration_ms: step.duration,
+          screenshot_path: step.screenshot,
+          error_message: step.error,
+          expected_result: null,
+          actual_result: null,
+          action_type: step.action,
+          action_target: step.target,
+          action_value: step.value
+        }))
+      });
+
+      console.log(`Test result saved to database with ID: ${testResult.id}`);
+    } catch (error) {
+      console.error(`Error saving to database: ${error.message}`);
     }
   }
 }

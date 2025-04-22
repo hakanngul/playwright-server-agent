@@ -1,5 +1,5 @@
 import express from 'express';
-import { elementService, scenarioService, resultService } from '../database/index.js';
+import { elementService, scenarioService, resultService, testResultService } from '../database/index.js';
 import reportImportService from '../database/reportImportService.js';
 
 const router = express.Router();
@@ -170,7 +170,16 @@ router.get('/results', (req, res) => {
 router.get('/results/recent', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-    const results = resultService.getRecentTestResults(limit);
+
+    // Try to get results from the new testResultService first
+    let results;
+    try {
+      results = testResultService.getAllTestResults({ limit });
+    } catch (err) {
+      console.warn('Error using testResultService, falling back to resultService:', err);
+      results = resultService.getRecentTestResults(limit);
+    }
+
     res.json(results);
   } catch (error) {
     console.error('Error fetching recent test results:', error);
@@ -190,7 +199,20 @@ router.get('/results/stats', (req, res) => {
 
 router.get('/results/:id', (req, res) => {
   try {
-    const result = resultService.getTestResultById(req.params.id);
+    // Try to get result from the new testResultService first
+    let result;
+    try {
+      result = testResultService.getTestResultById(req.params.id);
+    } catch (err) {
+      console.warn('Error using testResultService:', err);
+      // If there's an error with testResultService, try resultService
+      try {
+        result = resultService.getTestResultById(req.params.id);
+      } catch (err2) {
+        console.warn('Error using resultService:', err2);
+      }
+    }
+
     if (!result) {
       return res.status(404).json({ error: 'Test result not found' });
     }

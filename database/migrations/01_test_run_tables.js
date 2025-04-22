@@ -33,7 +33,7 @@ export function createTestRunTables() {
 
   // TestResult tablosu
   db.exec(`
-    CREATE TABLE IF NOT EXISTS test_results_extended (
+    CREATE TABLE IF NOT EXISTS test_results (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       test_run_id INTEGER NOT NULL,
       test_suite_id INTEGER,
@@ -51,20 +51,22 @@ export function createTestRunTables() {
       custom_data TEXT, -- JSON formatında özel veriler
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (test_run_id) REFERENCES test_runs(id) ON DELETE CASCADE
+      FOREIGN KEY (test_run_id) REFERENCES test_runs(id) ON DELETE CASCADE,
+      FOREIGN KEY (test_suite_id) REFERENCES test_suites(id) ON DELETE SET NULL,
+      FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE SET NULL
     )
   `);
 
   // TestStep tablosu
   db.exec(`
-    CREATE TABLE IF NOT EXISTS test_steps_extended (
+    CREATE TABLE IF NOT EXISTS test_steps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       test_result_id INTEGER NOT NULL,
       test_case_id INTEGER,
       order_number INTEGER NOT NULL,
       description TEXT,
       status TEXT NOT NULL CHECK (status IN ('PASSED', 'FAILED', 'SKIPPED')),
-      start_time TIMESTAMP,
+      start_time TIMESTAMP NOT NULL,
       end_time TIMESTAMP,
       duration_ms INTEGER,
       screenshot_path TEXT,
@@ -76,32 +78,25 @@ export function createTestRunTables() {
       action_value TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (test_result_id) REFERENCES test_results_extended(id) ON DELETE CASCADE
+      FOREIGN KEY (test_result_id) REFERENCES test_results(id) ON DELETE CASCADE,
+      FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE SET NULL
     )
   `);
 
-  // İndeksler
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_test_runs_status ON test_runs(status);
-    CREATE INDEX IF NOT EXISTS idx_test_runs_browser ON test_runs(browser);
-    CREATE INDEX IF NOT EXISTS idx_test_runs_environment ON test_runs(environment);
-    CREATE INDEX IF NOT EXISTS idx_test_results_extended_status ON test_results_extended(status);
-    CREATE INDEX IF NOT EXISTS idx_test_results_extended_test_run_id ON test_results_extended(test_run_id);
-    CREATE INDEX IF NOT EXISTS idx_test_steps_extended_test_result_id ON test_steps_extended(test_result_id);
-  `);
+  // İndeksler daha sonra oluşturulacak
 
   console.log('Test run tables created successfully');
 }
 
 export function dropTestRunTables() {
   console.log('Dropping test run tables...');
-  
+
   // Tabloları ters sırada sil (foreign key kısıtlamaları nedeniyle)
   db.exec(`
-    DROP TABLE IF EXISTS test_steps_extended;
-    DROP TABLE IF EXISTS test_results_extended;
+    DROP TABLE IF EXISTS test_steps;
+    DROP TABLE IF EXISTS test_results;
     DROP TABLE IF EXISTS test_runs;
   `);
-  
+
   console.log('Test run tables dropped successfully');
 }

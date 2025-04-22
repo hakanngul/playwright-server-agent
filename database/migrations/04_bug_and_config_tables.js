@@ -24,7 +24,7 @@ export function createBugAndConfigTables() {
       external_bug_id TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (test_result_id) REFERENCES test_results_extended(id) ON DELETE SET NULL
+      FOREIGN KEY (test_result_id) REFERENCES test_results(id) ON DELETE SET NULL
     )
   `);
 
@@ -72,13 +72,13 @@ export function createBugAndConfigTables() {
 
 export function dropBugAndConfigTables() {
   console.log('Dropping bug and configuration tables...');
-  
+
   // Tabloları sil
   db.exec(`
     DROP TABLE IF EXISTS bugs;
     DROP TABLE IF EXISTS test_data;
     DROP TABLE IF EXISTS configurations;
   `);
-  
+
   console.log('Bug and configuration tables dropped successfully');
 }
