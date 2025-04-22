@@ -2,9 +2,9 @@
 
 # Default values
 BROWSER="chromium"
-HEADLESS="true"
+HEADLESS="false"
 SERVER_URL="http://localhost:3002/api/test/run"
-TEST_PLAN_FILE="./test-plans/test-plan.json"
+TEST_PLAN_FILE="test-plans/basic-interactions.json"
 
 # Firefox için özel uyarı
 FIREFOX_WARNING="Firefox tarayıcısı için tam ekran modu devre dışı bırakıldı. Normal pencere boyutunda çalışacak."
@@ -15,10 +15,10 @@ function show_usage {
   echo "Options:"
   echo "  -b, --browser BROWSER    Specify browser (chromium, firefox, edge) [default: chromium]"
   echo "  -h, --headless BOOL      Run in headless mode (true, false) [default: false]"
-  echo "  -f, --file FILE          Test plan file to use [default: test-plan.json]"
+  echo "  -t, --test TEST_NAME     Test to run (basic, advanced, verification, navigation, selectors, iframe, comprehensive) [default: basic]"
   echo "  --help                   Show this help message"
   echo ""
-  echo "Example: $0 -b firefox -h true"
+  echo "Example: $0 -b firefox -h true -t comprehensive"
 }
 
 # Parse command line arguments
@@ -32,8 +32,35 @@ while [[ $# -gt 0 ]]; do
       HEADLESS="$2"
       shift 2
       ;;
-    -f|--file)
-      TEST_PLAN_FILE="$2"
+    -t|--test)
+      TEST_NAME="$2"
+      case "$TEST_NAME" in
+        basic)
+          TEST_PLAN_FILE="test-plans/basic-interactions.json"
+          ;;
+        advanced)
+          TEST_PLAN_FILE="test-plans/advanced-interactions.json"
+          ;;
+        verification)
+          TEST_PLAN_FILE="test-plans/verification-tests.json"
+          ;;
+        navigation)
+          TEST_PLAN_FILE="test-plans/navigation-tests.json"
+          ;;
+        selectors)
+          TEST_PLAN_FILE="test-plans/special-selectors.json"
+          ;;
+        iframe)
+          TEST_PLAN_FILE="test-plans/iframe-tests.json"
+          ;;
+        comprehensive)
+          TEST_PLAN_FILE="test-plans/comprehensive-test.json"
+          ;;
+        *)
+          echo "Error: Invalid test name '$TEST_NAME'. Must be one of: basic, advanced, verification, navigation, selectors, iframe, comprehensive"
+          exit 1
+          ;;
+      esac
       shift 2
       ;;
     --help)
@@ -74,7 +101,7 @@ cat "$TEST_PLAN_FILE" | sed "s/\"browserPreference\": \"[^\"]*\"/\"browserPrefer
   sed "s/\"headless\": [^,}]*/\"headless\": $HEADLESS/" > "$TEMP_FILE"
 
 echo "==================================================="
-echo "Running Google Search Test with the following settings:"
+echo "Running Only Testing Blog Test with the following settings:"
 echo "Browser: $BROWSER"
 echo "Headless: $HEADLESS"
 echo "Test Plan: $TEST_PLAN_FILE"

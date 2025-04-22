@@ -1,0 +1,81 @@
+{
+  "name": "Temel Etkileşimler Testi",
+  "description": "Only Testing Blog üzerinde temel etkileşimleri test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/01/textbox.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "type",
+      "target": "text1",
+      "strategy": "id",
+      "value": "Test Kullanıcısı",
+      "description": "First name alanına metin yaz"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "click",
+      "target": "check1",
+      "strategy": "id",
+      "description": "İşaretli checkbox'ı tıkla (işareti kaldır)"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "click",
+      "target": "check2",
+      "strategy": "id",
+      "description": "İşaretsiz checkbox'ı tıkla (işaretle)"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "click",
+      "target": "radio1",
+      "strategy": "id",
+      "description": "Radio button'ı tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "select",
+      "target": "Carlist",
+      "strategy": "id",
+      "value": "BMW Car",
+      "description": "Dropdown'dan BMW seç"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Temel etkileşimler sonrası ekran görüntüsü al"
+    }
+  ]
+}

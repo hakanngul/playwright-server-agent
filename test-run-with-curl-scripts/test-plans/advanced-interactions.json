@@ -1,0 +1,82 @@
+{
+  "name": "Gelişmiş Etkileşimler Testi",
+  "description": "Only Testing Blog üzerinde gelişmiş etkileşimleri test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/09/selectable.html",
+      "description": "Selectable test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "doubleClick",
+      "target": "//button[contains(text(), 'Double-Click Me')]",
+      "strategy": "xpath",
+      "description": "Double-Click butonuna çift tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Alert'in görünmesini bekle"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Alert'i kapat"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "hover",
+      "target": "//img[@title='Test Image To Verify Tooltip']",
+      "strategy": "xpath",
+      "description": "Tooltip görmek için resmin üzerine gel"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Tooltip'in görünmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Tooltip görünümünün ekran görüntüsünü al"
+    },
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/09/drag-and-drop.html",
+      "description": "Drag and Drop test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "dragAndDrop",
+      "source": "dragdiv",
+      "sourceStrategy": "id",
+      "target": "dropdiv",
+      "targetStrategy": "id",
+      "description": "Drag and Drop işlemi gerçekleştir"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Drag and Drop işleminin tamamlanmasını bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Drag and Drop sonrası ekran görüntüsü al"
+    }
+  ]
+}

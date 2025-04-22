@@ -1,0 +1,98 @@
+{
+  "name": "Navigasyon İşlemleri Testi",
+  "description": "Only Testing Blog üzerinde navigasyon işlemlerini test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/",
+      "description": "Ana sayfaya git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Ana sayfa ekran görüntüsü al"
+    },
+    {
+      "action": "click",
+      "target": "//a[contains(text(), 'Playwright Practice Page')]",
+      "strategy": "xpath",
+      "description": "Playwright Practice sayfasına git"
+    },
+    {
+      "action": "waitForNavigation",
+      "description": "Sayfa yönlendirmesini bekle"
+    },
+    {
+      "action": "waitForURL",
+      "value": "https://only-testing-blog.blogspot.com/2025/04/playwright-practice-page.html",
+      "description": "URL değişimini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Playwright Practice sayfası ekran görüntüsü al"
+    },
+    {
+      "action": "click",
+      "target": "//a[@id='homePage']",
+      "strategy": "xpath",
+      "description": "Ana sayfaya dön"
+    },
+    {
+      "action": "waitForNavigation",
+      "description": "Sayfa yönlendirmesini bekle"
+    },
+    {
+      "action": "waitForURL",
+      "value": "https://only-testing-blog.blogspot.com/",
+      "description": "URL değişimini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Ana sayfaya dönüş ekran görüntüsü al"
+    },
+    {
+      "action": "goBack",
+      "description": "Geri git"
+    },
+    {
+      "action": "waitForNavigation",
+      "description": "Sayfa yönlendirmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Geri gitme sonrası ekran görüntüsü al"
+    },
+    {
+      "action": "goForward",
+      "description": "İleri git"
+    },
+    {
+      "action": "waitForNavigation",
+      "description": "Sayfa yönlendirmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "İleri gitme sonrası ekran görüntüsü al"
+    },
+    {
+      "action": "refresh",
+      "description": "Sayfayı yenile"
+    },
+    {
+      "action": "waitForNavigation",
+      "description": "Sayfa yenilenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Sayfa yenileme sonrası ekran görüntüsü al"
+    }
+  ]
+}

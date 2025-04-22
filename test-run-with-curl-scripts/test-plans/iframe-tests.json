@@ -1,0 +1,80 @@
+{
+  "name": "İframe İşlemleri Testi",
+  "description": "Only Testing Blog üzerinde iframe işlemlerini test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2015/01/iframe1.html",
+      "description": "İframe test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "type",
+      "target": "text1",
+      "strategy": "id",
+      "value": "Ana Sayfa Metin",
+      "description": "Ana sayfadaki metin kutusuna yaz"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "clickInFrame",
+      "frameSelector": "frame1",
+      "frameStrategy": "id",
+      "target": "//input[@type='checkbox'][1]",
+      "strategy": "xpath",
+      "description": "İlk iframe içindeki checkbox'a tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "İlk iframe işlemi sonrası ekran görüntüsü al"
+    },
+    {
+      "action": "clickInFrame",
+      "frameSelector": "frame2",
+      "frameStrategy": "id",
+      "target": "//input[@id='text1']",
+      "strategy": "xpath",
+      "description": "İkinci iframe içindeki metin kutusuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "typeInFrame",
+      "frameSelector": "frame2",
+      "frameStrategy": "id",
+      "target": "//input[@id='text1']",
+      "strategy": "xpath",
+      "value": "İframe İçi Metin",
+      "description": "İkinci iframe içindeki metin kutusuna yaz"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "İkinci iframe işlemi sonrası ekran görüntüsü al"
+    }
+  ]
+}

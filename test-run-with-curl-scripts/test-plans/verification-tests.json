@@ -1,0 +1,97 @@
+{
+  "name": "Doğrulama İşlemleri Testi",
+  "description": "Only Testing Blog üzerinde doğrulama işlemlerini test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2025/04/playwright-practice-page.html",
+      "description": "Playwright Practice sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "verifyTitle",
+      "value": "Only Testing",
+      "description": "Sayfa başlığını doğrula"
+    },
+    {
+      "action": "verifyText",
+      "target": "//h1[contains(text(), 'Playwright Practice Page')]",
+      "strategy": "xpath",
+      "value": "Playwright Practice Page",
+      "description": "Sayfa başlığı metnini doğrula"
+    },
+    {
+      "action": "click",
+      "target": "clickBtn",
+      "strategy": "id",
+      "description": "Click Me butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "clickOutput",
+      "strategy": "id",
+      "value": "Button was clicked!",
+      "description": "Tıklama sonrası çıktıyı doğrula"
+    },
+    {
+      "action": "type",
+      "target": "textInput",
+      "strategy": "id",
+      "value": "Playwright Test",
+      "description": "Metin kutusuna yaz"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "textOutput",
+      "strategy": "id",
+      "value": "You typed: Playwright Test",
+      "description": "Yazma sonrası çıktıyı doğrula"
+    },
+    {
+      "action": "select",
+      "target": "dropdown",
+      "strategy": "id",
+      "value": "option2",
+      "description": "Dropdown'dan Option 2'yi seç"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "dropdownOutput",
+      "strategy": "id",
+      "value": "Selected: option2",
+      "description": "Seçim sonrası çıktıyı doğrula"
+    },
+    {
+      "action": "verifyURL",
+      "value": "https://only-testing-blog.blogspot.com/2025/04/playwright-practice-page.html",
+      "description": "URL'i doğrula"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Doğrulama testleri sonrası ekran görüntüsü al"
+    }
+  ]
+}

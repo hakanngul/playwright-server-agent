@@ -1,0 +1,80 @@
+{
+  "name": "Özel Seçiciler Testi",
+  "description": "Only Testing Blog üzerinde özel seçicileri test eder",
+  "browserPreference": "chromium",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2025/04/playwright-practice-page.html",
+      "description": "Playwright Practice sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "clickByRole",
+      "role": "button",
+      "options": {
+        "name": "Click Me"
+      },
+      "description": "Role ile Click Me butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "clickOutput",
+      "strategy": "id",
+      "value": "Button was clicked!",
+      "description": "Tıklama sonrası çıktıyı doğrula"
+    },
+    {
+      "action": "clickByText",
+      "text": "Double Click Me",
+      "description": "Metne göre Double Click butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Alert'i kapat"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "clickByText",
+      "text": "Page 2",
+      "description": "Metne göre Page 2 butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "pageContent",
+      "strategy": "id",
+      "value": "Page 2 Content",
+      "description": "Sayfa içeriğini doğrula"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Özel seçiciler sonrası ekran görüntüsü al"
+    }
+  ]
+}
