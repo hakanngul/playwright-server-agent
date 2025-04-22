@@ -9,6 +9,7 @@ import { JsonReporter } from '../reporting/index.js';
 import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import { PerformanceHelper, NetworkMonitor, PerformanceReporter } from '../performance/index.js';
+import { BrowserPoolManager } from './BrowserPoolManager.js';
 
 /**
  * Runs test plans
@@ -29,6 +30,11 @@ export class TestRunner {
     this.collectPerformanceMetrics = options.collectPerformanceMetrics !== undefined ? options.collectPerformanceMetrics : true;
     this.performanceReportsDir = options.performanceReportsDir || './data/performance-reports';
 
+    // Browser pool options
+    this.useBrowserPool = options.useBrowserPool !== undefined ? options.useBrowserPool : true;
+    this.browserPoolManager = options.browserPoolManager || null;
+    this.acquiredBrowser = null;
+
     // Dependencies (can be injected)
     this.browserManager = options.browserManager || null;
     this.stepExecutor = options.stepExecutor || null;
@@ -45,7 +51,7 @@ export class TestRunner {
       thresholds: options.performanceThresholds
     });
 
-    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}`);
+    console.log(`TestRunner created with browserType: ${this.browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
   }
 
   /**
@@ -53,8 +59,35 @@ export class TestRunner {
    * @returns {Promise<void>}
    */
   async initialize() {
-    if (!this.browserManager) {
-      // Create new browser manager
+    if (this.useBrowserPool) {
+      // Use browser pool
+      if (!this.browserPoolManager) {
+        console.log('Creating browser pool manager');
+        this.browserPoolManager = new BrowserPoolManager({
+          maxSize: 5,
+          minSize: 1,
+          headless: this.headless
+        });
+
+        await this.browserPoolManager.initialize();
+      }
+
+      if (!this.acquiredBrowser) {
+        console.log(`Acquiring ${this.browserType} browser from pool with headless: ${this.headless}...`);
+        this.acquiredBrowser = await this.browserPoolManager.acquireBrowser(this.browserType, { headless: this.headless });
+        this.browserManager = this.acquiredBrowser.manager;
+        console.log(`Acquired browser ${this.acquiredBrowser.id} from pool with headless: ${this.browserManager.headless}`);
+
+        // Browser zaten initialize edilmiş olmalı, tekrar initialize etmeye gerek yok
+        if (!this.browserManager.isInitialized()) {
+          console.warn('Browser manager is not initialized, initializing now...');
+          await this.browserManager.initialize();
+        } else {
+          console.log(`Using already initialized browser from pool with headless: ${this.browserManager.headless}`);
+        }
+      }
+    } else if (!this.browserManager) {
+      // Create new browser manager directly (no pool)
       console.log(`Creating new ${this.browserType} browser`);
       this.browserManager = new BrowserManager(this.browserType, {
         headless: this.headless
@@ -66,33 +99,53 @@ export class TestRunner {
 
     // Create step executor if not provided
     if (!this.stepExecutor) {
-      const page = this.browserManager.getPage();
-
-      // Create helper components
-      const elementHelper = new ElementHelper(page);
-      const screenshotManager = new ScreenshotManager(page, this.screenshotsDir);
-
-      // Create step executor with dependencies
-      this.stepExecutor = new StepExecutor(
-        page,
-        this.screenshotsDir,
-        this.onStepCompleted,
-        elementHelper,
-        screenshotManager
-      );
-
-      // Initialize performance monitoring components if enabled
-      if (this.collectPerformanceMetrics) {
-        this.performanceHelper = new PerformanceHelper(page);
-        this.networkMonitor = new NetworkMonitor(page);
-
-        // Set up performance observers
-        await this.performanceHelper.setupPerformanceObservers();
-        console.log('Performance monitoring initialized');
-      }
+      await this.initializeStepExecutor();
     }
 
     console.log('TestRunner initialized');
+  }
+
+  /**
+   * Initializes the step executor and performance monitoring components
+   * @returns {Promise<void>}
+   * @private
+   */
+  async initializeStepExecutor() {
+    if (!this.browserManager || !this.browserManager.isInitialized()) {
+      console.warn('Browser manager not initialized, cannot initialize step executor');
+      return;
+    }
+
+    const page = this.browserManager.getPage();
+    if (!page) {
+      console.warn('Browser page not available, cannot initialize step executor');
+      return;
+    }
+
+    // Create helper components
+    const elementHelper = new ElementHelper(page);
+    const screenshotManager = new ScreenshotManager(page, this.screenshotsDir);
+
+    // Create step executor with dependencies
+    this.stepExecutor = new StepExecutor(
+      page,
+      this.screenshotsDir,
+      this.onStepCompleted,
+      elementHelper,
+      screenshotManager
+    );
+
+    // Initialize performance monitoring components if enabled
+    if (this.collectPerformanceMetrics) {
+      this.performanceHelper = new PerformanceHelper(page);
+      this.networkMonitor = new NetworkMonitor(page);
+
+      // Set up performance observers
+      await this.performanceHelper.setupPerformanceObservers();
+      console.log('Performance monitoring initialized');
+    }
+
+    console.log('Step executor initialized successfully');
   }
 
   /**
@@ -101,14 +154,51 @@ export class TestRunner {
    * @returns {Promise<Object>} Test results
    */
   async runTest(testPlan) {
-    console.log(`Running test plan: ${testPlan.name}`);
+    console.log(`Running test plan: ${testPlan.name} with browser type: ${this.browserType}`);
 
     // Initialize if not already initialized
     if (!this.browserManager || !this.browserManager.isInitialized()) {
+      console.log('Browser manager not initialized, initializing now...');
       await this.initialize();
     } else if (this.browserManager) {
       // Update last used timestamp
       this.browserManager.updateLastUsed();
+      console.log(`Using existing browser manager (initialized: ${this.browserManager.isInitialized()}, headless: ${this.browserManager.headless})`);
+
+      // Headless modu farklıysa, tarayıcıyı yeniden başlat
+      if (this.browserManager.headless !== this.headless) {
+        console.log(`Headless mode mismatch (current: ${this.browserManager.headless}, requested: ${this.headless}), reinitializing browser...`);
+
+        // Tarayıcı havuzundan alındıysa, havuza geri ver ve yeni bir tarayıcı al
+        if (this.useBrowserPool && this.browserPoolManager && this.acquiredBrowser) {
+          console.log(`Releasing browser ${this.acquiredBrowser.id} back to pool due to headless mode change...`);
+          await this.browserPoolManager.releaseBrowser(this.acquiredBrowser.id, this.browserType);
+          this.acquiredBrowser = null;
+          this.browserManager = null;
+
+          // Yeni bir tarayıcı al
+          console.log(`Acquiring new browser with headless: ${this.headless}...`);
+          this.acquiredBrowser = await this.browserPoolManager.acquireBrowser(this.browserType, { headless: this.headless });
+          this.browserManager = this.acquiredBrowser.manager;
+          console.log(`Acquired browser ${this.acquiredBrowser.id} from pool with headless: ${this.browserManager.headless}`);
+        } else {
+          // Havuz kullanılmıyorsa, mevcut tarayıcıyı kapat ve yeniden başlat
+          await this.browserManager.close();
+          this.browserManager.headless = this.headless;
+          await this.browserManager.initialize();
+          console.log(`Reinitialized browser with headless: ${this.headless}`);
+        }
+
+        // StepExecutor'u yeniden oluştur
+        this.stepExecutor = null;
+        await this.initializeStepExecutor();
+      }
+
+      // Tarayıcı havuzundan alındıysa, havuz istatistiklerini göster
+      if (this.useBrowserPool && this.browserPoolManager) {
+        const stats = this.browserPoolManager.getStats();
+        console.log(`Browser pool stats: ${stats.overall.activeBrowsers}/${stats.overall.totalBrowsers} browsers active`);
+      }
     }
 
     const startTime = Date.now();
@@ -310,7 +400,21 @@ export class TestRunner {
   async close() {
     console.log('Closing test runner and releasing resources...');
 
-    if (this.browserManager) {
+    if (this.useBrowserPool && this.acquiredBrowser) {
+      // Release browser back to pool
+      try {
+        if (this.browserPoolManager) {
+          await this.browserPoolManager.releaseBrowser(this.acquiredBrowser.id, this.browserType);
+          console.log(`Browser ${this.acquiredBrowser.id} released back to pool`);
+        }
+      } catch (error) {
+        console.error('Error releasing browser to pool:', error);
+      } finally {
+        this.acquiredBrowser = null;
+        this.browserManager = null;
+        this.stepExecutor = null;
+      }
+    } else if (this.browserManager) {
       // Close browser directly
       try {
         await this.browserManager.close();

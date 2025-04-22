@@ -7,7 +7,7 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
-import { TestAgent } from './services/testAgent.js';
+import { TestAgent, BrowserPoolManager } from './services/browser/index.js';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -217,8 +217,12 @@ app.post('/api/test/run', async (req, res) => {
 
     // Create test agent with browser preference and options
     const testAgent = new TestAgent(browserPreference, {
-      headless
+      headless,
+      useBrowserPool: true,
+      browserPoolManager: globalBrowserPoolManager // Use the global browser pool manager
     });
+
+    console.log(`Created test agent with browser: ${browserPreference}, headless: ${headless}, using browser pool: true`);
 
     // Step completion callback
     testAgent.setStepCompletedCallback((result) => {
@@ -242,12 +246,16 @@ app.post('/api/test/run', async (req, res) => {
     // Run the test
     const results = await testAgent.runTest(testPlan);
 
-    // Make sure to close the browser
+    // Tarayıcıyı havuza geri ver
     try {
-      await testAgent.close();
-      console.log('Browser closed after test completion');
+      if (testAgent) {
+        // BrowserPool kullanılıyorsa, tarayıcıyı havuza geri ver
+        // Tarayıcıyı kapatma, sadece havuza geri ver
+        await testAgent.close();
+        console.log('Browser released back to pool after test completion');
+      }
     } catch (error) {
-      console.error('Error closing browser after test:', error);
+      console.error('Error releasing browser after test:', error);
     }
 
     console.log('Test completed, sending results to client');
@@ -294,14 +302,81 @@ app.use((err, _req, res, _next) => {
 
 
 
+// Create global browser pool manager
+const headlessMode = process.env.HEADLESS !== 'false';
+console.log(`Server starting with default headless mode: ${headlessMode} (${headlessMode ? 'invisible browsers' : 'visible browsers'})`);
+
+const globalBrowserPoolManager = new BrowserPoolManager({
+  maxSize: 2, // Maksimum 2 tarayıcı (her tarayıcı tipi için)
+  minSize: 1,  // En az 1 tarayıcı hazır beklesin (her tarayıcı tipi için)
+  idleTimeout: 60000, // 1 dakika sonra kullanılmayan tarayıcıları kapat
+  headless: headlessMode // Varsayılan olarak true, HEADLESS=false ise false olur
+});
+
+console.log(`Global browser pool manager created with headless: ${headlessMode} (${headlessMode ? 'invisible browsers' : 'visible browsers'})`);
+
+// Initialize browser pool
+async function initializeBrowserPool() {
+  try {
+    console.log('Initializing global browser pool...');
+    await globalBrowserPoolManager.initialize();
+    console.log('Global browser pool initialized successfully');
+
+    // Warm up the pools
+    await globalBrowserPoolManager.warmup();
+    console.log('Browser pools warmed up');
+  } catch (error) {
+    console.error('Failed to initialize browser pool:', error);
+  }
+}
+
 // Start server
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`\n=== Playwright-Based Test Runner Server ===`);
   console.log(`Server running on port ${PORT}`);
   console.log(`API server running at http://localhost:${PORT}`);
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
 
-  console.log('Browser pool feature has been removed');
+  // Initialize browser pool
+  await initializeBrowserPool();
+
+  console.log('Browser pool feature is enabled');
   console.log('Ready to run tests!');
+});
+
+// Add browser pool stats endpoint
+app.get('/api/browser-pool/stats', (_req, res) => {
+  const stats = globalBrowserPoolManager.getStats();
+  res.json(stats);
+});
+
+// Add browser pool management endpoints
+app.post('/api/browser-pool/warmup', async (_req, res) => {
+  try {
+    await globalBrowserPoolManager.warmup();
+    res.json({ success: true, message: 'Browser pools warmed up' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\nShutting down server...');
+
+  // Close browser pool
+  try {
+    console.log('Closing browser pool...');
+    await globalBrowserPoolManager.close();
+    console.log('Browser pool closed');
+  } catch (error) {
+    console.error('Error closing browser pool:', error);
+  }
+
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

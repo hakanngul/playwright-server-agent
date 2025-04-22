@@ -1,0 +1,56 @@
+{
+  "name": "Form Doldurma Testi",
+  "browser": "chromium",
+  "headless": false,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/05/form.html",
+      "description": "Form sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "form-sayfasi",
+      "description": "Form sayfası ekran görüntüsü al"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='FirstName']",
+      "value": "Test Kullanıcı",
+      "description": "İsim alanını doldur"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='LastName']",
+      "value": "Soyadı",
+      "description": "Soyisim alanını doldur"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='EmailID']",
+      "value": "test@example.com",
+      "description": "Email alanını doldur"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='MobNo']",
+      "value": "5551234567",
+      "description": "Telefon alanını doldur"
+    },
+    {
+      "action": "click",
+      "selector": "input[name='male']",
+      "description": "Cinsiyet seç"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "form-dolduruldu",
+      "description": "Doldurulmuş form ekran görüntüsü al"
+    }
+  ]
+}

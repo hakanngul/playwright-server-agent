@@ -9,6 +9,7 @@ import { ElementHelper } from './ElementHelper.js';
 import { ScreenshotManager } from './ScreenshotManager.js';
 import { StepExecutor } from './StepExecutor.js';
 import { TestRunner } from './TestRunner.js';
+import { BrowserPoolManager } from './BrowserPoolManager.js';
 import { applyAntiDetectionMeasures } from './AntiDetection.js';
 
 /**
@@ -31,10 +32,23 @@ export class TestAgent {
     this.onStepCompleted = null; // Callback for step completion
     this.initialized = false;
 
+    // Browser pool options
+    this.useBrowserPool = options.useBrowserPool !== undefined ? options.useBrowserPool : true;
+    this.browserPoolManager = null;
+
     // Create internal components
     this._testRunner = null;
 
-    console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}`);
+    console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}, useBrowserPool: ${this.useBrowserPool}`);
+
+    // Initialize browser pool manager if enabled
+    if (this.useBrowserPool) {
+      this.browserPoolManager = new BrowserPoolManager({
+        maxSize: options.maxPoolSize || 5,
+        minSize: options.minPoolSize || 1,
+        headless: this.headless
+      });
+    }
   }
 
 
@@ -50,12 +64,19 @@ export class TestAgent {
 
     console.log(`Initializing browser (type: ${this.browserType})...`);
     try {
+      // Initialize browser pool if enabled
+      if (this.useBrowserPool && this.browserPoolManager) {
+        await this.browserPoolManager.initialize();
+      }
+
       // Create and initialize test runner
       this._testRunner = new TestRunner({
         browserType: this.browserType,
         headless: this.headless,
         screenshotsDir: this.screenshotsDir,
-        onStepCompleted: this.onStepCompleted
+        onStepCompleted: this.onStepCompleted,
+        useBrowserPool: this.useBrowserPool,
+        browserPoolManager: this.browserPoolManager
       });
 
       await this._testRunner.initialize();
@@ -82,8 +103,14 @@ export class TestAgent {
   async runTest(testPlan) {
     if (!this.initialized) {
       await this.initialize();
+    } else {
+      // Tarayıcı zaten başlatılmış, son kullanım zamanını güncelle
+      if (this._testRunner && this._testRunner.browserManager) {
+        this._testRunner.browserManager.updateLastUsed();
+      }
     }
 
+    console.log(`Running test plan: ${testPlan.name} with browser type: ${this.browserType}`);
     return await this._testRunner.runTest(testPlan);
   }
 
@@ -158,6 +185,10 @@ export class TestAgent {
       this.page = null;
       this.initialized = false;
     }
+
+    // Note: We don't close the browser pool manager here
+    // It will be kept alive for the lifetime of the server
+    // to allow reusing browsers across requests
   }
 
 
@@ -183,5 +214,6 @@ export {
   ScreenshotManager,
   StepExecutor,
   TestRunner,
+  BrowserPoolManager,
   applyAntiDetectionMeasures
 };

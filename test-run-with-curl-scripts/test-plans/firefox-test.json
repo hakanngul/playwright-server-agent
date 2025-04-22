@@ -1,0 +1,37 @@
+{
+  "name": "Firefox Test Planı",
+  "browser": "firefox",
+  "headless": false,
+  "steps": [
+  {
+    "action": "navigate",
+    "value": "https://only-testing-blog.blogspot.com/",
+    "description": "Test sayfasına git"
+  },
+  {
+    "action": "wait",
+    "value": "2000",
+    "description": "2 saniye bekle"
+  },
+  {
+    "action": "takeScreenshot",
+    "value": "anasayfa",
+    "description": "Ekran görüntüsü al"
+  },
+  {
+    "action": "click",
+    "selector": "a[href='https://only-testing-blog.blogspot.com/2014/01/textbox.html']",
+    "description": "Textbox sayfasına git"
+  },
+  {
+    "action": "wait",
+    "value": "2000",
+    "description": "2 saniye bekle"
+  },
+  {
+    "action": "takeScreenshot",
+    "value": "textbox-sayfasi",
+    "description": "Ekran görüntüsü al"
+  }
+]
+}

@@ -1,0 +1,52 @@
+{
+  "name": "Tablo Testi",
+  "browser": "chromium",
+  "headless": false,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2013/09/test.html",
+      "description": "Tablo sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "tablo-sayfasi",
+      "description": "Tablo sayfası ekran görüntüsü al"
+    },
+    {
+      "action": "click",
+      "selector": "#check1",
+      "description": "Checkbox'ı işaretle"
+    },
+    {
+      "action": "click",
+      "selector": "#radio1",
+      "description": "Radio butonu seç"
+    },
+    {
+      "action": "click",
+      "selector": "select[name='FromLB'] option:nth-child(2)",
+      "description": "Listeden bir öğe seç"
+    },
+    {
+      "action": "click",
+      "selector": "#add",
+      "description": "Add butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "tablo-islemler",
+      "description": "İşlemler sonrası ekran görüntüsü al"
+    }
+  ]
+}

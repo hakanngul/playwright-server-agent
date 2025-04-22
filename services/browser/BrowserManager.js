@@ -36,6 +36,7 @@ export class BrowserManager {
    */
   async initialize() {
     if (this.initialized) {
+      console.log(`Browser already initialized with headless: ${this.headless}`);
       return;
     }
 
@@ -58,9 +59,10 @@ export class BrowserManager {
       await applyAntiDetectionMeasures(this.page, this.browserType);
 
       this.initialized = true;
-      console.log('Browser page initialized with anti-detection measures');
+      console.log(`Browser page initialized with anti-detection measures (headless: ${this.headless})`);
     } catch (error) {
       console.error('Failed to initialize browser:', error);
+      this.initialized = false;
       throw error;
     }
   }
@@ -96,30 +98,47 @@ export class BrowserManager {
    * @returns {Promise<void>}
    */
   async close() {
-    console.log('Closing browser and cleaning up resources...');
+    console.log(`Closing browser (type: ${this.browserType}, headless: ${this.headless}) and cleaning up resources...`);
     if (this.browser) {
       try {
         // First close the page
         if (this.page) {
-          await this.page.close().catch(e => console.error('Error closing page:', e));
+          try {
+            // Önce sayfayı temizle
+            await this.page.goto('about:blank').catch(e => console.warn(`Error navigating to blank page: ${e.message}`));
+            await this.page.close().catch(e => console.error('Error closing page:', e));
+          } catch (e) {
+            console.error('Error closing page:', e);
+          }
           this.page = null;
         }
 
         // Then close the context
         if (this.context) {
-          await this.context.close().catch(e => console.error('Error closing context:', e));
+          try {
+            await this.context.close().catch(e => console.error('Error closing context:', e));
+          } catch (e) {
+            console.error('Error closing context:', e);
+          }
           this.context = null;
         }
 
         // Finally close the browser
-        await this.browser.close().catch(e => console.error('Error closing browser:', e));
-        console.log('Browser closed successfully');
+        try {
+          await this.browser.close().catch(e => console.error('Error closing browser:', e));
+          console.log(`Browser (type: ${this.browserType}, headless: ${this.headless}) closed successfully`);
+        } catch (e) {
+          console.error('Error closing browser:', e);
+        }
       } catch (error) {
         console.error('Error during browser cleanup:', error);
       } finally {
         this.browser = null;
         this.initialized = false;
       }
+    } else {
+      console.log(`No browser instance to close for ${this.browserType}`);
+      this.initialized = false;
     }
   }
 
