@@ -312,6 +312,10 @@ export class StepExecutor {
         case 'maximizeWindow':
           console.log('Maximizing browser window');
           try {
+            // Tarayıcı tipini belirle
+            const browserType = this.page.context().browser()._initializer.name.toLowerCase();
+            console.log(`Browser type detected: ${browserType}`);
+
             // Ekran boyutlarını al
             const { width, height } = await this.page.evaluate(() => {
               return {
@@ -330,22 +334,59 @@ export class StepExecutor {
 
             console.log('Browser window maximized using JavaScript');
 
-            // Tam ekran moduna geçmek için F11 tuşuna basma
-            if (this.page.context().browser()) {
-              await this.page.keyboard.press('F11');
-              console.log('Entered fullscreen mode with F11 key');
+            // Firefox için özel tam ekran modu
+            if (browserType === 'firefox') {
+              console.log('Using Firefox-specific fullscreen method');
 
-              // Alternatif olarak document.documentElement.requestFullscreen() metodunu da kullanabiliriz
+              // Firefox için önce viewport'u ayarla
+              await this.page.setViewportSize({ width, height });
+              console.log(`Firefox viewport size set to ${width}x${height}`);
+
+              // Firefox için tam ekran API'sini kullan
               await this.page.evaluate(() => {
-                if (document.documentElement.requestFullscreen) {
+                // Firefox'ta pencereyi maximize et
+                window.moveTo(0, 0);
+                window.resizeTo(window.screen.availWidth, window.screen.availHeight);
+
+                // Firefox'ta tam ekran API'sini kullan
+                if (document.documentElement.mozRequestFullScreen) {
+                  document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.requestFullscreen) {
                   document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                  document.documentElement.webkitRequestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) {
-                  document.documentElement.msRequestFullscreen();
                 }
               });
-              console.log('Also tried requestFullscreen API');
+              console.log('Firefox fullscreen API called');
+
+              // Firefox'ta tam ekran modunun uygulanması için daha uzun bir bekleme
+              await this.page.waitForTimeout(1000);
+
+              // F11 tuşunu da deneyelim
+              try {
+                await this.page.keyboard.press('F11');
+                console.log('Also tried F11 key for Firefox');
+              } catch (e) {
+                console.log('F11 key press failed for Firefox:', e.message);
+              }
+            }
+            // Chromium tabanlı tarayıcılar için
+            else {
+              // Tam ekran moduna geçmek için F11 tuşuna basma
+              if (this.page.context().browser()) {
+                await this.page.keyboard.press('F11');
+                console.log('Entered fullscreen mode with F11 key');
+
+                // Alternatif olarak document.documentElement.requestFullscreen() metodunu da kullanabiliriz
+                await this.page.evaluate(() => {
+                  if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                  } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                  } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                  }
+                });
+                console.log('Also tried requestFullscreen API');
+              }
             }
           } catch (error) {
             console.error(`Error maximizing window: ${error.message}`);

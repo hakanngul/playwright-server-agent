@@ -80,7 +80,7 @@ export class BrowserManager {
         // Firefox için özel seçenekler
         const firefoxOptions = {
           headless: this.headless, // Headless modunu açıkça belirt
-          args: this.headless ? [] : ['--start-maximized'],
+          args: this.headless ? [] : ['--start-maximized', '--kiosk', '--full-screen'],
           firefoxUserPrefs: {
             // Firefox'un otomasyon belirteçlerini gizle
             'dom.webdriver.enabled': false,
@@ -89,6 +89,11 @@ export class BrowserManager {
             'browser.cache.disk.enable': true,
             'browser.cache.memory.enable': true,
             'permissions.default.image': 1,
+            // Tam ekran izinlerini ayarla
+            'full-screen-api.enabled': true,
+            'full-screen-api.allow-trusted-requests-only': false,
+            'full-screen-api.warning.timeout': 0,
+            // Kullanıcı ajanını ayarla
             'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
           },
           ignoreDefaultArgs: ['--enable-automation']
@@ -153,13 +158,20 @@ export class BrowserManager {
 
     console.log('Creating browser context with viewport: null (for maximized window)');
 
-    // Set user agent based on browser type
+    // Set user agent and browser-specific options based on browser type
     if (this.browserType === 'firefox') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/115.0';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0';
+
+      // Firefox için özel ayarlar
+      if (!this.headless) {
+        // Firefox için tam ekran modunu desteklemek için viewport'u null olarak ayarla
+        contextOptions.viewport = null;
+        console.log('Firefox viewport set to null for fullscreen support');
+      }
     } else if (this.browserType === 'edge') {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
     } else {
-      contextOptions.userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     }
 
     return await this.browser.newContext(contextOptions);
