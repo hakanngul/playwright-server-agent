@@ -1,15 +1,11 @@
 {
   "name": "Google Arama Testi",
   "description": "Google'a git ve arama yap",
-  "browserPreference": "firefox",
+  "browserPreference": "chromium",
   "headless": false,
   "useBrowserPool": false,
-  "takeScreenshots": true,
+  "takeScreenshots": false,
   "steps": [
-    {
-      "action": "maximizeWindow",
-      "description": "Tarayıcı penceresini tam ekran yap"
-    },
     {
       "action": "navigate",
       "value": "https://www.google.com",

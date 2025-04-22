@@ -80,23 +80,61 @@ export class BrowserManager {
         // Firefox için özel seçenekler
         const firefoxOptions = {
           headless: this.headless, // Headless modunu açıkça belirt
-          args: this.headless ? [] : ['--start-maximized', '--kiosk', '--full-screen'],
+          args: [], // Firefox için tam ekran komutlarını kaldırdık
           firefoxUserPrefs: {
-            // Firefox'un otomasyon belirteçlerini gizle
+            // Otomasyon algılamasını devre dışı bırakma
             'dom.webdriver.enabled': false,
+            'dom.automation.enabled': false,
+
+            // Gizli mod için ayarlar
+            'browser.privatebrowsing.autostart': true,
+
+            // CAPTCHA algılamasını azaltmak için izleme koruması ve çerez ayarları
             'privacy.trackingprotection.enabled': false,
             'network.cookie.cookieBehavior': 0,
+            'network.cookie.lifetimePolicy': 0,
+
+            // Önbellek ayarları
             'browser.cache.disk.enable': true,
             'browser.cache.memory.enable': true,
-            'permissions.default.image': 1,
-            // Tam ekran izinlerini ayarla
-            'full-screen-api.enabled': true,
-            'full-screen-api.allow-trusted-requests-only': false,
-            'full-screen-api.warning.timeout': 0,
-            // Kullanıcı ajanını ayarla
-            'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
+
+            // Medya ve WebRTC ayarları
+            'media.navigator.enabled': false,
+            'media.peerconnection.enabled': false,
+
+            // Pencere boyutu için varsayılan ayarlar
+            'browser.window.width': 1366,
+            'browser.window.height': 768,
+            'browser.window.screenX': 0,
+            'browser.window.screenY': 0,
+
+            // Otomatik doldurma ve form geçmişi
+            'signon.autofillForms': false,
+            'browser.formfill.enable': false,
+
+            // Gerçekçi kullanıcı ajanı
+            'general.useragent.override': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+
+            // İndirme ayarları
+            'browser.download.folderList': 2,
+            'browser.download.manager.showWhenStarting': false,
+            'browser.helperApps.alwaysAsk.force': false,
+
+            // Ek performans ayarları
+            'gfx.webrender.all': true,
+            'layers.acceleration.force-enabled': true,
+
+            // Bildirimleri devre dışı bırakma
+            'dom.push.enabled': false,
+            'permissions.default.desktop-notification': 2
           },
-          ignoreDefaultArgs: ['--enable-automation']
+          ignoreDefaultArgs: ['--enable-automation'],
+          firefoxOptions: {
+            prefs: {},
+            log: {
+              level: 'warn'
+            }
+          }
         };
         return await firefox.launch(firefoxOptions);
 
@@ -163,11 +201,9 @@ export class BrowserManager {
       contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0';
 
       // Firefox için özel ayarlar
-      if (!this.headless) {
-        // Firefox için tam ekran modunu desteklemek için viewport'u null olarak ayarla
-        contextOptions.viewport = null;
-        console.log('Firefox viewport set to null for fullscreen support');
-      }
+      // Tam ekran modunu kaldırdık, sabit bir viewport kullanıyoruz
+      contextOptions.viewport = { width: 1366, height: 768 };
+      console.log('Firefox viewport set to 1366x768');
     } else if (this.browserType === 'edge') {
       contextOptions.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0';
     } else {
