@@ -175,6 +175,16 @@ if %ERRORLEVEL% EQU 0 (
         curl -s http://localhost:3002/api/performance/trend/Performans%%20Test%%20Plani > trend_report.json
         type trend_report.json
         echo.
+
+        REM Optimizasyon onerilerini goruntule
+        echo =================================================
+        echo Optimizasyon onerileri aliniyor...
+        echo =================================================
+        echo.
+
+        curl -s http://localhost:3002/api/results/!TEST_ID!/optimization-recommendations > optimization_recommendations.json
+        type optimization_recommendations.json
+        echo.
     ) else (
         echo Test ID alinamadi.
     )
@@ -193,5 +203,6 @@ del performance_report.json 2>nul
 del web_vitals.json 2>nul
 del network_metrics.json 2>nul
 del trend_report.json 2>nul
+del optimization_recommendations.json 2>nul
 
 pause

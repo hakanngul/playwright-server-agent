@@ -1,0 +1,100 @@
+{
+  "name": "Detaylı Performans Test Planı",
+  "description": "Optimizasyon önerilerini test etmek için detaylı test planı",
+  "browser": "chromium",
+  "headless": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/",
+      "description": "Ana sayfaya git"
+    },
+    {
+      "action": "wait",
+      "value": "3000",
+      "description": "3 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "anasayfa",
+      "description": "Ana sayfa ekran görüntüsü al"
+    },
+    {
+      "action": "click",
+      "selector": "a[href='https://only-testing-blog.blogspot.com/2014/01/textbox.html']",
+      "description": "Textbox sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "textbox-sayfasi",
+      "description": "Textbox sayfası ekran görüntüsü al"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='fname']",
+      "value": "Test Kullanıcı",
+      "description": "İsim alanını doldur"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='lname']",
+      "value": "Performans Test",
+      "description": "Soyisim alanını doldur"
+    },
+    {
+      "action": "click",
+      "selector": "input[type='submit']",
+      "description": "Formu gönder"
+    },
+    {
+      "action": "wait",
+      "value": "4000",
+      "description": "4 saniye bekle (uzun bekleme)"
+    },
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2013/11/new-test.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "test-sayfasi",
+      "description": "Test sayfası ekran görüntüsü al"
+    },
+    {
+      "action": "click",
+      "selector": "#submitButton",
+      "description": "Submit butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/09/temp.html",
+      "description": "Temp sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "value": "temp-sayfasi",
+      "description": "Temp sayfası ekran görüntüsü al"
+    }
+  ]
+}

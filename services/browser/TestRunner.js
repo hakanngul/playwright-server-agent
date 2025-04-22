@@ -260,7 +260,8 @@ export class TestRunner {
             cpu: results.performance.cpuUsage
           },
           stepStats: results.performance.stepStats,
-          timingMetrics: results.performance.timingMetrics
+          timingMetrics: results.performance.timingMetrics,
+          steps: results.steps // Test adımlarını da gönder (optimizasyon önerileri için)
         });
 
         // Add warnings to results if not already added
@@ -270,6 +271,12 @@ export class TestRunner {
 
         if (results.performance.warnings && results.performance.warnings.length > 0) {
           console.warn(`Found ${results.performance.warnings.length} performance warnings`);
+        }
+
+        // Add optimization recommendations to results
+        if (reportResult.recommendations && reportResult.recommendations.length > 0) {
+          results.recommendations = reportResult.recommendations;
+          console.log(`Generated ${results.recommendations.length} optimization recommendations`);
         }
       } catch (error) {
         console.error('Error collecting performance metrics:', error.message);
@@ -420,6 +427,14 @@ export class TestRunner {
       console.log('\nPerformance Warnings:');
       results.performance.warnings.forEach(warning => {
         console.log(`- ${warning.message}`);
+      });
+    }
+
+    // Log optimization recommendations if any
+    if (results.recommendations && results.recommendations.length > 0) {
+      console.log('\nOptimizasyon Önerileri:');
+      results.recommendations.forEach(recommendation => {
+        console.log(`- ${recommendation}`);
       });
     }
 

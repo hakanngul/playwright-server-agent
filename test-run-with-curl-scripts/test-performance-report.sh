@@ -150,6 +150,13 @@ if [ $? -eq 0 ]; then
     echo -e "${BLUE}==================================================${NC}"
 
     curl -s http://localhost:3002/api/performance/trend/Performans%20Test%20Plan%C4%B1 | jq .
+
+    # Optimizasyon önerilerini görüntüle
+    echo -e "${BLUE}==================================================${NC}"
+    echo -e "${GREEN}Optimizasyon önerileri alınıyor...${NC}"
+    echo -e "${BLUE}==================================================${NC}"
+
+    curl -s http://localhost:3002/api/results/${TEST_ID}/optimization-recommendations | jq .
   else
     echo -e "${RED}Test ID alınamadı.${NC}"
   fi

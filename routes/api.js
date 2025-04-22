@@ -676,6 +676,93 @@ router.get('/performance/trend/:testName', async (req, res) => {
   }
 });
 
+// Optimizasyon önerileri endpoint'i
+router.get('/results/:id/optimization-recommendations', async (req, res) => {
+  try {
+    const resultId = req.params.id;
+
+    // Önce test sonucunu al
+    let result;
+    try {
+      result = testResultService.getTestResultById(resultId);
+    } catch (err) {
+      console.warn('Error using testResultService:', err);
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    if (!result) {
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    // Test sonucundan performans verilerini çıkar
+    const performanceData = {
+      testDuration: result.duration_ms,
+      steps: result.steps || [],
+      webVitals: result.web_vitals || {},
+      networkMetrics: result.network_metrics || {},
+      systemMetrics: result.system_metrics || {}
+    };
+
+    // PerformanceReporter sınıfını import et
+    const { PerformanceReporter } = await import('../services/performance/PerformanceReporter.js');
+
+    // PerformanceReporter örneği oluştur
+    const performanceReporter = new PerformanceReporter();
+
+    // Optimizasyon önerilerini oluştur
+    const recommendations = [];
+
+    // Yavaş adımlar için öneriler
+    if (performanceData.steps.length > 0) {
+      const stepDurations = performanceData.steps.map(step => step.duration || 0);
+      const stepStats = {
+        totalSteps: performanceData.steps.length,
+        averageStepDuration: stepDurations.reduce((a, b) => a + b, 0) / stepDurations.length,
+        minStepDuration: Math.min(...stepDurations),
+        maxStepDuration: Math.max(...stepDurations),
+        slowestStepIndex: stepDurations.indexOf(Math.max(...stepDurations))
+      };
+
+      const slowStepRecommendations = performanceReporter.analyzeSlowSteps(stepStats, performanceData.steps);
+      recommendations.push(...slowStepRecommendations);
+    }
+
+    // Ağ darboğazları için öneriler
+    if (performanceData.networkMetrics) {
+      const networkRecommendations = performanceReporter.analyzeNetworkBottlenecks(performanceData.networkMetrics);
+      recommendations.push(...networkRecommendations);
+    }
+
+    // Bellek sızıntıları için öneriler
+    if (performanceData.systemMetrics && performanceData.systemMetrics.memory) {
+      const memoryRecommendations = performanceReporter.analyzeMemoryUsage(performanceData.systemMetrics.memory);
+      recommendations.push(...memoryRecommendations);
+    }
+
+    // Paralelleştirme önerileri
+    const parallelizationRecommendations = performanceReporter.analyzeParallelizationPotential(performanceData);
+    recommendations.push(...parallelizationRecommendations);
+
+    // Yanıtı dön
+    res.json({
+      id: result.id,
+      name: result.name || 'Test Result',
+      timestamp: result.start_time,
+      duration: result.duration_ms,
+      recommendations: [...new Set(recommendations)], // Duplicate'leri kaldır
+      categories: {
+        slowSteps: recommendations.filter(r => r.includes('adım') || r.includes('step')),
+        networkBottlenecks: recommendations.filter(r => r.includes('istek') || r.includes('kaynak') || r.includes('network')),
+        memoryLeaks: recommendations.filter(r => r.includes('bellek') || r.includes('memory')),
+        parallelization: recommendations.filter(r => r.includes('paralel') || r.includes('hızlandır'))
+      }
+    });
+  } catch (error) {
+    console.error(`Error generating optimization recommendations for ${req.params.id}:`, error);
+    res.status(500).json({ error: `Failed to generate optimization recommendations for ${req.params.id}` });
+  }
+});
+
 // Web Vitals endpoint'i
 router.get('/results/:id/web-vitals', async (req, res) => {
   try {
