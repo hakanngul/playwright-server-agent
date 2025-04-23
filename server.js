@@ -148,6 +148,20 @@ if (!fs.existsSync(dataDir)) {
 // Serve screenshots
 app.use('/screenshots', express.static(screenshotsDir));
 
+// Serve reports
+const reportsDir = path.join(__dirname, 'reports');
+if (!fs.existsSync(reportsDir)) {
+  fs.mkdirSync(reportsDir, { recursive: true });
+}
+app.use('/reports', express.static(reportsDir));
+
+// Serve videos
+const videosDir = path.join(__dirname, 'videos');
+if (!fs.existsSync(videosDir)) {
+  fs.mkdirSync(videosDir, { recursive: true });
+}
+app.use('/videos', express.static(videosDir));
+
 // Use API routes
 app.use('/api', apiRoutes);
 
@@ -195,12 +209,24 @@ app.get('/api/browsers', (_req, res) => {
   res.json(browsers);
 });
 
-// Create parallel test manager
+// Create parallel test manager with advanced features
 const parallelTestManager = new ParallelTestManager({
+  // Basic configuration
   workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : os.cpus().length,
   headless: process.env.HEADLESS !== 'false',
   screenshotsDir: path.join(__dirname, 'screenshots'),
-  browserTypes: ['chromium', 'firefox']
+  videosDir: path.join(__dirname, 'videos'),
+  browserTypes: ['chromium', 'firefox'],
+
+  // Advanced features
+  recordVideo: true, // Video kaydetme özelliğini her zaman etkinleştir
+  captureTraces: process.env.CAPTURE_TRACES === 'true',
+  visualComparison: process.env.VISUAL_COMPARISON === 'true',
+  accessibilityTest: process.env.ACCESSIBILITY_TEST === 'true',
+  apiTesting: process.env.API_TESTING === 'true',
+  mobileEmulation: process.env.MOBILE_EMULATION === 'true',
+  reuseContext: process.env.REUSE_CONTEXT === 'true',
+  retryCount: process.env.RETRY_COUNT ? parseInt(process.env.RETRY_COUNT) : 0
 });
 
 // Add parallel test execution endpoint

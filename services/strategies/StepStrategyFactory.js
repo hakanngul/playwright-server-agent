@@ -29,6 +29,7 @@ import { VerifyElementVisibleStepStrategy } from './VerifyElementVisibleStepStra
 import { GoBackStepStrategy } from './GoBackStepStrategy.js';
 import { GoForwardStepStrategy } from './GoForwardStepStrategy.js';
 import { RefreshStepStrategy } from './RefreshStepStrategy.js';
+import { ApiRequestStepStrategy } from './ApiRequestStepStrategy.js';
 
 // Additional strategies for complex interactions
 import { HoverAndClickMenuItemStepStrategy } from './HoverAndClickMenuItemStepStrategy.js';
@@ -148,6 +149,10 @@ export class StepStrategyFactory {
         return new VerifyElementExistsStepStrategy();
       case 'verifyElementVisible':
         return new VerifyElementVisibleStepStrategy();
+
+      // API actions
+      case 'apiRequest':
+        return new ApiRequestStepStrategy();
 
       default:
         throw new Error(`Unsupported step type: ${stepType}`);
