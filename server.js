@@ -151,6 +151,9 @@ if (!fs.existsSync(dataDir)) {
 // Serve screenshots
 app.use('/screenshots', express.static(screenshotsDir));
 
+// Serve static files from the client/build directory
+app.use(express.static(path.join(__dirname, 'client/build')));
+
 // Use API routes
 app.use('/api', apiRoutes);
 

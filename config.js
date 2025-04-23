@@ -42,16 +42,7 @@ const defaultConfig = {
       ttfb: 600
     }
   },
-  database: {
-    type: 'sqlite', // 'sqlite' or 'mongodb'
-    mongodb: {
-      uri: 'mongodb://localhost:27017',
-      dbName: 'playwright_server_agent'
-    },
-    sqlite: {
-      path: path.join(__dirname, 'data', 'database.sqlite')
-    }
-  }
+  // Veritabanı desteği kaldırıldı
 };
 
 // Load user configuration if exists
@@ -82,18 +73,7 @@ const config = {
       ...(userConfig.performance?.thresholds || {})
     }
   },
-  database: {
-    ...defaultConfig.database,
-    ...(userConfig.database || {}),
-    mongodb: {
-      ...defaultConfig.database.mongodb,
-      ...(userConfig.database?.mongodb || {})
-    },
-    sqlite: {
-      ...defaultConfig.database.sqlite,
-      ...(userConfig.database?.sqlite || {})
-    }
-  }
+  // Veritabanı desteği kaldırıldı
 };
 
 // Create directories if they don't exist

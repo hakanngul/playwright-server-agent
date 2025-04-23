@@ -5,7 +5,8 @@
 import express from 'express';
 import os from 'os';
 import { execSync } from 'child_process';
-import { testResultService } from '../database/index.js';
+
+// Veritabanı desteği kaldırıldı
 
 // Create router
 const router = express.Router();
@@ -65,28 +66,13 @@ router.get('/', (req, res) => {
       browsers.firefox = 'not found';
     }
 
-    // Get test statistics
-    let testStats = {
+    // Get test statistics (veritabanı desteği kaldırıldı)
+    const testStats = {
       totalTestsRun: 0,
       successfulTests: 0,
       failedTests: 0,
       averageDuration: 0
     };
-
-    try {
-      const allResults = testResultService.getAllTestResults({ limit: 1000 });
-      
-      testStats.totalTestsRun = allResults.length;
-      testStats.successfulTests = allResults.filter(r => r.success).length;
-      testStats.failedTests = allResults.filter(r => !r.success).length;
-      
-      if (allResults.length > 0) {
-        const totalDuration = allResults.reduce((sum, r) => sum + (r.duration_ms || 0), 0);
-        testStats.averageDuration = Math.round(totalDuration / allResults.length);
-      }
-    } catch (e) {
-      console.warn('Error getting test statistics:', e);
-    }
 
     // Get worker status
     const workerStatus = {

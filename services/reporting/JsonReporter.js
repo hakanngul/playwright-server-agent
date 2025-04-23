@@ -7,7 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-import { testRunService, testResultService } from '../../database/index.js';
+
+// Veritabanı desteği kaldırıldı
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -162,8 +163,8 @@ export class JsonReporter {
       // Update monthly summary
       await this.updateSummary('monthly', date, report);
 
-      // Veritabanına kaydet
-      await this.saveToDatabase(report, testResult);
+      // Veritabanı desteği kaldırıldı
+      console.log('Database support has been removed, skipping database save');
 
       return reportId;
     } catch (error) {
@@ -252,72 +253,5 @@ export class JsonReporter {
     }
   }
 
-  /**
-   * Veritabanına test sonucunu kaydeder
-   * @param {Object} report - JSON rapor nesnesi
-   * @param {Object} testResult - Test sonuç nesnesi
-   * @returns {Promise<void>}
-   * @private
-   */
-  async saveToDatabase(report, originalTestResult) {
-    try {
-      console.log('Saving test results to database...');
-
-      // 1. Test çalıştırmasını oluştur
-      const testRun = await testRunService.createTestRun({
-        name: report.name,
-        description: report.description,
-        status: report.success ? 'PASSED' : 'FAILED',
-        start_time: report.timestamp,
-        end_time: new Date(new Date(report.timestamp).getTime() + report.duration).toISOString(),
-        duration_ms: report.duration,
-        browser: report.browserType,
-        browser_version: null, // Tarayıcı sürümü bilgisi eklenebilir
-        operating_system: null, // İşletim sistemi bilgisi eklenebilir
-        viewport_size: null, // Görüntü alanı boyutu eklenebilir
-        environment: 'TEST', // Ortam bilgisi eklenebilir
-        created_by: 'system',
-        tags: report.tags
-      });
-
-      console.log(`Test run created with ID: ${testRun.id}`);
-
-      // 2. Test sonucunu oluştur
-      const testResult = await testResultService.createTestResult({
-        test_run_id: testRun.id,
-        test_suite_id: null, // Test suite ID'si eklenebilir
-        test_case_id: null, // Test case ID'si eklenebilir
-        status: report.success ? 'PASSED' : 'FAILED',
-        start_time: report.timestamp,
-        end_time: new Date(new Date(report.timestamp).getTime() + report.duration).toISOString(),
-        duration_ms: report.duration,
-        error_message: report.error,
-        error_stack: null,
-        screenshot_path: report.steps.find(step => step.screenshot)?.screenshot || null,
-        video_path: null,
-        trace_path: null,
-        retry_count: 0,
-        custom_data: JSON.stringify(report.metrics),
-        steps: report.steps.map((step, index) => ({
-          order_number: step.step,
-          description: step.description || `${step.action} on ${step.target || step.value}`,
-          status: step.success ? 'PASSED' : 'FAILED',
-          start_time: new Date(new Date(report.timestamp).getTime() + (index > 0 ? report.steps.slice(0, index).reduce((sum, s) => sum + s.duration, 0) : 0)).toISOString(),
-          end_time: new Date(new Date(report.timestamp).getTime() + (index > 0 ? report.steps.slice(0, index + 1).reduce((sum, s) => sum + s.duration, 0) : step.duration)).toISOString(),
-          duration_ms: step.duration,
-          screenshot_path: step.screenshot,
-          error_message: step.error,
-          expected_result: null,
-          actual_result: null,
-          action_type: step.action,
-          action_target: step.target,
-          action_value: step.value
-        }))
-      });
-
-      console.log(`Test result saved to database with ID: ${testResult.id}`);
-    } catch (error) {
-      console.error(`Error saving to database: ${error.message}`);
-    }
-  }
+  // Veritabanı desteği kaldırıldı
 }

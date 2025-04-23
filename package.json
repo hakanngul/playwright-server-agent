@@ -18,7 +18,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
     "express": "^4.18.2",
     "playwright": "^1.40.0",
     "ws": "^8.18.1"
