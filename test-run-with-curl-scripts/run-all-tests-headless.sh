@@ -3,7 +3,7 @@
 # Sabit değerler
 SERVER_URL="http://localhost:3002/api/test/run"
 HEADLESS=true
-TEST_PLANS_DIR="test-run-with-curl-scripts/test-plans"
+TEST_PLANS_DIR="test-plans"
 BROWSERS=("chromium" "firefox" "edge")
 DEFAULT_BROWSER="chromium"
 
@@ -63,40 +63,40 @@ function run_test_plan {
   local browser=$1
   local test_plan=$2
   local test_plan_name=$(basename "$test_plan")
-  
+
   echo -e "${BLUE}==================================================${NC}"
   echo -e "${GREEN}Test Planı Çalıştırılıyor: ${test_plan_name}${NC}"
   echo -e "${GREEN}Tarayıcı: ${browser}${NC}"
   echo -e "${GREEN}Headless: ${HEADLESS}${NC}"
   echo -e "${BLUE}==================================================${NC}"
-  
+
   # Firefox için uyarı göster
   if [[ "$browser" == "firefox" ]]; then
     echo -e "${YELLOW}UYARI: Firefox tarayıcısı için tam ekran modu devre dışı bırakıldı. Normal pencere boyutunda çalışacak.${NC}"
   fi
-  
+
   # Geçici dosya oluştur
   TEMP_FILE=$(mktemp)
-  
+
   # Test planını oku ve tarayıcı ve headless ayarlarını güncelle
   cat "$test_plan" | sed "s/\"browserPreference\": \"[^\"]*\"/\"browserPreference\": \"$browser\"/" | \
     sed "s/\"headless\": [^,}]*/\"headless\": $HEADLESS/" > "$TEMP_FILE"
-  
+
   # Test planını sunucuya gönder
   echo -e "${BLUE}Test planı sunucuya gönderiliyor...${NC}"
   curl -X POST \
     "$SERVER_URL" \
     -H "Content-Type: application/json" \
     -d @"$TEMP_FILE"
-  
+
   # Geçici dosyayı temizle
   rm "$TEMP_FILE"
-  
+
   echo ""
   echo -e "${GREEN}Test yürütme isteği gönderildi. Sonuçlar için sunucu loglarını kontrol edin.${NC}"
   echo -e "${BLUE}Son test sonucunu görüntülemek için: curl http://localhost:3002/api/results/recent?limit=1${NC}"
   echo ""
-  
+
   # Testler arasında kısa bir bekleme süresi
   echo -e "${YELLOW}Bir sonraki teste geçmeden önce 3 saniye bekleniyor...${NC}"
   sleep 3
@@ -125,7 +125,7 @@ if [[ "$BROWSER" == "all" ]]; then
     echo -e "${BLUE}==================================================${NC}"
     echo -e "${GREEN}${browser} tarayıcısında testler çalıştırılıyor...${NC}"
     echo -e "${BLUE}==================================================${NC}"
-    
+
     for test_plan in $TEST_PLANS; do
       run_test_plan "$browser" "$test_plan"
     done

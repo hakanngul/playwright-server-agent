@@ -1,0 +1,33 @@
+{
+  "name": "API Test Planı",
+  "description": "API testi için basit test planı",
+  "browserType": "chromium",
+  "headless": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "type",
+      "target": "APjFqb",
+      "strategy": "id",
+      "value": "playwright test",
+      "description": "Arama kutusuna yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Ekran görüntüsü al"
+    }
+  ]
+}

@@ -39,12 +39,18 @@ A server application for running automated browser tests using Playwright. This 
 - RESTful API
 - Modular and extensible architecture
 - Browser pool for efficient resource management
+- **NEW: Hybrid Test Runner** - Use either custom test runner or Playwright Test Runner
+- **NEW: Automatic Retry** - Automatically retry failed tests and steps
+- **NEW: Configuration System** - Flexible configuration options
+- **NEW: Performance Metrics** - Collect and analyze Web Vitals and network metrics
 
 ## Project Structure
 
 ```
 /server-agent/
 ├── server.js                # Main server file
+├── config.js                # Configuration system
+├── playwright-server-config.example.js # Example configuration
 ├── services/
 │   ├── testAgent.js         # Playwright test agent (entry point)
 │   └── browser/             # Modular browser automation components
@@ -54,7 +60,10 @@ A server application for running automated browser tests using Playwright. This 
 │       ├── ElementHelper.js # Element interaction utilities
 │       ├── ScreenshotManager.js # Screenshot capture utilities
 │       ├── StepExecutor.js  # Test step execution
-│       └── TestRunner.js    # Test plan execution
+│       ├── TestRunner.js    # Test plan execution
+│       ├── PlaywrightTestAdapter.js # Playwright Test Runner adapter
+│       ├── PlaywrightParallelRunner.js # Parallel test execution
+│       └── RetryManager.js  # Automatic retry mechanism
 ├── routes/
 │   └── api.js               # API routes
 ├── database/
@@ -67,8 +76,10 @@ A server application for running automated browser tests using Playwright. This 
 │   ├── run-test.sh          # Run a single test
 │   ├── interactive-test.sh  # Interactive test runner
 │   ├── run-all-browsers.sh  # Run tests in all browsers
+│   ├── parallel-test.sh     # Run tests in parallel
 │   └── test-plan.json       # Sample test plan
 ├── screenshots/             # Test screenshots directory
+├── test-results/            # Test results directory
 └── data/                    # Database files
 ```
 
@@ -107,13 +118,20 @@ npm install
 npx playwright install chromium firefox
 ```
 
-4. Start the server:
+4. Configure the server (optional):
+
+```bash
+cp playwright-server-config.example.js playwright-server-config.js
+# Edit playwright-server-config.js with your preferred settings
+```
+
+5. Start the server:
 
 ```bash
 npm start
 ```
 
-5. For development with auto-reload:
+6. For development with auto-reload:
 
 ```bash
 npm run dev
@@ -169,6 +187,7 @@ This script runs the test in all supported browsers sequentially.
 ### Test Execution
 
 - `POST /api/test/run`: Run a test with the provided test plan
+- `POST /api/test/run-parallel`: Run multiple tests in parallel
 
 ### Browser Information
 
@@ -341,27 +360,102 @@ The server supports the following selector strategies for targeting elements:
 - **text**: Text content (Playwright-specific)
 - **role**: Accessibility role (Playwright-specific)
 
-## Browser Pool
+## Hybrid Test Runner
 
-The server includes a browser pool mechanism for efficient resource management:
+The server now includes a hybrid test runner that can use either the custom test runner or Playwright Test Runner:
 
-- **Resource Optimization**: Reuses browser instances instead of creating new ones for each test
-- **Faster Test Execution**: Eliminates browser startup time for subsequent tests
-- **Parallel Testing**: Supports running multiple tests simultaneously
-- **Automatic Cleanup**: Manages browser lifecycle and cleans up idle browsers
+- **Custom Test Runner**: The original test runner with JSON-based test plans and REST API integration
+- **Playwright Test Runner**: Uses Playwright's official test runner for better performance and reliability
 
-### Browser Pool API
+### Configuration
 
-- **GET /api/browser-pool/stats**: Get current browser pool statistics
-- **POST /api/browser-pool/config**: Configure the browser pool
+You can configure which test runner to use in the configuration file:
 
 ```javascript
-// Example configuration request body
-{
-  "enabled": true,
-  "maxSize": 5,    // Maximum number of browsers in the pool
-  "minSize": 2,    // Minimum number of browsers to keep ready
-  "idleTimeout": 300000  // Time in ms before closing idle browsers
+// playwright-server-config.js
+export default {
+  test: {
+    usePlaywrightTestRunner: true, // Set to false to use custom test runner
+    // Other test configuration...
+  }
+}
+```
+
+## Automatic Retry
+
+The server now includes an automatic retry mechanism for failed tests and steps:
+
+- **Test Retries**: Automatically retry failed tests
+- **Step Retries**: Automatically retry failed steps
+- **Configurable Retry Conditions**: Configure which errors should trigger retries
+
+### Configuration
+
+```javascript
+// playwright-server-config.js
+export default {
+  test: {
+    retries: 2, // Number of retries for failed tests
+    // Other test configuration...
+  }
+}
+```
+
+## Configuration System
+
+The server now includes a flexible configuration system:
+
+- **Default Configuration**: Sensible defaults for all settings
+- **User Configuration**: Override defaults with your own settings
+- **Environment Variables**: Override configuration with environment variables
+
+### Configuration File
+
+Create a `playwright-server-config.js` file in the root directory to override default settings:
+
+```javascript
+// playwright-server-config.js
+export default {
+  server: {
+    port: 3002,
+    allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
+  },
+  test: {
+    usePlaywrightTestRunner: true,
+    workers: 4,
+    headless: true,
+    retries: 1,
+    timeout: 30000,
+    browserTypes: ['chromium', 'firefox']
+  },
+  // Other configuration...
+}
+```
+
+## Performance Metrics
+
+The server now collects and analyzes performance metrics:
+
+- **Web Vitals**: Collect Core Web Vitals metrics (LCP, FID, CLS, TTFB)
+- **Network Metrics**: Collect network performance metrics
+- **Performance Thresholds**: Configure performance thresholds
+
+### Configuration
+
+```javascript
+// playwright-server-config.js
+export default {
+  performance: {
+    collectMetrics: true,
+    webVitals: true,
+    networkMetrics: true,
+    thresholds: {
+      lcp: 2500, // Largest Contentful Paint (ms)
+      fid: 100,  // First Input Delay (ms)
+      cls: 0.1,  // Cumulative Layout Shift
+      ttfb: 600  // Time to First Byte (ms)
+    }
+  }
 }
 ```
 

@@ -7,6 +7,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PlaywrightParallelRunner } from './PlaywrightParallelRunner.js';
+import config from '../../config.js';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -23,19 +24,27 @@ export class ParallelTestManager {
   constructor(options = {}) {
     this.options = {
       // Browser configuration
-      browserTypes: options.browserTypes || ['chromium'],
-      headless: options.headless !== undefined ? options.headless : true,
+      browserTypes: options.browserTypes || config.test.browserTypes || ['chromium'],
+      headless: options.headless !== undefined ? options.headless : config.test.headless,
 
       // Parallelization
-      workers: options.workers || os.cpus().length,
+      workers: options.workers || config.test.workers || os.cpus().length,
 
       // Reporting
-      screenshotsDir: options.screenshotsDir || path.join(process.cwd(), 'screenshots'),
+      screenshotsDir: options.screenshotsDir || config.paths.screenshotsDir || path.join(process.cwd(), 'screenshots'),
 
       // Callbacks
       onTestStart: options.onTestStart || null,
       onTestComplete: options.onTestComplete || null,
-      onStepComplete: options.onStepComplete || null
+      onStepComplete: options.onStepComplete || null,
+
+      // Test runner mode
+      usePlaywrightTestRunner: options.usePlaywrightTestRunner !== undefined ?
+        options.usePlaywrightTestRunner :
+        config.test.usePlaywrightTestRunner,
+
+      // Retry configuration
+      retries: options.retries || config.test.retries || 1
     };
 
     // Create Playwright Parallel Runner
@@ -46,10 +55,13 @@ export class ParallelTestManager {
       screenshotsDir: this.options.screenshotsDir,
       onTestStart: this.options.onTestStart,
       onTestComplete: this.options.onTestComplete,
-      onStepComplete: this.options.onStepComplete
+      onStepComplete: this.options.onStepComplete,
+      usePlaywrightTestRunner: this.options.usePlaywrightTestRunner,
+      retries: this.options.retries
     });
 
     console.log(`ParallelTestManager created with workers: ${this.options.workers}, headless: ${this.options.headless}`);
+    console.log(`Using ${this.options.usePlaywrightTestRunner ? 'Playwright Test Runner' : 'Custom Test Runner'} with ${this.options.retries} retries`);
   }
 
   /**

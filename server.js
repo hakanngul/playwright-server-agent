@@ -7,9 +7,12 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
+import performanceRoutes from './routes/performance.js';
+import statusRoutes from './routes/status.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
+import config from './config.js';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -154,6 +157,12 @@ app.use('/api', apiRoutes);
 // Use reports routes
 app.use('/api/reports', reportRoutes);
 
+// Use performance routes
+app.use('/api/performance', performanceRoutes);
+
+// Use status routes
+app.use('/api/status', statusRoutes);
+
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -197,10 +206,12 @@ app.get('/api/browsers', (_req, res) => {
 
 // Create parallel test manager
 const parallelTestManager = new ParallelTestManager({
-  workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : os.cpus().length,
-  headless: process.env.HEADLESS !== 'false',
-  screenshotsDir: path.join(__dirname, 'screenshots'),
-  browserTypes: ['chromium', 'firefox']
+  workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : config.test.workers,
+  headless: process.env.HEADLESS !== 'false' ? true : config.test.headless,
+  screenshotsDir: config.paths.screenshotsDir,
+  browserTypes: config.test.browserTypes,
+  usePlaywrightTestRunner: config.test.usePlaywrightTestRunner,
+  retries: config.test.retries
 });
 
 // Add parallel test execution endpoint
@@ -217,6 +228,7 @@ app.post('/api/test/run-parallel', async (req, res) => {
     }
 
     console.log(`Received ${testPlans.length} test plans for parallel execution`);
+    console.log(`Using ${config.test.usePlaywrightTestRunner ? 'Playwright Test Runner' : 'Custom Test Runner'} with ${config.test.retries} retries`);
 
     // Set test completion callback
     parallelTestManager.setTestCompletedCallback((result) => {
