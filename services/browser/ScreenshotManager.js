@@ -1,96 +1,44 @@
 /**
  * Screenshot manager module
- * Handles taking and saving screenshots
+ * NOT: Screenshot desteği kaldırıldı
  */
 
-import fs from 'fs';
-import path from 'path';
-
 /**
- * Manages screenshot operations
+ * Manages screenshot operations (deactivated)
  */
 export class ScreenshotManager {
   /**
    * Creates a new ScreenshotManager instance
    * @param {Page} page - Playwright page object
-   * @param {string} screenshotsDir - Directory to save screenshots
+   * @param {string} screenshotsDir - Directory to save screenshots (ignored)
    */
   constructor(page, screenshotsDir) {
     this.page = page;
-    this.screenshotsDir = screenshotsDir;
-    this.ensureDirectoryExists();
+    // Screenshot desteği kaldırıldı
+    console.log('Screenshot support has been removed');
   }
 
-  /**
-   * Ensures the screenshots directory exists
-   * @private
-   */
-  ensureDirectoryExists() {
-    if (!fs.existsSync(this.screenshotsDir)) {
-      fs.mkdirSync(this.screenshotsDir, { recursive: true });
-      console.log(`Created screenshots directory: ${this.screenshotsDir}`);
-    }
-  }
+  // Screenshot desteği kaldırıldı
 
   /**
-   * Takes a screenshot and saves it to the screenshots directory
+   * Takes a screenshot (deactivated)
    * @param {string} name - Screenshot name
    * @param {Object} options - Screenshot options
-   * @returns {Promise<string>} Path to the saved screenshot
+   * @returns {Promise<string>} Empty string
    */
   async takeScreenshot(name, options = {}) {
-    try {
-      // Generate a unique filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `${name}_${timestamp}.png`;
-      const filepath = path.join(this.screenshotsDir, filename);
-
-      // Take the screenshot
-      await this.page.screenshot({
-        path: filepath,
-        fullPage: options.fullPage || false,
-        type: 'png',
-        quality: options.quality || 80
-      });
-
-      console.log(`Screenshot saved to: ${filepath}`);
-      return filepath;
-    } catch (error) {
-      console.error(`Error taking screenshot: ${error.message}`);
-      throw error;
-    }
+    console.log('Screenshot support has been removed');
+    return '';
   }
 
   /**
-   * Takes a screenshot of a specific element
+   * Takes a screenshot of a specific element (deactivated)
    * @param {string} selector - Element selector
    * @param {string} name - Screenshot name
-   * @returns {Promise<string>} Path to the saved screenshot
+   * @returns {Promise<string>} Empty string
    */
   async takeElementScreenshot(selector, name) {
-    try {
-      // Generate a unique filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `${name}_element_${timestamp}.png`;
-      const filepath = path.join(this.screenshotsDir, filename);
-
-      // Find the element
-      const element = await this.page.$(selector);
-      if (!element) {
-        throw new Error(`Element not found: ${selector}`);
-      }
-
-      // Take the screenshot of the element
-      await element.screenshot({
-        path: filepath,
-        type: 'png'
-      });
-
-      console.log(`Element screenshot saved to: ${filepath}`);
-      return filepath;
-    } catch (error) {
-      console.error(`Error taking element screenshot: ${error.message}`);
-      throw error;
-    }
+    console.log('Element screenshot support has been removed');
+    return '';
   }
 }

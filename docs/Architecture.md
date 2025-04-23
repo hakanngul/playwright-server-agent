@@ -37,7 +37,7 @@
   - `resultService.js`
   - `testRunService.js`
   - `testResultService.js`
-  - `testSuiteService.js`
+  - `testSuiteService.js` 
   - `webElementService.js`
   - `bugAndConfigService.js`
 

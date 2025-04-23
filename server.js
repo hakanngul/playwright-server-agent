@@ -136,20 +136,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Ensure screenshots directory exists
-const screenshotsDir = path.join(__dirname, 'screenshots');
-if (!fs.existsSync(screenshotsDir)) {
-  fs.mkdirSync(screenshotsDir, { recursive: true });
-}
-
 // Ensure data directory exists
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Serve screenshots
-app.use('/screenshots', express.static(screenshotsDir));
+// Screenshots, videos ve traces desteği kaldırıldı
 
 // Serve static files from the client/build directory
 app.use(express.static(path.join(__dirname, 'client/build')));
@@ -211,7 +204,7 @@ app.get('/api/browsers', (_req, res) => {
 const parallelTestManager = new ParallelTestManager({
   workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : config.test.workers,
   headless: process.env.HEADLESS !== 'false' ? true : config.test.headless,
-  screenshotsDir: config.paths.screenshotsDir,
+  // Screenshots desteği kaldırıldı
   browserTypes: config.test.browserTypes,
   usePlaywrightTestRunner: config.test.usePlaywrightTestRunner,
   retries: config.test.retries

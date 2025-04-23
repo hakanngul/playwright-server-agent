@@ -25,9 +25,7 @@ const defaultConfig = {
     browserTypes: ['chromium', 'firefox']
   },
   paths: {
-    screenshotsDir: path.join(__dirname, 'screenshots'),
-    videosDir: path.join(__dirname, 'videos'),
-    tracesDir: path.join(__dirname, 'traces'),
+    // Screenshots, videos ve traces desteği kaldırıldı
     reportsDir: path.join(__dirname, 'reports'),
     testPlansDir: path.join(__dirname, 'test-plans')
   },
