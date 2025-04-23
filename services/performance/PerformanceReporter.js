@@ -1,6 +1,7 @@
 /**
  * Performance Reporter module
  * Generates and saves performance reports
+ * NOT: Performans raporlama özelliği geçici olarak devre dışı bırakıldı
  */
 
 import fs from 'fs';
@@ -54,30 +55,13 @@ export class PerformanceReporter {
    * @returns {Object} Report result
    */
   saveReport(testName, performanceData) {
-    const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const filename = `${testName.replace(/\\s+/g, '-')}_${timestamp}.json`;
-    const filePath = path.join(this.reportsDir, filename);
-
-    // Check for threshold violations
-    const warnings = this.checkThresholds(performanceData);
-
-    // Create report object
-    const reportData = {
-      testName,
-      timestamp: new Date().toISOString(),
-      performanceData,
-      warnings,
-      recommendations: this.generateRecommendations(performanceData, warnings)
-    };
-
-    // Save report
-    fs.writeFileSync(filePath, JSON.stringify(reportData, null, 2));
-
-    console.log(`Performance report saved to: ${filePath}`);
+    // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
+    console.log('Performance reporting feature is temporarily disabled');
 
     return {
-      filePath,
-      warnings
+      filePath: null,
+      warnings: [],
+      disabled: true
     };
   }
 
@@ -476,29 +460,9 @@ export class PerformanceReporter {
    * @returns {Array} Trend data
    */
   generateTrendReport(testName, limit = 10) {
-    const testNamePattern = testName.replace(/\\s+/g, '-');
-    const files = fs.readdirSync(this.reportsDir)
-      .filter(file => file.startsWith(testNamePattern) && file.endsWith('.json'))
-      .sort()
-      .reverse()
-      .slice(0, limit);
+    // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
+    console.log('Performance reporting feature is temporarily disabled');
 
-    const trendData = files.map(file => {
-      const filePath = path.join(this.reportsDir, file);
-      const reportData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-      return {
-        timestamp: reportData.timestamp,
-        webVitals: reportData.performanceData.webVitals,
-        networkStats: {
-          totalRequests: reportData.performanceData.networkMetrics?.totalRequests,
-          totalSize: reportData.performanceData.networkMetrics?.totalSize,
-          averageDuration: reportData.performanceData.networkMetrics?.averageDuration
-        },
-        warnings: reportData.warnings.length
-      };
-    });
-
-    return trendData;
+    return [];
   }
 }

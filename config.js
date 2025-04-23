@@ -30,9 +30,10 @@ const defaultConfig = {
     testPlansDir: path.join(__dirname, 'test-plans')
   },
   performance: {
-    collectMetrics: true,
-    webVitals: true,
-    networkMetrics: true,
+    // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
+    collectMetrics: false,
+    webVitals: false,
+    networkMetrics: false,
     thresholds: {
       lcp: 2500,
       fid: 100,

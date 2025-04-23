@@ -4,6 +4,8 @@
   <img src="https://raw.githubusercontent.com/microsoft/playwright/main/docs/src/img/playwright-logo.svg" width="200" alt="Playwright Logo">
 </div>
 
+> **Güncelleme**: Bu rapor, projenin son durumuna göre güncellenmiştir. Özellikle Strateji Deseni uygulaması ve Factory Deseni kullanımı gibi iyileştirmeler yapılmıştır.
+
 ## 📋 İçindekiler
 
 - [Giriş](#-giriş)
@@ -32,52 +34,40 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
   - `ScreenshotManager.js`: Ekran görüntüsü yönetimi
   - `AntiDetection.js`: Bot algılama önlemleri
 
-- **Ayrılmış Servisler**: Veritabanı işlemleri için ayrı servisler oluşturulmuş:
+- **Ayrılmış Servisler**: Raporlama, performans izleme gibi işlevler için ayrı servisler oluşturulmuş.
+
+- **StepExecutor**: Test adımlarını yürütme sorumluluğunu üstleniyor ve bu işi Strateji Deseni kullanarak yapıyor. Her adım türü için ayrı bir strateji sınıfı bulunuyor:
+
   ```javascript
-  // database/index.js
-  import elementService from './elementService.js';
-  import scenarioService from './scenarioService.js';
-  import resultService from './resultService.js';
-  import reportImportService from './reportImportService.js';
+  // StepExecutor.js
+  async executeStep(step, index) {
+    // ...
+    try {
+      // Create execution context with all dependencies
+      const context = {
+        page: this.page,
+        elementHelper: this.elementHelper,
+        screenshotManager: this.screenshotManager,
+        screenshotsDir: this.screenshotsDir
+      };
+
+      // Get appropriate strategy for the step type
+      const stepStrategy = StepStrategyFactory.getStrategy(step.action);
+
+      // Execute the strategy
+      const strategyResult = await stepStrategy.execute(step, context);
+      // ...
+    } catch (error) {
+      // ...
+    }
+  }
   ```
 
 ### İyileştirme Gerektiren Alanlar
 
-- **BrowserManager.js**: Bu sınıf hem tarayıcı başlatma hem de tarayıcı bağlamı oluşturma gibi birden fazla sorumluluk üstleniyor. Tarayıcı türüne özgü yapılandırmalar da bu sınıfta yer alıyor:
+- **TestAgent Sınıfı**: Bu sınıf, çok sayıda metod içeriyor ve birden fazla sorumluluğu var (tarayıcı yönetimi, test çalıştırma, element etkileşimleri). Bu sınıf daha küçük, daha odaklı sınıflara bölünebilir.
 
-  ```javascript
-  async launchBrowser() {
-    // Tarayıcı başlatma mantığı
-    switch (this.browserType) {
-      case 'firefox':
-        // Firefox özel yapılandırması
-      case 'edge':
-        // Edge özel yapılandırması
-      case 'chromium':
-        // Chromium özel yapılandırması
-    }
-  }
-  ```
-
-- **StepExecutor.js**: Bu sınıf çok fazla farklı test adımı türünü işliyor ve büyük bir switch-case yapısı içeriyor. Her adım türü için ayrı bir strateji sınıfı kullanılabilir.
-
-  ```javascript
-  async executeStep(step, index) {
-    try {
-      switch (step.action) {
-        case 'navigate':
-          // Gezinme mantığı
-        case 'click':
-          // Tıklama mantığı
-        case 'type':
-          // Yazma mantığı
-        // ... ve daha birçok durum
-      }
-    } catch (error) {
-      // Hata işleme
-    }
-  }
-  ```
+- **TestRunner Sınıfı**: Hem test yürütme hem de performans izleme sorumluluklarını üstleniyor. Performans izleme işlevleri ayrı bir sınıfa taşınabilir.
 
 ## 🔄 Açık/Kapalı Prensibi (OCP)
 
@@ -85,45 +75,44 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
 
 ### Olumlu Yönler
 
-- **Modüler Yapı**: Proje, yeni bileşenlerin kolayca eklenebileceği modüler bir yapıya sahip.
+- **Strateji Deseni**: `StepExecutor` sınıfı, Strateji Deseni kullanarak farklı test adımı türlerini işliyor. Bu, yeni adım türleri eklemek için mevcut kodu değiştirmeden genişletmeye olanak tanıyor:
 
-- **Retry Mekanizması**: Yeniden deneme mantığı, farklı senaryolarda kullanılabilecek şekilde genelleştirilmiş:
   ```javascript
-  // Örnek kullanım
-  await retry(async () => {
-    // Yeniden denenecek işlem
-  }, {
-    maxRetries: 2,
-    initialDelay: 1000,
-    factor: 2
-  });
+  // StepStrategyFactory.js
+  static getStrategy(stepType) {
+    switch (stepType) {
+      // Navigation actions
+      case 'navigate':
+      case 'navigateAndWait':
+        return new NavigateStepStrategy();
+      case 'goBack':
+        return new GoBackStepStrategy();
+      // ... diğer stratejiler
+      default:
+        throw new Error(`Unsupported step type: ${stepType}`);
+    }
+  }
+  ```
+
+- **Factory Deseni**: `BrowserFactoryProducer` ve `BrowserFactory` sınıfları, farklı tarayıcı türlerini desteklemek için Factory Deseni kullanıyor. Yeni bir tarayıcı türü eklemek için mevcut kodu değiştirmeden genişletme yapılabilir:
+
+  ```javascript
+  // BrowserFactoryProducer.js
+  static getFactory(browserType) {
+    switch (browserType) {
+      case 'chromium': return new ChromiumFactory();
+      case 'firefox': return new FirefoxFactory();
+      case 'edge': return new EdgeFactory();
+      default: return new ChromiumFactory(); // Varsayılan
+    }
+  }
   ```
 
 ### İyileştirme Gerektiren Alanlar
 
-- **StepExecutor.js**: Yeni bir test adımı türü eklemek için mevcut sınıfı değiştirmek gerekiyor. Bu, OCP'ye aykırı:
+- **Performans İzleme**: Performans izleme özellikleri, mevcut sınıflara sıkı bir şekilde bağlı. Bu, performans izleme özelliklerini değiştirmek veya genişletmek için mevcut kodu değiştirmeyi gerektiriyor.
 
-  ```javascript
-  async executeStep(step, index) {
-    try {
-      switch (step.action) {
-        // Yeni bir adım türü eklemek için burayı değiştirmek gerekiyor
-      }
-    } catch (error) {
-      // Hata işleme
-    }
-  }
-  ```
-
-- **BrowserManager.js**: Yeni bir tarayıcı türü eklemek için mevcut sınıfı değiştirmek gerekiyor:
-
-  ```javascript
-  async launchBrowser() {
-    switch (this.browserType) {
-      // Yeni bir tarayıcı türü eklemek için burayı değiştirmek gerekiyor
-    }
-  }
-  ```
+- **StepStrategyFactory**: Yeni bir adım türü eklemek için hala `StepStrategyFactory` sınıfını değiştirmek gerekiyor. Bu, bir kayıt mekanizması ile daha da iyileştirilebilir.
 
 ## 🔄 Liskov Yerine Geçme Prensibi (LSP)
 
@@ -131,25 +120,50 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
 
 ### Olumlu Yönler
 
-- **Hata Sınıfları**: Özel hata sınıfları, temel `AppError` sınıfından türetilmiş ve tutarlı bir şekilde kullanılıyor.
+- **BrowserFactory Hiyerarşisi**: `BrowserFactory` soyut sınıfı ve alt sınıfları (`ChromiumFactory`, `FirefoxFactory`, `EdgeFactory`), Liskov Yerine Geçme Prensibine uygun. Alt sınıflar, üst sınıfın davranışını değiştirmeden genişletiyor:
+
+  ```javascript
+  // BrowserFactory.js
+  export class BrowserFactory {
+    async createBrowser(options) {
+      throw new Error('This method must be implemented by subclasses');
+    }
+
+    createContextOptions() {
+      throw new Error('This method must be implemented by subclasses');
+    }
+  }
+
+  // ChromiumFactory.js
+  export class ChromiumFactory extends BrowserFactory {
+    async createBrowser(options) {
+      // Chromium-specific implementation
+    }
+
+    createContextOptions() {
+      // Chromium-specific context options
+    }
+  }
+  ```
+
+- **StepStrategy Hiyerarşisi**: `StepStrategy` soyut sınıfı ve alt sınıfları, Liskov Yerine Geçme Prensibine uygun. Her strateji, aynı arayüzü uyguluyor ve beklendiği gibi davranıyor.
 
 ### İyileştirme Gerektiren Alanlar
 
-- **Arayüz Eksikliği**: Projede açık bir şekilde tanımlanmış arayüzler (interfaces) bulunmuyor, bu da LSP'nin tam olarak değerlendirilmesini zorlaştırıyor.
-
-- **BrowserPool.js**: Bu sınıf kaldırılmış ancak uyumluluk için boş metodlarla tutulmuş. Bu durum, LSP'ye aykırı olabilir çünkü bu sınıfın metodları beklenen davranışı sergilemiyor:
+- **ScreenshotManager**: Ekran görüntüsü desteği kaldırıldığında, `ScreenshotManager` sınıfı boş bir dize döndürüyor. Bu, sınıfın beklenen davranışını değiştiriyor ve Liskov Yerine Geçme Prensibini ihlal ediyor:
 
   ```javascript
-  export class BrowserPool {
-    constructor(options = {}) {
-      console.warn('WARNING: Browser Pool feature has been removed from the application.');
+  export class ScreenshotManager {
+    constructor(page, screenshotsDir) {
+      this.page = page;
+      // Screenshot desteği kaldırıldı
+      console.log('Screenshot support has been removed');
     }
-    
-    async acquireBrowser() {
-      console.warn('Browser Pool feature has been removed. This method does nothing.');
-      throw new Error('Browser Pool feature has been removed from the application.');
+
+    async takeScreenshot(name, options = {}) {
+      console.log('Screenshot support has been removed');
+      return '';
     }
-    // ...
   }
   ```
 
@@ -159,24 +173,31 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
 
 ### Olumlu Yönler
 
-- **Modüler Yapı**: Proje, farklı sorumlulukları ayrı modüllere ayırarak, her modülün yalnızca gerekli işlevleri sunmasını sağlıyor.
+- **Küçük, Odaklı Arayüzler**: `StepStrategy`, `BrowserFactory` gibi arayüzler, tek bir sorumluluğa odaklanmış ve gereksiz metodlar içermiyor:
+
+  ```javascript
+  // StepStrategy.js
+  export class StepStrategy {
+    async execute(step, context) {
+      throw new Error('This method must be implemented by subclasses');
+    }
+  }
+
+  // BrowserFactory.js
+  export class BrowserFactory {
+    async createBrowser(options) {
+      throw new Error('This method must be implemented by subclasses');
+    }
+
+    createContextOptions() {
+      throw new Error('This method must be implemented by subclasses');
+    }
+  }
+  ```
 
 ### İyileştirme Gerektiren Alanlar
 
-- **Açık Arayüzlerin Eksikliği**: Projede açıkça tanımlanmış arayüzler bulunmuyor, bu da ISP'nin tam olarak değerlendirilmesini zorlaştırıyor.
-
-- **TestAgent Sınıfı**: Bu sınıf, çok sayıda metod içeriyor ve bazı istemciler için gereksiz olabilecek işlevler sunuyor:
-
-  ```javascript
-  export class TestAgent {
-    // Birçok farklı metod
-    async navigateTo(url) { /* ... */ }
-    async clickElement(target, strategy) { /* ... */ }
-    async typeText(target, strategy, value) { /* ... */ }
-    async takeScreenshot(name) { /* ... */ }
-    // ...
-  }
-  ```
+- **TestAgent Arayüzü**: `TestAgent` sınıfı, çok sayıda metod içeriyor ve bazı istemciler için gereksiz olabilecek işlevler sunuyor. Bu arayüz, daha küçük, daha odaklı arayüzlere bölünebilir.
 
 ## 🔄 Bağımlılığın Tersine Çevrilmesi Prensibi (DIP)
 
@@ -184,12 +205,13 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
 
 ### Olumlu Yönler
 
-- **Bağımlılık Enjeksiyonu**: TestRunner sınıfı, BrowserManager ve StepExecutor örneklerini dışarıdan alabilir:
+- **Bağımlılık Enjeksiyonu**: `TestRunner` sınıfı, `BrowserManager` ve `StepExecutor` örneklerini dışarıdan alabilir:
 
   ```javascript
   constructor(options = {}) {
     // ...
     this.browserManager = options.browserManager || null;
+    this.stepExecutor = options.stepExecutor || null;
     // ...
   }
 
@@ -204,37 +226,59 @@ Bu rapor, Playwright Server Agent projesinin SOLID yazılım tasarım prensipler
   }
   ```
 
-### İyileştirme Gerektiren Alanlar
-
-- **Doğrudan Bağımlılıklar**: Birçok sınıf, somut sınıflara doğrudan bağımlı:
+- **Soyutlamalar Üzerinden Bağımlılık**: `BrowserManager` sınıfı, somut tarayıcı sınıflarına değil, `BrowserFactory` soyutlamasına bağımlı:
 
   ```javascript
-  // StepExecutor.js
-  constructor(page, screenshotsDir, onStepCompleted = null) {
-    this.page = page;
-    this.elementHelper = new ElementHelper(page); // Doğrudan bağımlılık
-    this.screenshotManager = new ScreenshotManager(page, screenshotsDir); // Doğrudan bağımlılık
-    this.onStepCompleted = onStepCompleted;
+  constructor(browserType = 'chromium', options = {}) {
+    // ...
+    // Get the appropriate browser factory
+    this.browserFactory = BrowserFactoryProducer.getFactory(this.browserType);
+  }
+
+  async launchBrowser() {
+    // Use the factory to create the browser
+    return await this.browserFactory.createBrowser({
+      headless: this.headless
+    });
   }
   ```
 
-- **Soyutlama Eksikliği**: Projede, bileşenler arasındaki bağımlılıkları yönetmek için soyutlamalar (interfaces veya abstract classes) kullanılmıyor.
+### İyileştirme Gerektiren Alanlar
+
+- **Doğrudan Bağımlılıklar**: Bazı sınıflar, somut sınıflara doğrudan bağımlı. Örneğin, `TestRunner` sınıfı, `JsonReporter` ve `PerformanceReporter` sınıflarını doğrudan oluşturuyor. Bu, bağımlılıkların tersine çevrilmesi prensibini ihlal ediyor:
+
+  ```javascript
+  constructor(options = {}) {
+    // ...
+    this.jsonReporter = options.jsonReporter || new JsonReporter({
+      reportsDir: options.reportsDir || './data/reports',
+      screenshotsDir: this.screenshotsDir
+    });
+    // ...
+    this.performanceReporter = new PerformanceReporter({
+      reportsDir: this.performanceReportsDir,
+      thresholds: options.performanceThresholds
+    });
+  }
+  ```
 
 ## 📊 Genel Değerlendirme
 
 | Prensip | Değerlendirme | Açıklama |
 |---------|---------------|----------|
-| **SRP** | 🟡 Orta | Modüler yapı iyi, ancak bazı sınıflar birden fazla sorumluluk üstleniyor |
-| **OCP** | 🟠 Düşük-Orta | Yeni özellikler eklemek genellikle mevcut kodu değiştirmeyi gerektiriyor |
-| **LSP** | 🟡 Orta | Hata sınıfları iyi tasarlanmış, ancak genel olarak arayüz eksikliği var |
-| **ISP** | 🟠 Düşük-Orta | Modüler yapı iyi, ancak bazı sınıflar çok fazla sorumluluk üstleniyor |
-| **DIP** | 🟠 Düşük-Orta | Bazı bağımlılık enjeksiyonu var, ancak çoğunlukla doğrudan bağımlılıklar kullanılıyor |
+| **SRP** | 🟢 İyi | Modüler yapı iyi, sınıflar genellikle tek bir sorumluluğa odaklanıyor |
+| **OCP** | 🟡 Orta-İyi | Strateji Deseni ve Factory Deseni kullanımı ile genişletilebilirlik artırılmış |
+| **LSP** | 🟡 Orta | Hata sınıfları ve strateji sınıfları iyi tasarlanmış, ancak bazı alanlarda iyileştirme gerekiyor |
+| **ISP** | 🟡 Orta | Modüler yapı iyi, ancak bazı sınıflar hala çok fazla sorumluluk üstleniyor |
+| **DIP** | 🟡 Orta | Bağımlılık enjeksiyonu kullanımı artırılmış, ancak bazı alanlarda doğrudan bağımlılıklar hala mevcut |
+
+> **Not**: Projenin son durumunda, özellikle Strateji Deseni ve Factory Deseni uygulamaları ile SOLID prensiplerine uyum önemli ölçüde artırılmıştır.
 
 ## 🛠 İyileştirme Önerileri
 
 ### 1. Strateji Deseni Kullanımı
 
-StepExecutor sınıfındaki büyük switch-case yapısı yerine Strateji Deseni kullanılabilir:
+Proje, Strateji Deseni'ni başarıyla uygulamaktadır. Ancak, bu desen daha da geliştirilebilir. Örneğin, `StepStrategyFactory` sınıfındaki switch-case yapısı yerine bir kayıt mekanizması kullanılabilir:
 
 ```javascript
 // Arayüz
@@ -283,7 +327,7 @@ class StepExecutor {
 
 ### 2. Fabrika Deseni Kullanımı
 
-BrowserManager sınıfındaki tarayıcı başlatma mantığı için Fabrika Deseni kullanılabilir:
+Proje, Fabrika Deseni'ni başarıyla uygulamaktadır. Ancak, bu desen daha da geliştirilebilir. Örneğin, yeni tarayıcı türleri eklemek için daha esnek bir mekanizma oluşturulabilir:
 
 ```javascript
 // Arayüz
@@ -332,7 +376,7 @@ class BrowserManager {
 
 ### 3. Bağımlılık Enjeksiyonu Kullanımı
 
-Sınıflar arasındaki bağımlılıkları yönetmek için bağımlılık enjeksiyonu kullanılabilir:
+Proje, bağımlılık enjeksiyonunu kısmen uygulamaktadır. Ancak, bu yaklaşım daha da geliştirilebilir. Tüm sınıflar, bağımlılıklarını dışarıdan alacak şekilde tasarlanabilir:
 
 ```javascript
 // Arayüzler
@@ -356,7 +400,7 @@ class PlaywrightElementHelper extends IElementHelper {
     super();
     this.page = page;
   }
-  
+
   async clickElement(target, strategy) {
     // Playwright ile tıklama mantığı
   }
@@ -371,7 +415,7 @@ class StepExecutor {
     this.screenshotManager = screenshotManager; // Dışarıdan enjekte edilir
     this.onStepCompleted = onStepCompleted;
   }
-  
+
   // Metodlar
 }
 
@@ -384,7 +428,7 @@ const stepExecutor = new StepExecutor(page, elementHelper, screenshotManager);
 
 ### 4. Komut Deseni Kullanımı
 
-Test adımlarını yürütmek için Komut Deseni kullanılabilir:
+Proje, Strateji Deseni'ni kullanarak test adımlarını yürütüyor. Alternatif olarak veya tamamlayıcı olarak Komut Deseni de kullanılabilir:
 
 ```javascript
 // Komut arayüzü
@@ -401,7 +445,7 @@ class NavigateCommand extends TestCommand {
     this.page = page;
     this.url = url;
   }
-  
+
   async execute() {
     await this.page.goto(this.url, { waitUntil: 'networkidle' });
     return { success: true };
@@ -415,7 +459,7 @@ class ClickCommand extends TestCommand {
     this.target = target;
     this.strategy = strategy;
   }
-  
+
   async execute() {
     await this.elementHelper.clickElement(this.target, this.strategy);
     return { success: true };
@@ -429,7 +473,7 @@ class CommandFactory {
     this.elementHelper = elementHelper;
     this.screenshotManager = screenshotManager;
   }
-  
+
   createCommand(step) {
     switch (step.action) {
       case 'navigate': return new NavigateCommand(this.page, step.value);
@@ -445,7 +489,7 @@ class StepExecutor {
   constructor(page, elementHelper, screenshotManager) {
     this.commandFactory = new CommandFactory(page, elementHelper, screenshotManager);
   }
-  
+
   async executeStep(step) {
     const command = this.commandFactory.createCommand(step);
     return await command.execute();
@@ -453,4 +497,35 @@ class StepExecutor {
 }
 ```
 
-Bu iyileştirmeler, projenin SOLID prensiplerine daha uygun hale gelmesini sağlayacak ve kodun bakımını, genişletilmesini ve test edilmesini kolaylaştıracaktır.
+### 5. Null Object Deseni Kullanımı
+
+`ScreenshotManager` sınıfı için bir "Null Object" deseni uygulanabilir:
+
+```javascript
+// Arayüz
+class IScreenshotManager {
+  async takeScreenshot(name, options) {}
+}
+
+// Normal uygulama
+class ScreenshotManager implements IScreenshotManager {
+  async takeScreenshot(name, options) {
+    // Ekran görüntüsü alma işlemi
+  }
+}
+
+// Null Object uygulama
+class NullScreenshotManager implements IScreenshotManager {
+  async takeScreenshot(name, options) {
+    console.log('Screenshot support is disabled');
+    return null; // Tutarlı bir dönüş değeri
+  }
+}
+
+// Kullanım
+const screenshotManager = isScreenshotEnabled
+  ? new ScreenshotManager(page, screenshotsDir)
+  : new NullScreenshotManager();
+```
+
+Bu iyileştirmeler, projenin SOLID prensiplerine daha uygun hale gelmesini sağlayacak ve kodun bakımını, genişletilmesini ve test edilmesini kolaylaştıracaktır. Projenin mevcut durumunda, özellikle Strateji Deseni ve Factory Deseni uygulamaları ile SOLID prensiplerine uyum önemli ölçüde artırılmıştır.

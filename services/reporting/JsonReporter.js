@@ -1,6 +1,7 @@
 /**
  * JSON Reporter module
  * Generates and saves test reports in JSON format
+ * NOT: Performans raporlama özelliği geçici olarak devre dışı bırakıldı
  */
 
 import fs from 'fs';
@@ -135,11 +136,13 @@ export class JsonReporter {
           success: step.success,
           error: step.error,
           duration: step.duration,
-          screenshot: step.screenshot,
-          performance: step.performance || null
+          screenshot: step.screenshot
+          // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
+          // performance: step.performance || null
         })),
         metrics,
-        performance: testResult.performance || null,
+        // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
+        // performance: testResult.performance || null,
         tags: [] // Can be populated later
       };
 
