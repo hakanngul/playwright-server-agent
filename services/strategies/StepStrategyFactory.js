@@ -3,6 +3,10 @@
  * Creates appropriate strategy based on step type
  */
 
+import { StepStrategyRegistry } from './StepStrategyRegistry.js';
+import { StepStrategy } from './StepStrategy.js';
+
+// Import all strategies
 import { NavigateStepStrategy } from './NavigateStepStrategy.js';
 import { ClickStepStrategy } from './ClickStepStrategy.js';
 import { TypeStepStrategy } from './TypeStepStrategy.js';
@@ -43,6 +47,65 @@ import { ClickFullscreenButtonStepStrategy } from './ClickFullscreenButtonStepSt
 import { ExitFullScreenStepStrategy } from './ExitFullScreenStepStrategy.js';
 import { TakeElementScreenshotStepStrategy } from './TakeElementScreenshotStepStrategy.js';
 
+// Register all strategies
+// Navigation actions
+StepStrategyRegistry.register('navigate', NavigateStepStrategy);
+StepStrategyRegistry.register('navigateAndWait', NavigateStepStrategy);
+StepStrategyRegistry.register('goBack', GoBackStepStrategy);
+StepStrategyRegistry.register('goForward', GoForwardStepStrategy);
+StepStrategyRegistry.register('refresh', RefreshStepStrategy);
+
+// Element interaction actions
+StepStrategyRegistry.register('click', ClickStepStrategy);
+StepStrategyRegistry.register('doubleClick', DoubleClickStepStrategy);
+StepStrategyRegistry.register('hover', HoverStepStrategy);
+StepStrategyRegistry.register('type', TypeStepStrategy);
+StepStrategyRegistry.register('select', SelectStepStrategy);
+StepStrategyRegistry.register('check', CheckStepStrategy);
+StepStrategyRegistry.register('uncheck', UncheckStepStrategy);
+StepStrategyRegistry.register('upload', UploadStepStrategy);
+
+// Complex interaction actions
+StepStrategyRegistry.register('hoverAndClickMenuItem', HoverAndClickMenuItemStepStrategy);
+StepStrategyRegistry.register('hoverAndVerifyTooltip', HoverAndVerifyTooltipStepStrategy);
+StepStrategyRegistry.register('dragAndDrop', DragAndDropStepStrategy);
+
+// Role-based actions
+StepStrategyRegistry.register('clickByRole', ClickByRoleStepStrategy);
+StepStrategyRegistry.register('clickByText', ClickByTextStepStrategy);
+StepStrategyRegistry.register('clickByTestId', ClickByTestIdStepStrategy);
+
+// Frame actions
+StepStrategyRegistry.register('clickInFrame', ClickInFrameStepStrategy);
+
+// Browser window actions
+StepStrategyRegistry.register('maximizeWindow', MaximizeWindowStepStrategy);
+StepStrategyRegistry.register('clickFullscreenButton', ClickFullscreenButtonStepStrategy);
+StepStrategyRegistry.register('exitFullScreen', ExitFullScreenStepStrategy);
+
+// Keyboard actions
+StepStrategyRegistry.register('pressEnter', PressEnterStepStrategy);
+StepStrategyRegistry.register('pressTab', PressTabStepStrategy);
+StepStrategyRegistry.register('pressEscape', PressEscapeStepStrategy);
+
+// Wait actions
+StepStrategyRegistry.register('wait', WaitStepStrategy);
+StepStrategyRegistry.register('waitForElement', WaitForElementStepStrategy);
+StepStrategyRegistry.register('waitForElementToDisappear', WaitForElementToDisappearStepStrategy);
+StepStrategyRegistry.register('waitForNavigation', WaitForNavigationStepStrategy);
+StepStrategyRegistry.register('waitForURL', WaitForURLStepStrategy);
+
+// Screenshot actions
+StepStrategyRegistry.register('takeScreenshot', TakeScreenshotStepStrategy);
+StepStrategyRegistry.register('takeElementScreenshot', TakeElementScreenshotStepStrategy);
+
+// Verification actions
+StepStrategyRegistry.register('verifyText', VerifyTextStepStrategy);
+StepStrategyRegistry.register('verifyTitle', VerifyTitleStepStrategy);
+StepStrategyRegistry.register('verifyURL', VerifyURLStepStrategy);
+StepStrategyRegistry.register('verifyElementExists', VerifyElementExistsStepStrategy);
+StepStrategyRegistry.register('verifyElementVisible', VerifyElementVisibleStepStrategy);
+
 /**
  * Factory for creating step execution strategies
  */
@@ -53,104 +116,32 @@ export class StepStrategyFactory {
    * @returns {StepStrategy} Strategy for executing the step
    */
   static getStrategy(stepType) {
-    switch (stepType) {
-      // Navigation actions
-      case 'navigate':
-      case 'navigateAndWait':
-        return new NavigateStepStrategy();
-      case 'goBack':
-        return new GoBackStepStrategy();
-      case 'goForward':
-        return new GoForwardStepStrategy();
-      case 'refresh':
-        return new RefreshStepStrategy();
+    return StepStrategyRegistry.getStrategy(stepType);
+  }
 
-      // Element interaction actions
-      case 'click':
-        return new ClickStepStrategy();
-      case 'doubleClick':
-        return new DoubleClickStepStrategy();
-      case 'hover':
-        return new HoverStepStrategy();
-      case 'type':
-        return new TypeStepStrategy();
-      case 'select':
-        return new SelectStepStrategy();
-      case 'check':
-        return new CheckStepStrategy();
-      case 'uncheck':
-        return new UncheckStepStrategy();
-      case 'upload':
-        return new UploadStepStrategy();
+  /**
+   * Checks if a strategy is registered for a step type
+   * @param {string} stepType - Type of step
+   * @returns {boolean} True if a strategy is registered
+   */
+  static hasStrategy(stepType) {
+    return StepStrategyRegistry.hasStrategy(stepType);
+  }
 
-      // Complex interaction actions
-      case 'hoverAndClickMenuItem':
-        return new HoverAndClickMenuItemStepStrategy();
-      case 'hoverAndVerifyTooltip':
-        return new HoverAndVerifyTooltipStepStrategy();
-      case 'dragAndDrop':
-        return new DragAndDropStepStrategy();
+  /**
+   * Gets all registered step types
+   * @returns {Array<string>} Array of registered step types
+   */
+  static getRegisteredStepTypes() {
+    return StepStrategyRegistry.getRegisteredStepTypes();
+  }
 
-      // Role-based actions
-      case 'clickByRole':
-        return new ClickByRoleStepStrategy();
-      case 'clickByText':
-        return new ClickByTextStepStrategy();
-      case 'clickByTestId':
-        return new ClickByTestIdStepStrategy();
-
-      // Frame actions
-      case 'clickInFrame':
-        return new ClickInFrameStepStrategy();
-
-      // Browser window actions
-      case 'maximizeWindow':
-        return new MaximizeWindowStepStrategy();
-      case 'clickFullscreenButton':
-        return new ClickFullscreenButtonStepStrategy();
-      case 'exitFullScreen':
-        return new ExitFullScreenStepStrategy();
-
-      // Keyboard actions
-      case 'pressEnter':
-        return new PressEnterStepStrategy();
-      case 'pressTab':
-        return new PressTabStepStrategy();
-      case 'pressEscape':
-        return new PressEscapeStepStrategy();
-
-      // Wait actions
-      case 'wait':
-        return new WaitStepStrategy();
-      case 'waitForElement':
-        return new WaitForElementStepStrategy();
-      case 'waitForElementToDisappear':
-        return new WaitForElementToDisappearStepStrategy();
-      case 'waitForNavigation':
-        return new WaitForNavigationStepStrategy();
-      case 'waitForURL':
-        return new WaitForURLStepStrategy();
-
-      // Screenshot actions
-      case 'takeScreenshot':
-        return new TakeScreenshotStepStrategy();
-      case 'takeElementScreenshot':
-        return new TakeElementScreenshotStepStrategy();
-
-      // Verification actions
-      case 'verifyText':
-        return new VerifyTextStepStrategy();
-      case 'verifyTitle':
-        return new VerifyTitleStepStrategy();
-      case 'verifyURL':
-        return new VerifyURLStepStrategy();
-      case 'verifyElementExists':
-        return new VerifyElementExistsStepStrategy();
-      case 'verifyElementVisible':
-        return new VerifyElementVisibleStepStrategy();
-
-      default:
-        throw new Error(`Unsupported step type: ${stepType}`);
-    }
+  /**
+   * Registers a new strategy
+   * @param {string} stepType - Type of step
+   * @param {Function} strategyClass - Strategy class constructor
+   */
+  static registerStrategy(stepType, strategyClass) {
+    StepStrategyRegistry.register(stepType, strategyClass);
   }
 }

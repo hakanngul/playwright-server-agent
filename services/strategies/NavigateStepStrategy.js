@@ -19,11 +19,22 @@ export class NavigateStepStrategy extends StepStrategy {
    */
   async execute(step, context) {
     const { page } = context;
-    
+
+    // Get URL from either target or value field
+    const url = step.target || step.value;
+
+    if (!url) {
+      throw new NavigationError(
+        'Navigation step is missing URL. Please provide a URL in the target or value field.',
+        '',
+        false
+      );
+    }
+
     await retry(async () => {
       try {
-        console.log(`Navigating to: ${step.value}`);
-        await page.goto(step.value, {
+        console.log(`Navigating to: ${url}`);
+        await page.goto(url, {
           waitUntil: 'networkidle',
           timeout: step.timeout || 60000
         });
@@ -33,15 +44,15 @@ export class NavigateStepStrategy extends StepStrategy {
         // Convert Playwright errors to our custom errors
         if (error.name === 'TimeoutError') {
           throw new NavigationError(
-            `Timeout navigating to: ${step.value}`,
-            step.value,
+            `Timeout navigating to: ${url}`,
+            url,
             true
           );
         }
 
         throw new NavigationError(
-          `Failed to navigate to: ${step.value} - ${error.message}`,
-          step.value,
+          `Failed to navigate to: ${url} - ${error.message}`,
+          url,
           true
         );
       }
@@ -50,11 +61,11 @@ export class NavigateStepStrategy extends StepStrategy {
       initialDelay: 1000,
       factor: 2,
       onRetry: ({ attempt, error, willRetry }) => {
-        console.log(`Retry ${attempt} navigating to: ${step.value} (${willRetry ? 'will retry' : 'giving up'})`);
+        console.log(`Retry ${attempt} navigating to: ${url} (${willRetry ? 'will retry' : 'giving up'})`);
         console.error(`Error: ${error.message}`);
       }
     });
-    
+
     return { success: true };
   }
 }

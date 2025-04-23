@@ -11,9 +11,19 @@ import { StepExecutor } from './StepExecutor.js';
 import { TestRunner } from './TestRunner.js';
 import { applyAntiDetectionMeasures } from './AntiDetection.js';
 
+// Import interfaces
+import { IBrowserController } from '../interfaces/IBrowserController.js';
+import { ITestRunner } from '../interfaces/ITestRunner.js';
+import { IElementInteractor } from '../interfaces/IElementInteractor.js';
+
+// Import implementations
+import { BrowserController } from './BrowserController.js';
+import { ElementInteractor } from './ElementInteractor.js';
+import { TestRunnerAdapter } from './TestRunnerAdapter.js';
+
 /**
  * TestAgent class for browser automation
- * This is a compatibility layer for the original TestAgent class
+ * Facade that combines browser controller, test runner, and element interactor
  */
 export class TestAgent {
   /**
@@ -22,52 +32,56 @@ export class TestAgent {
    * @param {Object} options - Browser configuration options
    */
   constructor(browserType = 'chromium', options = {}) {
-    this.browser = null;
-    this.context = null;
-    this.page = null;
-    this.screenshotsDir = path.join(process.cwd(), 'screenshots');
+    this.screenshotsDir = options.screenshotsDir || path.join(process.cwd(), 'screenshots');
     this.browserType = browserType;
     this.headless = options.headless !== undefined ? options.headless : true;
     this.onStepCompleted = null; // Callback for step completion
-    this.initialized = false;
 
-    // Create internal components
-    this._testRunner = null;
+    // Create component instances
+    this.browserController = new BrowserController(browserType, {
+      headless: this.headless
+    });
+
+    this.testRunner = new TestRunnerAdapter({
+      browserType: this.browserType,
+      headless: this.headless,
+      screenshotsDir: this.screenshotsDir
+    });
+
+    this.elementInteractor = null; // Will be initialized after browser is ready
 
     console.log(`TestAgent created with browserType: ${browserType}, headless: ${this.headless}`);
   }
 
-
-
   /**
-   * Initializes the browser
+   * Initializes the browser and components
    * @returns {Promise<void>}
    */
   async initialize() {
-    if (this.initialized) {
+    if (this.browserController.isInitialized()) {
       return;
     }
 
     console.log(`Initializing browser (type: ${this.browserType})...`);
     try {
-      // Create and initialize test runner
-      this._testRunner = new TestRunner({
-        browserType: this.browserType,
-        headless: this.headless,
-        screenshotsDir: this.screenshotsDir,
-        onStepCompleted: this.onStepCompleted
-      });
+      // Initialize browser controller
+      await this.browserController.initialize();
 
-      await this._testRunner.initialize();
+      // Initialize test runner
+      await this.testRunner.initialize();
 
-      // Get references to browser, context and page
-      const browserManager = this._testRunner.browserManager;
-      this.browser = browserManager.browser;
-      this.context = browserManager.context;
-      this.page = browserManager.page;
+      // Create element interactor with the initialized page
+      this.elementInteractor = new ElementInteractor(
+        this.browserController.getPage(),
+        this.screenshotsDir
+      );
 
-      this.initialized = true;
-      console.log('Browser initialized successfully');
+      // Set step completed callback
+      if (this.onStepCompleted) {
+        this.testRunner.setStepCompletedCallback(this.onStepCompleted);
+      }
+
+      console.log('Browser and components initialized successfully');
     } catch (error) {
       console.error('Failed to initialize browser:', error);
       throw error;
@@ -80,11 +94,11 @@ export class TestAgent {
    * @returns {Promise<Object>} Test results
    */
   async runTest(testPlan) {
-    if (!this.initialized) {
+    if (!this.browserController.isInitialized()) {
       await this.initialize();
     }
 
-    return await this._testRunner.runTest(testPlan);
+    return await this.testRunner.runTest(testPlan);
   }
 
   /**
@@ -93,12 +107,11 @@ export class TestAgent {
    * @returns {Promise<void>}
    */
   async navigateTo(url) {
-    if (!this.initialized) {
+    if (!this.browserController.isInitialized()) {
       await this.initialize();
     }
 
-    console.log(`Navigating to: ${url}`);
-    await this.page.goto(url, { waitUntil: 'networkidle' });
+    await this.elementInteractor.navigateTo(url);
   }
 
   /**
@@ -108,12 +121,11 @@ export class TestAgent {
    * @returns {Promise<boolean>} True if click was successful
    */
   async clickElement(target, strategy) {
-    if (!this.initialized) {
+    if (!this.browserController.isInitialized()) {
       await this.initialize();
     }
 
-    const elementHelper = new ElementHelper(this.page);
-    return await elementHelper.clickElement(target, strategy);
+    return await this.elementInteractor.clickElement(target, strategy);
   }
 
   /**
@@ -124,12 +136,11 @@ export class TestAgent {
    * @returns {Promise<boolean>} True if typing was successful
    */
   async typeText(target, strategy, value) {
-    if (!this.initialized) {
+    if (!this.browserController.isInitialized()) {
       await this.initialize();
     }
 
-    const elementHelper = new ElementHelper(this.page);
-    return await elementHelper.typeText(target, strategy, value);
+    return await this.elementInteractor.typeText(target, strategy, value);
   }
 
   /**
@@ -138,29 +149,31 @@ export class TestAgent {
    * @returns {Promise<string>} Path to the saved screenshot
    */
   async takeScreenshot(name) {
-    if (!this.initialized) {
+    if (!this.browserController.isInitialized()) {
       await this.initialize();
     }
 
-    const screenshotManager = new ScreenshotManager(this.page, this.screenshotsDir);
-    return await screenshotManager.takeScreenshot(name);
+    return await this.elementInteractor.takeScreenshot(name);
   }
 
   /**
-   * Closes the browser
+   * Closes the browser and all components
    * @returns {Promise<void>}
    */
   async close() {
-    if (this._testRunner) {
-      await this._testRunner.close();
-      this.browser = null;
-      this.context = null;
-      this.page = null;
-      this.initialized = false;
+    // Close test runner first
+    if (this.testRunner) {
+      await this.testRunner.close();
     }
+
+    // Then close browser controller
+    if (this.browserController) {
+      await this.browserController.close();
+    }
+
+    // Clear element interactor
+    this.elementInteractor = null;
   }
-
-
 
   /**
    * Sets the callback for step completion
@@ -170,9 +183,25 @@ export class TestAgent {
     this.onStepCompleted = callback;
 
     // Update the test runner if it exists
-    if (this._testRunner) {
-      this._testRunner.onStepCompleted = callback;
+    if (this.testRunner) {
+      this.testRunner.setStepCompletedCallback(callback);
     }
+  }
+
+  /**
+   * Gets the browser type
+   * @returns {string} Browser type
+   */
+  getBrowserType() {
+    return this.browserType;
+  }
+
+  /**
+   * Gets the current page
+   * @returns {Object} Playwright page object
+   */
+  getPage() {
+    return this.browserController.getPage();
   }
 }
 
@@ -183,5 +212,8 @@ export {
   ScreenshotManager,
   StepExecutor,
   TestRunner,
-  applyAntiDetectionMeasures
+  applyAntiDetectionMeasures,
+  BrowserController,
+  ElementInteractor,
+  TestRunnerAdapter
 };
