@@ -53,6 +53,12 @@ import { ReactComponent as MoreDotIcon } from "./moredot.svg?react";
 import { ReactComponent as AlertHexaIcon } from "./alert-hexa.svg?react";
 import { ReactComponent as ErrorHexaIcon } from "./info-hexa.svg?react";
 
+// Yeni ikonlar
+import PlayIcon from "./PlayIcon";
+import ReportIcon from "./ReportIcon";
+import ChartIcon from "./ChartIcon";
+import SettingsIcon from "./SettingsIcon";
+
 export {
   ErrorHexaIcon,
   AlertHexaIcon,
@@ -108,4 +114,9 @@ export {
   HorizontaLDots,
   ChevronUpIcon,
   ChatIcon,
+  // Yeni ikonlar
+  PlayIcon,
+  ReportIcon,
+  ChartIcon,
+  SettingsIcon,
 };

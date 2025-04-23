@@ -2,22 +2,21 @@ import { BrowserRouter as Router, Routes, Route } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
-import Home from "./pages/Dashboard/Home";
+
+// Dashboard
+import Dashboard from "./pages/Dashboard/Dashboard";
+
+// Playwright Server Agent Pages
+import TestPlans from "./pages/TestPlans";
+import CreateTestPlan from "./pages/TestPlans/Create";
+import EditTestPlan from "./pages/TestPlans/Edit";
+import TestRun from "./pages/TestRun";
+import Results from "./pages/Results";
+import ResultDetail from "./pages/Results/Detail";
+import Performance from "./pages/Performance";
+import Settings from "./pages/Settings";
 
 export default function App() {
   return (
@@ -27,30 +26,18 @@ export default function App() {
         <Routes>
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+            <Route index path="/" element={<Dashboard />} />
 
-            {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
-
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
-
-            {/* Tables */}
-            <Route path="/basic-tables" element={<BasicTables />} />
-
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
-
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
+            {/* Playwright Server Agent Pages */}
+            <Route path="/test-plans" element={<TestPlans />} />
+            <Route path="/test-plans/create" element={<CreateTestPlan />} />
+            <Route path="/test-plans/edit/:id" element={<EditTestPlan />} />
+            <Route path="/test-run" element={<TestRun />} />
+            <Route path="/results" element={<Results />} />
+            <Route path="/results/:id" element={<ResultDetail />} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/performance/:id" element={<Performance />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
 
           {/* Auth Layout */}
