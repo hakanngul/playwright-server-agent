@@ -9,6 +9,7 @@ import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
 import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
+import agentRoutes from './routes/agent.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
@@ -158,6 +159,9 @@ app.use('/api/performance', performanceRoutes);
 
 // Use status routes
 app.use('/api/status', statusRoutes);
+
+// Use agent routes
+app.use('/api/agent', agentRoutes);
 
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -364,6 +368,47 @@ server.listen(PORT, () => {
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
 
-  console.log('Browser pool feature has been removed');
+  console.log('Agent-based test execution system is active');
   console.log('Ready to run tests!');
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received. Shutting down gracefully...');
+
+  // Close agent manager
+  try {
+    const agentManager = agentRoutes.agentManager;
+    if (agentManager) {
+      await agentManager.close();
+    }
+  } catch (error) {
+    console.error('Error closing agent manager:', error);
+  }
+
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT signal received. Shutting down gracefully...');
+
+  // Close agent manager
+  try {
+    const agentManager = agentRoutes.agentManager;
+    if (agentManager) {
+      await agentManager.close();
+    }
+  } catch (error) {
+    console.error('Error closing agent manager:', error);
+  }
+
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

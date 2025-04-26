@@ -1,0 +1,33 @@
+{
+  "name": "Example Blog Test",
+  "description": "Example Blog sitesine git ve test et",
+  "browserPreference": "chromium",
+  "headless": false,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/",
+      "description": "Example Blog sitesine git"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "click",
+      "target": "//button[contains(text(),'Show Me Alert')]",
+      "strategy": "xpath",
+      "description": "Alert butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Alert'in görünmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "description": "Sayfanın ekran görüntüsünü al"
+    }
+  ]
+}
