@@ -2,12 +2,20 @@
 
 echo "Sunucuyu yeniden başlatıyor..."
 
-# Mevcut sunucu işlemini bul ve sonlandır
-PID=$(lsof -t -i:3002)
-if [ -n "$PID" ]; then
-  echo "Mevcut sunucu işlemi (PID: $PID) sonlandırılıyor..."
-  kill -9 $PID
+# Mevcut sunucu işlemlerini bul ve sonlandır
+PIDS=$(lsof -t -i:3002)
+if [ -n "$PIDS" ]; then
+  echo "Mevcut sunucu işlemleri (PID: $PIDS) sonlandırılıyor..."
+  for PID in $PIDS; do
+    kill -9 $PID
+  done
   sleep 2
+
+  # Port kullanımını tekrar kontrol et
+  if [ -n "$(lsof -t -i:3002)" ]; then
+    echo "UYARI: 3002 portu hala kullanımda. Lütfen manuel olarak işlemleri sonlandırın."
+    exit 1
+  fi
 fi
 
 # Sunucuyu yeniden başlat

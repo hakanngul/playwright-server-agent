@@ -164,7 +164,30 @@
             </div>
         </nav>
 
-        <h1 class="mt-4 mb-4">Test Raporları</h1>
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+            <h1>Test Raporları</h1>
+            <div class="d-flex align-items-center">
+                <div class="me-2">
+                    <label for="reportPeriod" class="form-label mb-0">Dönem:</label>
+                </div>
+                <div class="me-2">
+                    <select class="form-select" id="reportPeriod">
+                        <option value="daily" selected>Günlük</option>
+                        <option value="weekly">Haftalık</option>
+                        <option value="monthly">Aylık</option>
+                    </select>
+                </div>
+                <div class="me-2">
+                    <label for="reportDate" class="form-label mb-0">Tarih:</label>
+                </div>
+                <div class="me-2">
+                    <input type="date" class="form-control" id="reportDate">
+                </div>
+                <div>
+                    <button id="loadReportsBtn" class="btn btn-primary">Raporları Yükle</button>
+                </div>
+            </div>
+        </div>
         <div id="last-updated" class="last-updated mb-3"></div>
 
         <!-- Test Sonuçları Özeti -->
@@ -289,20 +312,20 @@
     <script>
         // Test sonuçlarını saklayacak dizi
         let completedTests = [];
-        
+
         // Socket.io bağlantısı
         const socket = io();
-        
+
         // Socket.io olayları
         socket.on('connect', () => {
             console.log('Socket.io bağlantısı kuruldu');
             updateLastUpdated();
         });
-        
+
         socket.on('welcome', (data) => {
             console.log('Server mesajı:', data.message);
         });
-        
+
         socket.on('request:completed', (data) => {
             console.log('Test tamamlandı:', data);
             // Tamamlanan testi listeye ekle
@@ -317,7 +340,7 @@
             updatePerformanceMetrics();
             updateLastUpdated();
         });
-        
+
         socket.on('request:failed', (data) => {
             console.log('Test başarısız:', data);
             // Başarısız testi listeye ekle
@@ -332,35 +355,35 @@
             updatePerformanceMetrics();
             updateLastUpdated();
         });
-        
+
         // Tarih formatı fonksiyonu
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
             return date.toLocaleString();
         }
-        
+
         // Süre formatı fonksiyonu
         function formatDuration(ms) {
             if (!ms) return '0s';
-            
+
             const seconds = Math.floor(ms / 1000);
             if (seconds < 60) return `${seconds}s`;
-            
+
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
             return `${minutes}m ${remainingSeconds}s`;
         }
-        
+
         // Test süresini hesaplama fonksiyonu
         function calculateTestDuration(test) {
             if (!test.completedAt || !test.startedAt) return 0;
-            
+
             const startTime = new Date(test.startedAt).getTime();
             const endTime = new Date(test.completedAt).getTime();
             return endTime - startTime;
         }
-        
+
         // Kategori rengini belirleme fonksiyonu
         function getCategoryClass(category) {
             switch (category) {
@@ -371,25 +394,25 @@
                 default: return 'category-default';
             }
         }
-        
+
         // Tamamlanan testler tablosunu güncelleme
         function updateCompletedTestsTable() {
             const tableBody = document.getElementById('completed-tests-table');
             tableBody.innerHTML = '';
-            
+
             if (completedTests.length === 0) {
                 const row = document.createElement('tr');
                 row.innerHTML = '<td colspan="7" class="text-center">Henüz tamamlanan test yok</td>';
                 tableBody.appendChild(row);
                 return;
             }
-            
+
             completedTests.forEach((test, index) => {
                 const row = document.createElement('tr');
                 const isSuccess = test.status === 'completed';
                 const testDuration = calculateTestDuration(test);
                 const category = test.testPlan.category || 'default';
-                
+
                 row.innerHTML = `
                     <td>${test.testPlan.name}</td>
                     <td><span class="test-category ${getCategoryClass(category)}">${category}</span></td>
@@ -399,21 +422,21 @@
                     <td>${formatDate(test.completedAt)}</td>
                     <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${index})">Detaylar</button></td>
                 `;
-                
+
                 tableBody.appendChild(row);
             });
         }
-        
+
         // Test detaylarını gösterme
         function showTestDetails(index) {
             const test = completedTests[index];
             const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
             const modalContent = document.getElementById('testDetailsContent');
-            
+
             const isSuccess = test.status === 'completed';
             const testDuration = calculateTestDuration(test);
             const category = test.testPlan.category || 'default';
-            
+
             let stepsHtml = '';
             if (test.result && test.result.steps) {
                 test.result.steps.forEach((step, stepIndex) => {
@@ -438,7 +461,7 @@
                     </div>
                 `;
             }
-            
+
             modalContent.innerHTML = `
                 <div class="card ${isSuccess ? 'test-result-success' : 'test-result-failed'} mb-3">
                     <div class="card-body">
@@ -466,25 +489,25 @@
                     </div>
                 </div>
             `;
-            
+
             modal.show();
         }
-        
+
         // Grafikleri güncelleme
         function updateCharts() {
             updateTestResultsChart();
             updateCategoryChart();
             updateDurationChart();
         }
-        
+
         // Test sonuçları grafiğini güncelleme
         function updateTestResultsChart() {
             const ctx = document.getElementById('test-results-chart').getContext('2d');
-            
+
             // Başarılı ve başarısız test sayılarını hesapla
             const successCount = completedTests.filter(test => test.status === 'completed').length;
             const failedCount = completedTests.filter(test => test.status === 'failed').length;
-            
+
             // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
             if (window.testResultsChart) {
                 window.testResultsChart.data.datasets[0].data = [successCount, failedCount];
@@ -516,18 +539,18 @@
                 });
             }
         }
-        
+
         // Kategori grafiğini güncelleme
         function updateCategoryChart() {
             const ctx = document.getElementById('category-chart').getContext('2d');
-            
+
             // Kategorilere göre test sayılarını hesapla
             const categories = {};
             completedTests.forEach(test => {
                 const category = test.testPlan.category || 'default';
                 categories[category] = (categories[category] || 0) + 1;
             });
-            
+
             const categoryLabels = Object.keys(categories);
             const categoryData = Object.values(categories);
             const categoryColors = categoryLabels.map(category => {
@@ -539,7 +562,7 @@
                     default: return '#6c757d';
                 }
             });
-            
+
             // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
             if (window.categoryChart) {
                 window.categoryChart.data.labels = categoryLabels;
@@ -573,11 +596,11 @@
                 });
             }
         }
-        
+
         // Süre grafiğini güncelleme
         function updateDurationChart() {
             const ctx = document.getElementById('duration-chart').getContext('2d');
-            
+
             // Test sürelerini hesapla
             const durations = completedTests.map(test => {
                 return {
@@ -586,10 +609,10 @@
                     success: test.status === 'completed'
                 };
             });
-            
+
             // En son 10 testi al
             const recentTests = durations.slice(0, 10).reverse();
-            
+
             // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
             if (window.durationChart) {
                 window.durationChart.data.labels = recentTests.map(test => test.name);
@@ -639,22 +662,22 @@
                 });
             }
         }
-        
+
         // Performans metriklerini güncelleme
         function updatePerformanceMetrics() {
             // Toplam test sayısı
             document.getElementById('total-tests').textContent = completedTests.length;
-            
+
             // Başarı oranı
             const successCount = completedTests.filter(test => test.status === 'completed').length;
             const successRate = completedTests.length > 0 ? (successCount / completedTests.length * 100).toFixed(1) + '%' : '-';
             document.getElementById('success-rate').textContent = successRate;
-            
+
             // Ortalama test süresi
             const durations = completedTests.map(test => calculateTestDuration(test));
             const avgDuration = durations.length > 0 ? formatDuration(durations.reduce((a, b) => a + b, 0) / durations.length) : '-';
             document.getElementById('avg-duration').textContent = avgDuration;
-            
+
             // Ortalama adım sayısı
             let totalSteps = 0;
             let testsWithSteps = 0;
@@ -667,39 +690,140 @@
             const avgSteps = testsWithSteps > 0 ? (totalSteps / testsWithSteps).toFixed(1) : '-';
             document.getElementById('avg-steps').textContent = avgSteps;
         }
-        
+
         // Son güncelleme zamanını güncelleme
         function updateLastUpdated() {
             document.getElementById('last-updated').textContent = `Son Güncelleme: ${formatDate(new Date())}`;
         }
-        
-        // Sayfa yüklendiğinde verileri al
-        async function fetchInitialData() {
+
+        // Belirli bir dönem ve tarihteki verileri al
+        async function fetchReportsByDate(date, period = 'daily') {
             try {
-                // Tamamlanan testleri al
+                // Önce agent sisteminden tamamlanan testleri al
                 const completedResponse = await fetch('/api/agent/completed-requests');
                 const completedData = await completedResponse.json();
-                
+
+                let agentTests = [];
                 if (completedData.success) {
-                    completedTests = completedData.requests;
-                    updateCompletedTestsTable();
-                    updateCharts();
-                    updatePerformanceMetrics();
-                    updateLastUpdated();
+                    agentTests = completedData.requests;
+                }
+
+                // Sonra reports API'sinden seçilen dönem için raporları al
+                const reportsResponse = await fetch(`/api/reports?period=${period}&date=${date}`);
+                const reportsData = await reportsResponse.json();
+
+                // Seçilen dönem için özeti de al
+                const summaryResponse = await fetch(`/api/reports/summary/${period}?date=${date}`);
+                const summaryData = await summaryResponse.json();
+
+                // Agent testlerini ve raporları birleştir
+                let allTests = [...agentTests];
+
+                // Raporları agent formatına dönüştür ve ekle
+                if (reportsData && reportsData.length > 0) {
+                    const reportTests = reportsData.map(report => {
+                        return {
+                            id: report.id,
+                            status: report.success ? 'completed' : 'failed',
+                            testPlan: {
+                                name: report.name,
+                                description: report.description,
+                                browserPreference: report.browserType,
+                                category: report.tags && report.tags.length > 0 ? report.tags[0] : 'default'
+                            },
+                            startedAt: report.timestamp ? new Date(new Date(report.timestamp).getTime() - report.duration).toISOString() : null,
+                            completedAt: report.timestamp,
+                            result: {
+                                steps: report.steps
+                            },
+                            error: report.error
+                        };
+                    });
+
+                    // Duplicate ID'leri önlemek için agent testlerinde olmayan raporları ekle
+                    const existingIds = new Set(allTests.map(test => test.id));
+                    for (const test of reportTests) {
+                        if (!existingIds.has(test.id)) {
+                            allTests.push(test);
+                            existingIds.add(test.id);
+                        }
+                    }
+                }
+
+                // Tamamlanma zamanına göre sırala (en son tamamlanan en üstte)
+                allTests.sort((a, b) => {
+                    return new Date(b.completedAt || 0) - new Date(a.completedAt || 0);
+                });
+
+                // Tüm testleri güncelle
+                completedTests = allTests;
+
+                // Arayüzü güncelle
+                updateCompletedTestsTable();
+                updateCharts();
+                updatePerformanceMetrics();
+                updateLastUpdated();
+
+                // Özet bilgilerini göster
+                if (summaryData) {
+                    document.getElementById('total-tests').textContent = summaryData.totalTests || completedTests.length;
+                    document.getElementById('success-rate').textContent = summaryData.successRate ? `${summaryData.successRate.toFixed(1)}%` : '-';
+                    document.getElementById('avg-duration').textContent = summaryData.averageDuration ? formatDuration(summaryData.averageDuration) : '-';
                 }
             } catch (error) {
                 console.error('Veri alınırken hata oluştu:', error);
             }
         }
-        
+
+        // Bugünün tarihini al
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // Sayfa yüklendiğinde verileri al
+        async function fetchInitialData() {
+            const today = getTodayDate();
+            document.getElementById('reportDate').value = today;
+            const period = document.getElementById('reportPeriod').value || 'daily';
+            await fetchReportsByDate(today, period);
+        }
+
         // Sayfa yüklendiğinde çalıştır
         document.addEventListener('DOMContentLoaded', () => {
             fetchInitialData();
-            
+
             // Yenile butonu
-            document.getElementById('refresh-btn').addEventListener('click', fetchInitialData);
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                const date = document.getElementById('reportDate').value || getTodayDate();
+                const period = document.getElementById('reportPeriod').value || 'daily';
+                fetchReportsByDate(date, period);
+            });
+
+            // Tarih seçimi ve yükleme butonu
+            document.getElementById('loadReportsBtn').addEventListener('click', () => {
+                const date = document.getElementById('reportDate').value || getTodayDate();
+                const period = document.getElementById('reportPeriod').value || 'daily';
+                fetchReportsByDate(date, period);
+            });
+
+            // Dönem değiştiğinde tarih formatını ayarla
+            document.getElementById('reportPeriod').addEventListener('change', (e) => {
+                const period = e.target.value;
+                const dateInput = document.getElementById('reportDate');
+
+                if (period === 'monthly') {
+                    // Ay seçimi için
+                    dateInput.type = 'month';
+                } else {
+                    // Gün seçimi için
+                    dateInput.type = 'date';
+                }
+            });
+
+            // Tarih alanını bugünün tarihiyle doldur
+            document.getElementById('reportDate').value = getTodayDate();
         });
-        
+
         // showTestDetails fonksiyonunu global olarak tanımla
         window.showTestDetails = showTestDetails;
     </script>

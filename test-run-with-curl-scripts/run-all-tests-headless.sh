@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Sabit değerler
-SERVER_URL="http://localhost:3002/api/test/run"
+SERVER_URL="http://localhost:3002/api/agent/test-run"
 HEADLESS=true
 TEST_PLANS_DIR="test-plans"
 BROWSERS=("chromium" "firefox" "edge")
@@ -84,17 +84,29 @@ function run_test_plan {
 
   # Test planını sunucuya gönder
   echo -e "${BLUE}Test planı sunucuya gönderiliyor...${NC}"
-  curl -X POST \
+  RESPONSE=$(curl -s -X POST \
     "$SERVER_URL" \
     -H "Content-Type: application/json" \
-    -d @"$TEMP_FILE"
+    -d @"$TEMP_FILE")
 
   # Geçici dosyayı temizle
   rm "$TEMP_FILE"
 
+  # Extract request ID from response
+  REQUEST_ID=$(echo $RESPONSE | grep -o '"requestId":"[^"]*"' | cut -d'"' -f4)
+
+  if [ -n "$REQUEST_ID" ]; then
+    echo -e "${GREEN}Test isteği gönderildi, ID: $REQUEST_ID${NC}"
+  else
+    echo -e "${RED}Hata: Yanıttan istek ID'si alınamadı${NC}"
+    echo -e "${YELLOW}Yanıt: $RESPONSE${NC}"
+  fi
+
   echo ""
   echo -e "${GREEN}Test yürütme isteği gönderildi. Sonuçlar için sunucu loglarını kontrol edin.${NC}"
-  echo -e "${BLUE}Son test sonucunu görüntülemek için: curl http://localhost:3002/api/results/recent?limit=1${NC}"
+  echo -e "${BLUE}Test durumunu görüntülemek için: curl http://localhost:3002/api/agent/test-status/$REQUEST_ID${NC}"
+  echo -e "${BLUE}Tamamlanan testleri görüntülemek için: curl http://localhost:3002/api/agent/completed-requests${NC}"
+  echo -e "${BLUE}Raporları görüntülemek için: http://localhost:3002/reports.html${NC}"
   echo ""
 
   # Testler arasında kısa bir bekleme süresi
