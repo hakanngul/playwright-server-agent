@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Server Agent - Test Planları</title>
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary-color: #03dac6;
+            --background-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --error-color: #b00020;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --text-hint: rgba(0, 0, 0, 0.38);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding-top: 80px;
+            padding-bottom: 40px;
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 500;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: 500;
+        }
+
+        .nav-link.active {
+            color: white !important;
+        }
+
+        .card {
+            margin-bottom: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            background-color: var(--surface-color);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            font-weight: 500;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .material-icons {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table th {
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-top: none;
+            border-bottom-width: 1px;
+        }
+
+        .table td {
+            border-color: rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-variant);
+            border-color: var(--primary-variant);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-success {
+            background-color: #4caf50;
+            border-color: #4caf50;
+        }
+
+        .btn-success:hover {
+            background-color: #388e3c;
+            border-color: #388e3c;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+        }
+
+        .btn-danger:hover {
+            background-color: #9b001c;
+            border-color: #9b001c;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .badge-success {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .badge-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .badge-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .fab-button:hover {
+            background-color: var(--primary-variant);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .fab-button .material-icons {
+            font-size: 24px;
+        }
+
+        .action-buttons .btn {
+            padding: 0.25rem 0.5rem;
+            margin-right: 0.25rem;
+        }
+
+        .action-buttons .material-icons {
+            font-size: 18px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(98, 0, 238, 0.25);
+        }
+
+        .step-card {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background-color: #f9f9f9;
+        }
+
+        .step-card .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .step-card .step-title {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .step-card .step-title .material-icons {
+            margin-right: 8px;
+            color: var(--primary-color);
+            font-size: 20px;
+        }
+
+        .step-card .step-actions {
+            display: flex;
+        }
+
+        .step-card .step-actions .btn {
+            padding: 0.25rem;
+            margin-left: 0.25rem;
+        }
+
+        .step-card .step-actions .material-icons {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="material-icons align-middle me-2">theater_comedy</i>
+                Playwright Server Agent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="material-icons align-middle me-1">dashboard</i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html">
+                            <i class="material-icons align-middle me-1">assessment</i>
+                            Test Raporları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/test-plans.html">
+                            <i class="material-icons align-middle me-1">playlist_add_check</i>
+                            Test Planları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/create-test.html">
+                            <i class="material-icons align-middle me-1">add_circle</i>
+                            Test Oluştur
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="mb-4">Test Planları</h1>
+
+        <!-- Test Plans List Card -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">list</i>
+                <span>Mevcut Test Planları</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>İsim</th>
+                                <th>Açıklama</th>
+                                <th>Tarayıcı</th>
+                                <th>Headless</th>
+                                <th>Adım Sayısı</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="test-plans-table-body">
+                            <!-- Test plans will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Test Plan Button -->
+    <button id="add-test-plan-btn" class="fab-button" data-bs-toggle="modal" data-bs-target="#testPlanModal">
+        <i class="material-icons">add</i>
+    </button>
+
+    <!-- Test Plan Modal -->
+    <div class="modal fade" id="testPlanModal" tabindex="-1" aria-labelledby="testPlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="testPlanModalLabel">Yeni Test Planı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="test-plan-form">
+                        <input type="hidden" id="test-plan-id">
+
+                        <!-- Test Plan Basic Info -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="test-plan-name" class="form-label">Test Planı Adı</label>
+                                <input type="text" class="form-control" id="test-plan-name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="test-plan-description" class="form-label">Açıklama</label>
+                                <input type="text" class="form-control" id="test-plan-description">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="test-plan-browser" class="form-label">Tarayıcı</label>
+                                <select class="form-select" id="test-plan-browser">
+                                    <option value="chromium">Chromium</option>
+                                    <option value="firefox">Firefox</option>
+                                    <option value="edge">Edge</option>
+                                    <option value="webkit">WebKit (Safari)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="test-plan-headless" class="form-label">Headless Modu</label>
+                                <select class="form-select" id="test-plan-headless">
+                                    <option value="true">Evet</option>
+                                    <option value="false">Hayır</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="test-plan-browser-pool" class="form-label">Tarayıcı Havuzu</label>
+                                <select class="form-select" id="test-plan-browser-pool">
+                                    <option value="false">Kullanma</option>
+                                    <option value="true">Kullan</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Test Steps -->
+                        <h5 class="mb-3">Test Adımları</h5>
+                        <div id="test-steps-container">
+                            <!-- Test steps will be added here -->
+                        </div>
+
+                        <button type="button" id="add-step-btn" class="btn btn-outline-primary mt-3">
+                            <i class="material-icons align-middle me-1">add</i>
+                            Adım Ekle
+                        </button>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="save-test-plan-btn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Step Modal -->
+    <div class="modal fade" id="addStepModal" tabindex="-1" aria-labelledby="addStepModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addStepModalLabel">Test Adımı Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="step-form">
+                        <input type="hidden" id="step-index" value="-1">
+
+                        <div class="mb-3">
+                            <label for="step-action" class="form-label">Eylem</label>
+                            <select class="form-select" id="step-action" required>
+                                <option value="">Eylem Seçin</option>
+                                <option value="navigate">Sayfaya Git (navigate)</option>
+                                <option value="click">Tıkla (click)</option>
+                                <option value="type">Metin Yaz (type)</option>
+                                <option value="select">Seçim Yap (select)</option>
+                                <option value="wait">Bekle (wait)</option>
+                                <option value="takeScreenshot">Ekran Görüntüsü Al (takeScreenshot)</option>
+                                <option value="assert">Doğrula (assert)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="step-target-group">
+                            <label for="step-target" class="form-label">Hedef Element</label>
+                            <input type="text" class="form-control" id="step-target">
+                        </div>
+
+                        <div class="mb-3" id="step-strategy-group">
+                            <label for="step-strategy" class="form-label">Seçim Stratejisi</label>
+                            <select class="form-select" id="step-strategy">
+                                <option value="css">CSS Seçici</option>
+                                <option value="xpath">XPath</option>
+                                <option value="id">ID</option>
+                                <option value="name">Name</option>
+                                <option value="class">Class</option>
+                                <option value="text">Text</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="step-value-group">
+                            <label for="step-value" class="form-label">Değer</label>
+                            <input type="text" class="form-control" id="step-value">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="step-description" class="form-label">Açıklama</label>
+                            <input type="text" class="form-control" id="step-description">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="save-step-btn">Adımı Ekle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & jQuery Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Global variables
+        let testPlans = [];
+        let currentTestPlan = {
+            name: '',
+            description: '',
+            browserPreference: 'chromium',
+            headless: true,
+            useBrowserPool: false,
+            takeScreenshots: false,
+            steps: []
+        };
+        let editMode = false;
+
+        // Document ready
+        $(document).ready(function() {
+            // Load test plans
+            loadTestPlans();
+
+            // Setup event listeners
+            setupEventListeners();
+        });
+
+        // Load test plans from API
+        function loadTestPlans() {
+            $.ajax({
+                url: '/api/test-plans',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        testPlans = response.testPlans;
+                        renderTestPlans();
+                    } else {
+                        showAlert('danger', 'Test planları yüklenirken bir hata oluştu.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading test plans:', error);
+                    showAlert('danger', 'Test planları yüklenirken bir hata oluştu.');
+                }
+            });
+        }
+
+        // Render test plans table
+        function renderTestPlans() {
+            const tableBody = $('#test-plans-table-body');
+            tableBody.empty();
+
+            if (testPlans.length === 0) {
+                tableBody.append('<tr><td colspan="6" class="text-center">Henüz test planı bulunmuyor.</td></tr>');
+                return;
+            }
+
+            testPlans.forEach(plan => {
+                const row = $('<tr></tr>');
+                row.append(`<td>${plan.name}</td>`);
+                row.append(`<td>${plan.description || '-'}</td>`);
+                row.append(`<td>${plan.browserPreference || 'chromium'}</td>`);
+                row.append(`<td>${plan.headless ? 'Evet' : 'Hayır'}</td>`);
+                row.append(`<td>${plan.stepsCount}</td>`);
+
+                const actionsCell = $('<td class="action-buttons"></td>');
+
+                // Edit button
+                const editBtn = $('<button class="btn btn-sm btn-outline-primary"></button>')
+                    .html('<i class="material-icons">edit</i>')
+                    .attr('title', 'Düzenle')
+                    .on('click', function() {
+                        editTestPlan(plan.id);
+                    });
+
+                // Run button
+                const runBtn = $('<button class="btn btn-sm btn-success"></button>')
+                    .html('<i class="material-icons">play_arrow</i>')
+                    .attr('title', 'Çalıştır')
+                    .on('click', function() {
+                        runTestPlan(plan.id);
+                    });
+
+                // Delete button
+                const deleteBtn = $('<button class="btn btn-sm btn-danger"></button>')
+                    .html('<i class="material-icons">delete</i>')
+                    .attr('title', 'Sil')
+                    .on('click', function() {
+                        deleteTestPlan(plan.id, plan.name);
+                    });
+
+                actionsCell.append(editBtn, runBtn, deleteBtn);
+                row.append(actionsCell);
+
+                tableBody.append(row);
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // New test plan button
+            $('#add-test-plan-btn').on('click', function() {
+                resetTestPlanForm();
+                editMode = false;
+                $('#testPlanModalLabel').text('Yeni Test Planı');
+                $('#save-test-plan-btn').text('Kaydet');
+            });
+
+            // Save test plan button
+            $('#save-test-plan-btn').on('click', saveTestPlan);
+
+            // Add step button
+            $('#add-step-btn').on('click', function() {
+                resetStepForm();
+                $('#addStepModalLabel').text('Test Adımı Ekle');
+                $('#save-step-btn').text('Adımı Ekle');
+                $('#addStepModal').modal('show');
+            });
+
+            // Save step button
+            $('#save-step-btn').on('click', saveStep);
+
+            // Step action change
+            $('#step-action').on('change', function() {
+                updateStepFormFields();
+            });
+        }
+
+        // Update step form fields based on selected action
+        function updateStepFormFields() {
+            const action = $('#step-action').val();
+
+            // Hide all fields first
+            $('#step-target-group, #step-strategy-group, #step-value-group').hide();
+
+            // Show relevant fields based on action
+            switch (action) {
+                case 'navigate':
+                    $('#step-value-group').show();
+                    break;
+                case 'click':
+                    $('#step-target-group, #step-strategy-group').show();
+                    break;
+                case 'type':
+                case 'select':
+                    $('#step-target-group, #step-strategy-group, #step-value-group').show();
+                    break;
+                case 'wait':
+                    $('#step-value-group').show();
+                    break;
+                case 'takeScreenshot':
+                    // No additional fields needed
+                    break;
+                case 'assert':
+                    $('#step-target-group, #step-strategy-group, #step-value-group').show();
+                    break;
+            }
+        }
+
+        // Reset test plan form
+        function resetTestPlanForm() {
+            $('#test-plan-id').val('');
+            $('#test-plan-name').val('');
+            $('#test-plan-description').val('');
+            $('#test-plan-browser').val('chromium');
+            $('#test-plan-headless').val('true');
+            $('#test-plan-browser-pool').val('false');
+
+            currentTestPlan = {
+                name: '',
+                description: '',
+                browserPreference: 'chromium',
+                headless: true,
+                useBrowserPool: false,
+                takeScreenshots: false,
+                steps: []
+            };
+
+            renderTestSteps();
+        }
+
+        // Reset step form
+        function resetStepForm() {
+            $('#step-index').val('-1');
+            $('#step-action').val('');
+            $('#step-target').val('');
+            $('#step-strategy').val('css');
+            $('#step-value').val('');
+            $('#step-description').val('');
+
+            updateStepFormFields();
+        }
+
+        // Render test steps
+        function renderTestSteps() {
+            const container = $('#test-steps-container');
+            container.empty();
+
+            if (currentTestPlan.steps.length === 0) {
+                container.append('<p class="text-muted">Henüz test adımı eklenmemiş.</p>');
+                return;
+            }
+
+            currentTestPlan.steps.forEach((step, index) => {
+                const stepCard = $('<div class="step-card"></div>');
+
+                // Step header
+                const stepHeader = $('<div class="step-header"></div>');
+
+                // Step title
+                const stepTitle = $('<div class="step-title"></div>');
+                let icon = 'code';
+
+                switch (step.action) {
+                    case 'navigate': icon = 'open_in_browser'; break;
+                    case 'click': icon = 'touch_app'; break;
+                    case 'type': icon = 'keyboard'; break;
+                    case 'select': icon = 'list'; break;
+                    case 'wait': icon = 'hourglass_empty'; break;
+                    case 'takeScreenshot': icon = 'photo_camera'; break;
+                    case 'assert': icon = 'check_circle'; break;
+                }
+
+                stepTitle.append(`<i class="material-icons">${icon}</i>`);
+                stepTitle.append(`<span>${index + 1}. ${step.action}</span>`);
+
+                stepHeader.append(stepTitle);
+
+                // Step actions
+                const stepActions = $('<div class="step-actions"></div>');
+
+                // Edit button
+                const editBtn = $('<button class="btn btn-sm btn-outline-primary"></button>')
+                    .html('<i class="material-icons">edit</i>')
+                    .attr('title', 'Düzenle')
+                    .on('click', function() {
+                        editStep(index);
+                    });
+
+                // Delete button
+                const deleteBtn = $('<button class="btn btn-sm btn-outline-danger"></button>')
+                    .html('<i class="material-icons">delete</i>')
+                    .attr('title', 'Sil')
+                    .on('click', function() {
+                        deleteStep(index);
+                    });
+
+                // Move up button
+                if (index > 0) {
+                    const moveUpBtn = $('<button class="btn btn-sm btn-outline-secondary"></button>')
+                        .html('<i class="material-icons">arrow_upward</i>')
+                        .attr('title', 'Yukarı Taşı')
+                        .on('click', function() {
+                            moveStep(index, index - 1);
+                        });
+                    stepActions.append(moveUpBtn);
+                }
+
+                // Move down button
+                if (index < currentTestPlan.steps.length - 1) {
+                    const moveDownBtn = $('<button class="btn btn-sm btn-outline-secondary"></button>')
+                        .html('<i class="material-icons">arrow_downward</i>')
+                        .attr('title', 'Aşağı Taşı')
+                        .on('click', function() {
+                            moveStep(index, index + 1);
+                        });
+                    stepActions.append(moveDownBtn);
+                }
+
+                stepActions.append(editBtn, deleteBtn);
+                stepHeader.append(stepActions);
+
+                stepCard.append(stepHeader);
+
+                // Step details
+                const stepDetails = $('<div class="step-details mt-2"></div>');
+
+                if (step.description) {
+                    stepDetails.append(`<div><strong>Açıklama:</strong> ${step.description}</div>`);
+                }
+
+                if (step.target) {
+                    stepDetails.append(`<div><strong>Hedef:</strong> ${step.target} (${step.strategy || 'css'})</div>`);
+                }
+
+                if (step.value) {
+                    stepDetails.append(`<div><strong>Değer:</strong> ${step.value}</div>`);
+                }
+
+                stepCard.append(stepDetails);
+                container.append(stepCard);
+            });
+        }
+
+        // Save test plan
+        function saveTestPlan() {
+            // Get form values
+            const name = $('#test-plan-name').val();
+            const description = $('#test-plan-description').val();
+            const browserPreference = $('#test-plan-browser').val();
+            const headless = $('#test-plan-headless').val() === 'true';
+            const useBrowserPool = $('#test-plan-browser-pool').val() === 'true';
+
+            // Validate form
+            if (!name) {
+                alert('Test planı adı gereklidir.');
+                return;
+            }
+
+            if (currentTestPlan.steps.length === 0) {
+                alert('En az bir test adımı eklemelisiniz.');
+                return;
+            }
+
+            // Update current test plan
+            currentTestPlan.name = name;
+            currentTestPlan.description = description;
+            currentTestPlan.browserPreference = browserPreference;
+            currentTestPlan.headless = headless;
+            currentTestPlan.useBrowserPool = useBrowserPool;
+
+            // Save test plan
+            const testPlanId = $('#test-plan-id').val();
+
+            if (editMode && testPlanId) {
+                // Update existing test plan
+                $.ajax({
+                    url: `/api/test-plans/${testPlanId}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentTestPlan),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#testPlanModal').modal('hide');
+                            showAlert('success', 'Test planı başarıyla güncellendi.');
+                            loadTestPlans();
+                        } else {
+                            showAlert('danger', 'Test planı güncellenirken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating test plan:', error);
+                        showAlert('danger', 'Test planı güncellenirken bir hata oluştu.');
+                    }
+                });
+            } else {
+                // Create new test plan
+                $.ajax({
+                    url: '/api/test-plans',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentTestPlan),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#testPlanModal').modal('hide');
+                            showAlert('success', 'Test planı başarıyla oluşturuldu.');
+                            loadTestPlans();
+                        } else {
+                            showAlert('danger', 'Test planı oluşturulurken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error creating test plan:', error);
+                        showAlert('danger', 'Test planı oluşturulurken bir hata oluştu.');
+                    }
+                });
+            }
+        }
+
+        // Save step
+        function saveStep() {
+            // Get form values
+            const action = $('#step-action').val();
+            const target = $('#step-target').val();
+            const strategy = $('#step-strategy').val();
+            const value = $('#step-value').val();
+            const description = $('#step-description').val();
+
+            // Validate form
+            if (!action) {
+                alert('Eylem seçmelisiniz.');
+                return;
+            }
+
+            // Create step object
+            const step = {
+                action: action,
+                description: description
+            };
+
+            // Add additional properties based on action
+            switch (action) {
+                case 'navigate':
+                    if (!value) {
+                        alert('URL değeri gereklidir.');
+                        return;
+                    }
+                    step.value = value;
+                    break;
+                case 'click':
+                    if (!target) {
+                        alert('Hedef element gereklidir.');
+                        return;
+                    }
+                    step.target = target;
+                    step.strategy = strategy;
+                    break;
+                case 'type':
+                case 'select':
+                    if (!target || !value) {
+                        alert('Hedef element ve değer gereklidir.');
+                        return;
+                    }
+                    step.target = target;
+                    step.strategy = strategy;
+                    step.value = value;
+                    break;
+                case 'wait':
+                    step.value = value || '1000';
+                    break;
+                case 'takeScreenshot':
+                    // No additional properties needed
+                    break;
+                case 'assert':
+                    if (!target || !value) {
+                        alert('Hedef element ve beklenen değer gereklidir.');
+                        return;
+                    }
+                    step.target = target;
+                    step.strategy = strategy;
+                    step.value = value;
+                    break;
+            }
+
+            // Get step index
+            const stepIndex = parseInt($('#step-index').val());
+
+            if (stepIndex >= 0) {
+                // Update existing step
+                currentTestPlan.steps[stepIndex] = step;
+            } else {
+                // Add new step
+                currentTestPlan.steps.push(step);
+            }
+
+            // Close modal and render steps
+            $('#addStepModal').modal('hide');
+            renderTestSteps();
+        }
+
+        // Edit test plan
+        function editTestPlan(id) {
+            // Get test plan details
+            $.ajax({
+                url: `/api/test-plans/${id}`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const testPlan = response.testPlan;
+
+                        // Set form values
+                        $('#test-plan-id').val(id);
+                        $('#test-plan-name').val(testPlan.name);
+                        $('#test-plan-description').val(testPlan.description || '');
+                        $('#test-plan-browser').val(testPlan.browserPreference || 'chromium');
+                        $('#test-plan-headless').val(testPlan.headless === false ? 'false' : 'true');
+                        $('#test-plan-browser-pool').val(testPlan.useBrowserPool === true ? 'true' : 'false');
+
+                        // Set current test plan
+                        currentTestPlan = testPlan;
+
+                        // Render steps
+                        renderTestSteps();
+
+                        // Set edit mode
+                        editMode = true;
+                        $('#testPlanModalLabel').text('Test Planını Düzenle');
+                        $('#save-test-plan-btn').text('Güncelle');
+
+                        // Show modal
+                        $('#testPlanModal').modal('show');
+                    } else {
+                        showAlert('danger', 'Test planı yüklenirken bir hata oluştu.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading test plan:', error);
+                    showAlert('danger', 'Test planı yüklenirken bir hata oluştu.');
+                }
+            });
+        }
+
+        // Run test plan
+        function runTestPlan(id) {
+            $.ajax({
+                url: '/api/agent/test-run',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    testPlanId: id
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', `Test planı çalıştırılıyor. İstek ID: ${response.requestId}`);
+                    } else {
+                        showAlert('danger', 'Test planı çalıştırılırken bir hata oluştu.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error running test plan:', error);
+                    showAlert('danger', 'Test planı çalıştırılırken bir hata oluştu.');
+                }
+            });
+        }
+
+        // Delete test plan
+        function deleteTestPlan(id, name) {
+            if (confirm(`"${name}" test planını silmek istediğinize emin misiniz?`)) {
+                $.ajax({
+                    url: `/api/test-plans/${id}`,
+                    method: 'DELETE',
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('success', 'Test planı başarıyla silindi.');
+                            loadTestPlans();
+                        } else {
+                            showAlert('danger', 'Test planı silinirken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error deleting test plan:', error);
+                        showAlert('danger', 'Test planı silinirken bir hata oluştu.');
+                    }
+                });
+            }
+        }
+
+        // Edit step
+        function editStep(index) {
+            const step = currentTestPlan.steps[index];
+
+            // Set form values
+            $('#step-index').val(index);
+            $('#step-action').val(step.action);
+            $('#step-target').val(step.target || '');
+            $('#step-strategy').val(step.strategy || 'css');
+            $('#step-value').val(step.value || '');
+            $('#step-description').val(step.description || '');
+
+            // Update form fields
+            updateStepFormFields();
+
+            // Set modal title
+            $('#addStepModalLabel').text('Test Adımını Düzenle');
+            $('#save-step-btn').text('Güncelle');
+
+            // Show modal
+            $('#addStepModal').modal('show');
+        }
+
+        // Delete step
+        function deleteStep(index) {
+            if (confirm('Bu adımı silmek istediğinize emin misiniz?')) {
+                currentTestPlan.steps.splice(index, 1);
+                renderTestSteps();
+            }
+        }
+
+        // Move step
+        function moveStep(fromIndex, toIndex) {
+            const step = currentTestPlan.steps[fromIndex];
+            currentTestPlan.steps.splice(fromIndex, 1);
+            currentTestPlan.steps.splice(toIndex, 0, step);
+            renderTestSteps();
+        }
+
+        // Show alert
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Add alert to container
+            const alertContainer = $('.container').find('.alert-container');
+            if (alertContainer.length) {
+                alertContainer.append(alertHtml);
+            } else {
+                $('.container').prepend(`<div class="alert-container">${alertHtml}</div>`);
+            }
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

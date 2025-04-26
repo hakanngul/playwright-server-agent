@@ -2,9 +2,10 @@
 
 # Default values
 BROWSER="chromium"
-HEADLESS="true"
+HEADLESS="false"
 SERVER_URL="http://localhost:3002/api/agent/test-run"
-TEST_PLAN_FILE="./test-plans/test-plan.json"
+#TEST_PLAN_FILE="./test-plans/test-plan.json"
+TEST_PLAN_FILE="./test-plans/advanced-interactions.json"
 
 # Firefox için özel uyarı
 FIREFOX_WARNING="Firefox tarayıcısı için tam ekran modu devre dışı bırakıldı. Normal pencere boyutunda çalışacak."

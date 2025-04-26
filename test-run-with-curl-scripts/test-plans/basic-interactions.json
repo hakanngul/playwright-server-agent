@@ -2,8 +2,8 @@
   "name": "Temel Etkileşimler Testi",
   "description": "Only Testing Blog üzerinde temel etkileşimleri test eder",
   "browserPreference": "chromium",
-  "headless": true,
-  "useBrowserPool": false,
+  "headless": false,
+  "useBrowserPool": true,
   "takeScreenshots": false,
   "steps": [
     {

@@ -16,9 +16,10 @@ export class AgentManager extends EventEmitter {
     // Initialize options with defaults
     this.options = {
       maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1), // Default to CPU count - 1
-      agentIdleTimeout: options.agentIdleTimeout || 30 * 1000, // 30 seconds (was 5 minutes)
-      browserTypes: options.browserTypes || ['chromium', 'firefox'],
+      agentIdleTimeout: options.agentIdleTimeout || 5 * 1000, // 5 seconds (was 30 seconds)
+      browserTypes: options.browserTypes || ['chromium', 'firefox', 'webkit', 'edge'],
       headless: options.headless !== undefined ? options.headless : true,
+      closeAgentAfterTest: options.closeAgentAfterTest !== undefined ? options.closeAgentAfterTest : true, // Testi tamamladıktan sonra agent'ı kapat
       ...options
     };
 
@@ -199,6 +200,48 @@ export class AgentManager extends EventEmitter {
       },
       queue: this.queueSystem.getStatus()
     };
+  }
+
+  /**
+   * Set the maximum number of agents
+   * @param {number} limit - Maximum number of agents
+   */
+  setAgentLimit(limit) {
+    if (typeof limit !== 'number' || limit < 1) {
+      throw new Error('Agent limit must be a positive number');
+    }
+
+    const oldLimit = this.dynamicAgentOptions.currentLimit;
+    this.dynamicAgentOptions.currentLimit = Math.min(limit, this.dynamicAgentOptions.maxAgents);
+
+    console.log(`Agent limit changed from ${oldLimit} to ${this.dynamicAgentOptions.currentLimit}`);
+
+    // If the new limit is lower, optimize agent count
+    if (this.dynamicAgentOptions.currentLimit < oldLimit) {
+      this._optimizeAgentCount();
+    }
+  }
+
+  /**
+   * Process the queue immediately
+   * This can be called to start processing without waiting for the next interval
+   */
+  processQueue() {
+    console.log('Manually triggering queue processing');
+    // Process multiple requests at once based on available agents
+    const availableSlots = this.dynamicAgentOptions.currentLimit - this.busyAgents.size;
+
+    if (availableSlots <= 0) {
+      console.log('No available slots for processing requests');
+      return;
+    }
+
+    console.log(`Processing up to ${availableSlots} requests from queue`);
+
+    // Process multiple requests
+    for (let i = 0; i < availableSlots; i++) {
+      this._processNextRequest();
+    }
   }
 
   /**
@@ -524,8 +567,20 @@ export class AgentManager extends EventEmitter {
       // Mark request as failed
       this.queueSystem.fail(request.id, error);
     } finally {
-      // Mark agent as available
-      this._markAgentAsAvailable(agent.id);
+      // Test tamamlandıktan sonra agent'ı kapat veya kullanılabilir olarak işaretle
+      if (this.options.closeAgentAfterTest) {
+        console.log(`Closing agent ${agent.id} after test completion`);
+        try {
+          await this._terminateAgent(agent.id);
+        } catch (error) {
+          console.error(`Error terminating agent ${agent.id}:`, error);
+          // Hata durumunda agent'ı kullanılabilir olarak işaretle
+          this._markAgentAsAvailable(agent.id);
+        }
+      } else {
+        // Eski davranış: Agent'ı kullanılabilir olarak işaretle
+        this._markAgentAsAvailable(agent.id);
+      }
     }
   }
 

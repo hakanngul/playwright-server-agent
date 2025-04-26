@@ -10,6 +10,7 @@ import reportRoutes from './routes/reports.js';
 import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
 import agentRoutes from './routes/agent.js';
+import testPlansRoutes from './routes/test-plans.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
@@ -162,6 +163,9 @@ app.use('/api/status', statusRoutes);
 // Use agent routes
 app.use('/api/agent', agentRoutes);
 
+// Use test plans routes
+app.use('/api/test-plans', testPlansRoutes);
+
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -197,7 +201,8 @@ app.get('/api/browsers', (_req, res) => {
   const browsers = [
     { id: 'chromium', name: 'Chromium' },
     { id: 'firefox', name: 'Firefox' },
-    { id: 'edge', name: 'Microsoft Edge' }
+    { id: 'edge', name: 'Microsoft Edge' },
+    { id: 'webkit', name: 'WebKit (Safari)' }
   ];
 
   res.json(browsers);
@@ -213,9 +218,9 @@ const parallelTestManager = new ParallelTestManager({
   retries: config.test.retries
 });
 
-// Add parallel test execution endpoint
+// Add parallel test execution endpoint (legacy - redirects to agent-based endpoint)
 app.post('/api/test/run-parallel', async (req, res) => {
-  console.log('\n--- Received parallel test run request ---');
+  console.log('\n--- Received legacy parallel test run request, redirecting to agent-based endpoint ---');
   try {
     const { testPlans } = req.body;
 
@@ -226,30 +231,39 @@ app.post('/api/test/run-parallel', async (req, res) => {
       });
     }
 
-    console.log(`Received ${testPlans.length} test plans for parallel execution`);
-    console.log(`Using ${config.test.usePlaywrightTestRunner ? 'Playwright Test Runner' : 'Custom Test Runner'} with ${config.test.retries} retries`);
+    console.log(`Redirecting ${testPlans.length} test plans to agent-based endpoint`);
 
-    // Set test completion callback
-    parallelTestManager.setTestCompletedCallback((result) => {
-      console.log(`Test completed: ${result.name}, success: ${result.success}`);
+    // Forward to agent-based endpoint
+    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : 5;
+    console.log(`Using maximum ${maxAgents} agents for parallel execution`);
 
-      // Send test completion message via Socket.io
-      io.emit('test_completed', {
-        testName: result.name,
-        result: result
-      });
-    });
+    // Submit all test plans to the agent manager
+    const requestIds = [];
+    for (const testPlan of testPlans) {
+      if (!testPlan || !testPlan.steps || !Array.isArray(testPlan.steps)) {
+        console.warn(`Skipping invalid test plan: ${testPlan?.name || 'unnamed'}`);
+        continue;
+      }
 
-    // Run tests in parallel
-    const results = await parallelTestManager.runTests(testPlans);
+      // Submit the request to the agent manager
+      const requestId = agentRoutes.agentManager.submitRequest(testPlan);
+      requestIds.push({ id: requestId, name: testPlan.name });
+      console.log(`Test plan "${testPlan.name}" submitted with ID: ${requestId}`);
+    }
 
-    console.log(`All ${testPlans.length} tests completed, sending results to client`);
+    // Set agent limit temporarily for this batch
+    agentRoutes.agentManager.setAgentLimit(maxAgents);
+
+    // Start processing immediately
+    agentRoutes.agentManager.processQueue();
+
     res.json({
       success: true,
-      results: results
+      message: `${requestIds.length} test requests submitted for parallel execution (redirected from legacy endpoint)`,
+      requestIds: requestIds
     });
   } catch (error) {
-    console.error('Error running parallel tests:', error);
+    console.error('Error redirecting parallel test requests:', error);
     res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined

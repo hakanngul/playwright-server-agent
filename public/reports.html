@@ -356,6 +356,18 @@
                             Test Raporları
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/test-plans.html">
+                            <i class="material-icons align-middle me-1">playlist_add_check</i>
+                            Test Planları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/create-test.html">
+                            <i class="material-icons align-middle me-1">add_circle</i>
+                            Test Oluştur
+                        </a>
+                    </li>
                 </ul>
 
             </div>
@@ -525,15 +537,32 @@
             </div>
         </div>
 
-        <!-- Son Tamamlanan Testler -->
+        <!-- Tamamlanan Testler -->
         <div class="card">
             <div class="card-header">
                 <i class="material-icons">history</i>
-                <span>Son Tamamlanan Testler</span>
+                <span>Tamamlanan Testler</span>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <label for="page-size-select" class="me-3">Sayfa başına gösterim:</label>
+                        <select id="page-size-select" class="form-select form-select-sm d-inline-block" style="width: 70px;">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    <div class="input-group w-25">
+                        <input type="text" id="search-input" class="form-control" placeholder="Ara...">
+                        <button class="btn btn-outline-secondary" type="button" id="search-button">
+                            <i class="material-icons">search</i>
+                        </button>
+                    </div>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table id="completed-tests-table" class="table table-striped">
                         <thead>
                             <tr>
                                 <th>Test Adı</th>
@@ -545,7 +574,7 @@
                                 <th>Detaylar</th>
                             </tr>
                         </thead>
-                        <tbody id="completed-tests-table">
+                        <tbody id="completed-tests-tbody">
                             <!-- Tamamlanan testler burada listelenecek -->
                             <tr>
                                 <td colspan="7" class="text-center">Henüz tamamlanan test yok</td>
@@ -553,12 +582,32 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span id="pagination-info">Gösterilen: 0-0 / 0</span>
+                    </div>
+                    <nav aria-label="Sayfalama">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" id="prev-page" aria-label="Önceki">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" id="next-page" aria-label="Sonraki">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
 
         <!-- Test Detayları Modal -->
         <div class="modal fade" id="testDetailsModal" tabindex="-1" aria-labelledby="testDetailsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="testDetailsModalLabel">
@@ -567,11 +616,14 @@
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body" id="testDetailsContent">
+                    <div class="modal-body p-0" id="testDetailsContent">
                         <!-- Test detayları burada gösterilecek -->
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="material-icons align-middle me-1">close</i>
+                            Kapat
+                        </button>
                         <button type="button" class="btn btn-primary" id="downloadReportBtn">
                             <i class="material-icons align-middle me-1">download</i>
                             Raporu İndir
@@ -677,6 +729,17 @@
             }
         }
 
+        // Kategori rengini hex olarak al
+        function getCategoryColor(category) {
+            switch (category) {
+                case 'functional': return '#007bff';
+                case 'regression': return '#6f42c1';
+                case 'performance': return '#fd7e14';
+                case 'critical': return '#dc3545';
+                default: return '#6c757d';
+            }
+        }
+
         // Filtreleri uygulama fonksiyonu
         function applyFilters() {
             const browserFilter = document.getElementById('filterBrowser').value;
@@ -730,34 +793,44 @@
 
         // Tamamlanan testler tablosunu güncelleme
         function updateCompletedTestsTable() {
-            const tableBody = document.getElementById('completed-tests-table');
-            tableBody.innerHTML = '';
-
-            if (filteredTests.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = '<td colspan="7" class="text-center">Filtrelere uygun test bulunamadı</td>';
-                tableBody.appendChild(row);
-                return;
+            // DataTable'ı temizle ve yeniden oluştur
+            if ($.fn.DataTable.isDataTable('#completed-tests-datatable')) {
+                $('#completed-tests-datatable').DataTable().destroy();
             }
 
+            const tableData = [];
+
+            // Tablo verilerini hazırla
             filteredTests.forEach((test, index) => {
-                const row = document.createElement('tr');
                 const isSuccess = test.status === 'completed';
                 const testDuration = calculateTestDuration(test);
                 const category = test.testPlan.category || 'default';
                 const originalIndex = completedTests.indexOf(test);
 
-                row.innerHTML = `
-                    <td>${test.testPlan.name}</td>
-                    <td><span class="test-category ${getCategoryClass(category)}">${category}</span></td>
-                    <td>${test.testPlan.browserPreference || 'chromium'}</td>
-                    <td><span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span></td>
-                    <td>${formatDuration(testDuration)}</td>
-                    <td>${formatDate(test.completedAt)}</td>
-                    <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${originalIndex})">Detaylar</button></td>
-                `;
+                tableData.push([
+                    test.testPlan.name,
+                    `<span class="test-category ${getCategoryClass(category)}">${category}</span>`,
+                    test.testPlan.browserPreference || 'chromium',
+                    `<span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span>`,
+                    formatDuration(testDuration),
+                    formatDate(test.completedAt),
+                    `<button class="btn btn-sm btn-info" onclick="showTestDetails(${originalIndex})">Detaylar</button>`
+                ]);
+            });
 
-                tableBody.appendChild(row);
+            // DataTable'ı oluştur
+            $('#completed-tests-datatable').DataTable({
+                data: tableData,
+                responsive: true,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/tr.json'
+                },
+                order: [[5, 'desc']], // Tamamlanma zamanına göre sırala (en son en üstte)
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                columnDefs: [
+                    { className: "text-center", targets: [2, 3, 4, 6] }
+                ]
             });
         }
 
@@ -771,56 +844,100 @@
             const testDuration = calculateTestDuration(test);
             const category = test.testPlan.category || 'default';
 
+            // Başarı durumuna göre renk sınıfı
+            const statusClass = isSuccess ? 'success' : 'error';
+            const statusIcon = isSuccess ? 'check_circle' : 'error';
+            const statusText = isSuccess ? 'Başarılı' : 'Başarısız';
+
+            // Adımları HTML'e dönüştür
             let stepsHtml = '';
+            let totalSteps = 0;
+            let successfulSteps = 0;
+
             if (test.result && test.result.steps) {
+                totalSteps = test.result.steps.length;
+                successfulSteps = test.result.steps.filter(step => step.success !== false).length;
+
+                stepsHtml = '<div class="steps-list p-4">';
+                stepsHtml += '<div class="steps-header d-flex justify-content-between align-items-center">';
+                stepsHtml += `<h6 class="mb-0"><i class="material-icons align-middle me-1">list</i> Test Adımları (${successfulSteps}/${totalSteps})</h6>`;
+                stepsHtml += `<span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${successfulSteps}/${totalSteps} Adım Başarılı</span>`;
+                stepsHtml += '</div>';
+
                 test.result.steps.forEach((step, stepIndex) => {
                     const stepSuccess = step.success !== false;
+                    const stepIcon = stepSuccess ? 'check_circle' : 'error';
+
                     stepsHtml += `
-                        <div class="step-details ${stepSuccess ? 'step-success' : 'step-failed'} mb-2">
-                            <div><strong>Adım ${stepIndex + 1}:</strong> ${step.description || step.action}</div>
-                            <div><strong>Eylem:</strong> ${step.action}</div>
-                            <div><strong>Hedef:</strong> ${step.target}</div>
-                            <div><strong>Değer:</strong> ${step.value || '-'}</div>
-                            <div><strong>Durum:</strong> <span class="badge ${stepSuccess ? 'badge-success' : 'badge-danger'}">${stepSuccess ? 'Başarılı' : 'Başarısız'}</span></div>
-                            ${step.error ? `<div><strong>Hata:</strong> ${step.error}</div>` : ''}
-                            ${step.screenshot ? `<div class="mt-2"><img src="${step.screenshot}" class="img-fluid" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                        <div class="step-item ${stepSuccess ? 'step-success' : 'step-error'} mb-3">
+                            <div class="step-header">
+                                <span class="step-number">${stepIndex + 1}</span>
+                                <span class="step-action">${step.action}</span>
+                                <span class="step-status">
+                                    <i class="material-icons ${stepSuccess ? 'text-success' : 'text-danger'}">${stepIcon}</i>
+                                </span>
+                            </div>
+                            <div class="step-details">
+                                <div><strong>Hedef:</strong> ${step.target || '-'}</div>
+                                <div><strong>Strateji:</strong> ${step.strategy || '-'}</div>
+                                <div><strong>Değer:</strong> ${step.value || '-'}</div>
+                                <div><strong>Açıklama:</strong> ${step.description || '-'}</div>
+                                <div><strong>Süre:</strong> ${formatDuration(step.duration)}</div>
+                                ${step.error ? `<div class="text-danger mt-2 p-2 bg-light rounded"><strong>Hata:</strong> ${step.error}</div>` : ''}
+                                ${step.screenshot ? `<div class="mt-3"><img src="${step.screenshot}" class="img-fluid rounded shadow-sm" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                            </div>
                         </div>
                     `;
                 });
+                stepsHtml += '</div>';
             } else if (test.error) {
                 stepsHtml = `
-                    <div class="alert alert-danger">
-                        <strong>Hata:</strong> ${test.error.message}
-                        ${test.error.stack ? `<pre>${test.error.stack}</pre>` : ''}
+                    <div class="p-4">
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading"><i class="material-icons align-middle me-1">error</i> Hata</h6>
+                            <p>${test.error.message}</p>
+                            ${test.error.stack ? `<pre class="mt-3 p-2 bg-light rounded small">${test.error.stack}</pre>` : ''}
+                        </div>
                     </div>
                 `;
+            } else {
+                stepsHtml = '<div class="p-4"><div class="alert alert-info">Bu test için adım bilgisi bulunmuyor.</div></div>';
             }
 
             modalContent.innerHTML = `
-                <div class="card ${isSuccess ? 'test-result-success' : 'test-result-failed'} mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">${test.testPlan.name}</h5>
-                        <div class="mb-3">
-                            <span class="test-category ${getCategoryClass(category)}">${category}</span>
-                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span>
+                <div class="test-info-header ${statusClass} p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="test-info-title mb-0">
+                            <i class="material-icons">${statusIcon}</i>
+                            ${test.testPlan.name}
+                        </h5>
+                        <div>
+                            <span class="test-category ${getCategoryClass(category)} me-2">${category}</span>
+                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${statusText}</span>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <strong>Tarayıcı:</strong> ${test.testPlan.browserPreference || 'chromium'}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Süre:</strong> ${formatDuration(testDuration)}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Başlangıç:</strong> ${formatDate(test.startedAt)}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Bitiş:</strong> ${formatDate(test.completedAt)}
-                            </div>
-                        </div>
-                        <h6>Test Adımları:</h6>
-                        ${stepsHtml}
                     </div>
+                </div>
+                <div class="test-info-body p-4">
+                    <div class="test-info-grid">
+                        <div class="test-info-item">
+                            <strong>Tarayıcı</strong>
+                            <span>${test.testPlan.browserPreference || 'chromium'}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Süre</strong>
+                            <span>${formatDuration(testDuration)}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Başlangıç</strong>
+                            <span>${formatDate(test.startedAt)}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Bitiş</strong>
+                            <span>${formatDate(test.completedAt)}</span>
+                        </div>
+                    </div>
+
+                    ${stepsHtml}
                 </div>
             `;
 
@@ -1050,6 +1167,10 @@
                 const summaryResponse = await fetch(`/api/reports/summary/${period}?date=${date}`);
                 const summaryData = await summaryResponse.json();
 
+                // Tüm mevcut günlük raporları al
+                const dailySummariesResponse = await fetch('/api/reports/summaries/daily');
+                const dailySummaries = await dailySummariesResponse.json();
+
                 // Agent testlerini ve raporları birleştir
                 let allTests = [...agentTests];
 
@@ -1104,6 +1225,10 @@
                     document.getElementById('success-rate').textContent = summaryData.successRate ? `${summaryData.successRate.toFixed(1)}%` : '-';
                     document.getElementById('avg-duration').textContent = summaryData.averageDuration ? formatDuration(summaryData.averageDuration) : '-';
                 }
+
+                // Günlük raporları konsola yazdır (debug için)
+                console.log('Günlük raporlar:', dailySummaries);
+
             } catch (error) {
                 console.error('Veri alınırken hata oluştu:', error);
             }
@@ -1114,12 +1239,525 @@
             return new Date().toISOString().split('T')[0];
         }
 
+        // Tüm raporları saklayacak dizi
+        let allReports = [];
+        // Filtrelenmiş raporları saklayacak dizi
+        let filteredReports = [];
+        // Sayfalama değişkenleri
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalPages = 1;
+
+        // Günlük raporları tablo olarak göster
+        async function loadDailyReportsTable() {
+            try {
+                // Tüm günlük raporları al
+                const dailySummariesResponse = await fetch('/api/reports/summaries/daily');
+                const dailySummaries = await dailySummariesResponse.json();
+
+                allReports = [];
+
+                // Her günlük rapor için
+                for (const summary of dailySummaries) {
+                    // Raporları al
+                    const reportsResponse = await fetch(`/api/reports?period=daily&date=${summary.date}`);
+                    const reports = await reportsResponse.json();
+
+                    // Tüm raporları birleştir
+                    allReports = allReports.concat(reports);
+                }
+
+                // Raporları tarihe göre sırala (en son en üstte)
+                allReports.sort((a, b) => {
+                    return new Date(b.timestamp) - new Date(a.timestamp);
+                });
+
+                // Filtrelenmiş raporları güncelle
+                filteredReports = [...allReports];
+
+                // Sayfalama bilgilerini güncelle
+                updatePagination();
+
+                // Tabloyu güncelle
+                updateTable();
+
+                // Özet bilgilerini güncelle
+                updateChartsFromSummaries(dailySummaries);
+
+            } catch (error) {
+                console.error('Günlük raporlar yüklenirken hata oluştu:', error);
+            }
+        }
+
+        // Tabloyu güncelle
+        function updateTable() {
+            // Tablo içeriğini temizle
+            const tableBody = document.getElementById('completed-tests-tbody');
+            tableBody.innerHTML = '';
+
+            // Eğer rapor yoksa mesaj göster
+            if (filteredReports.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="7" class="text-center">Filtrelere uygun test bulunamadı</td></tr>';
+                return;
+            }
+
+            // Sayfa için başlangıç ve bitiş indekslerini hesapla
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, filteredReports.length);
+
+            // Sayfa bilgisini güncelle
+            document.getElementById('pagination-info').textContent = `Gösterilen: ${startIndex + 1}-${endIndex} / ${filteredReports.length}`;
+
+            // Sayfadaki raporları göster
+            for (let i = startIndex; i < endIndex; i++) {
+                const report = filteredReports[i];
+                const isSuccess = report.success;
+                const category = report.tags && report.tags.length > 0 ? report.tags[0] : 'default';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${report.name}</td>
+                    <td><span class="test-category ${getCategoryClass(category)}">${category}</span></td>
+                    <td class="text-center">${report.browserType || 'chromium'}</td>
+                    <td class="text-center"><span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span></td>
+                    <td class="text-center">${formatDuration(report.duration)}</td>
+                    <td class="text-center">${formatDate(report.timestamp)}</td>
+                    <td class="text-center"><button class="btn btn-sm btn-info" onclick="showReportDetails('${report.id}')">Detaylar</button></td>
+                `;
+
+                tableBody.appendChild(row);
+            }
+        }
+
+        // Sayfalama bilgilerini güncelle
+        function updatePagination() {
+            // Toplam sayfa sayısını hesapla
+            totalPages = Math.ceil(filteredReports.length / pageSize);
+
+            // Sayfa numaralarını oluştur
+            const pagination = document.querySelector('.pagination');
+            pagination.innerHTML = '';
+
+            // Önceki sayfa butonu
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `
+                <a class="page-link" href="#" aria-label="Önceki" onclick="goToPage(${currentPage - 1}); return false;">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            `;
+            pagination.appendChild(prevLi);
+
+            // Sayfa numaraları
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageLi.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>`;
+                pagination.appendChild(pageLi);
+            }
+
+            // Sonraki sayfa butonu
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `
+                <a class="page-link" href="#" aria-label="Sonraki" onclick="goToPage(${currentPage + 1}); return false;">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            `;
+            pagination.appendChild(nextLi);
+        }
+
+        // Belirli bir sayfaya git
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) {
+                return;
+            }
+
+            currentPage = page;
+            updateTable();
+            updatePagination();
+        }
+
+        // Arama fonksiyonu
+        function searchReports(query) {
+            if (!query || query.trim() === '') {
+                filteredReports = [...allReports];
+            } else {
+                query = query.toLowerCase();
+                filteredReports = allReports.filter(report => {
+                    return (
+                        report.name.toLowerCase().includes(query) ||
+                        (report.tags && report.tags.some(tag => tag.toLowerCase().includes(query))) ||
+                        report.browserType.toLowerCase().includes(query)
+                    );
+                });
+            }
+
+            currentPage = 1;
+            updatePagination();
+            updateTable();
+        }
+
+        // Rapor detaylarını göster
+        async function showReportDetails(reportId) {
+            try {
+                // Raporu al
+                const response = await fetch(`/api/reports/${reportId}`);
+                const report = await response.json();
+
+                const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
+                const modalContent = document.getElementById('testDetailsContent');
+
+                // Başarı durumuna göre renk sınıfı
+                const statusClass = report.success ? 'success' : 'error';
+                const statusIcon = report.success ? 'check_circle' : 'error';
+                const statusText = report.success ? 'Başarılı' : 'Başarısız';
+
+                // Adımları HTML'e dönüştür
+                let stepsHtml = '';
+                let totalSteps = 0;
+                let successfulSteps = 0;
+
+                if (report.steps && report.steps.length > 0) {
+                    totalSteps = report.steps.length;
+                    successfulSteps = report.steps.filter(step => step.success).length;
+
+                    stepsHtml = '<div class="steps-list p-4">';
+                    stepsHtml += '<div class="steps-header d-flex justify-content-between align-items-center">';
+                    stepsHtml += `<h6 class="mb-0"><i class="material-icons align-middle me-1">list</i> Test Adımları (${successfulSteps}/${totalSteps})</h6>`;
+                    stepsHtml += `<span class="badge ${report.success ? 'badge-success' : 'badge-danger'}">${successfulSteps}/${totalSteps} Adım Başarılı</span>`;
+                    stepsHtml += '</div>';
+
+                    report.steps.forEach(step => {
+                        const isStepSuccess = step.success;
+                        const stepIcon = isStepSuccess ? 'check_circle' : 'error';
+
+                        stepsHtml += `
+                            <div class="step-item ${isStepSuccess ? 'step-success' : 'step-error'} mb-3">
+                                <div class="step-header">
+                                    <span class="step-number">${step.step}</span>
+                                    <span class="step-action">${step.action}</span>
+                                    <span class="step-status">
+                                        <i class="material-icons ${isStepSuccess ? 'text-success' : 'text-danger'}">${stepIcon}</i>
+                                    </span>
+                                </div>
+                                <div class="step-details">
+                                    <div><strong>Hedef:</strong> ${step.target || '-'}</div>
+                                    <div><strong>Strateji:</strong> ${step.strategy || '-'}</div>
+                                    <div><strong>Değer:</strong> ${step.value || '-'}</div>
+                                    <div><strong>Açıklama:</strong> ${step.description || '-'}</div>
+                                    <div><strong>Süre:</strong> ${formatDuration(step.duration)}</div>
+                                    ${step.error ? `<div class="text-danger mt-2 p-2 bg-light rounded"><strong>Hata:</strong> ${step.error}</div>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    stepsHtml += '</div>';
+                } else {
+                    stepsHtml = '<div class="p-4"><div class="alert alert-info">Bu test için adım bilgisi bulunmuyor.</div></div>';
+                }
+
+                // Modal içeriğini oluştur
+                modalContent.innerHTML = `
+                    <div class="test-info-header ${statusClass} p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="test-info-title mb-0">
+                                <i class="material-icons">${statusIcon}</i>
+                                ${report.name}
+                            </h5>
+                            <span class="badge ${report.success ? 'badge-success' : 'badge-danger'}">${statusText}</span>
+                        </div>
+                    </div>
+                    <div class="test-info-body p-4">
+                        <div class="test-info-grid">
+                            <div class="test-info-item">
+                                <strong>Tarayıcı</strong>
+                                <span>${report.browserType || 'Chromium'}</span>
+                            </div>
+                            <div class="test-info-item">
+                                <strong>Kategori</strong>
+                                <span>${report.tags && report.tags.length > 0 ? report.tags[0] : 'Default'}</span>
+                            </div>
+                            <div class="test-info-item">
+                                <strong>Süre</strong>
+                                <span>${formatDuration(report.duration)}</span>
+                            </div>
+                            <div class="test-info-item">
+                                <strong>Tamamlanma Zamanı</strong>
+                                <span>${formatDate(report.timestamp)}</span>
+                            </div>
+                        </div>
+
+                        ${report.error ? `
+                        <div class="alert alert-danger mt-3">
+                            <h6 class="alert-heading"><i class="material-icons align-middle me-1">error</i> Hata</h6>
+                            <p class="mb-0">${report.error}</p>
+                        </div>
+                        ` : ''}
+
+                        ${stepsHtml}
+                    </div>
+                `;
+
+                modal.show();
+            } catch (error) {
+                console.error('Rapor detayları alınırken hata oluştu:', error);
+            }
+        }
+
+        // Özetlerden grafikleri güncelle
+        function updateChartsFromSummaries(summaries) {
+            // Toplam test sayısı
+            let totalTests = 0;
+            let successfulTests = 0;
+            let failedTests = 0;
+            let totalDuration = 0;
+            let totalSteps = 0;
+            let testsWithSteps = 0;
+
+            // Kategori dağılımı için
+            const categories = {};
+
+            // Test süreleri için
+            const testDurations = [];
+
+            // Önce raporlardan adım sayılarını hesaplamak için tüm raporları alalım
+            const calculateStepsFromReports = async () => {
+                for (const summary of summaries) {
+                    if (summary.date) {
+                        // Raporları al
+                        try {
+                            const reportsResponse = await fetch(`/api/reports?period=daily&date=${summary.date}`);
+                            const reports = await reportsResponse.json();
+
+                            // Her rapor için adım sayısını hesapla
+                            for (const report of reports) {
+                                if (report.steps && report.steps.length > 0) {
+                                    totalSteps += report.steps.length;
+                                    testsWithSteps++;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Raporlar alınırken hata oluştu:', error);
+                        }
+                    }
+                }
+
+                // Ortalama adım sayısını hesapla ve güncelle
+                const avgSteps = testsWithSteps > 0 ? (totalSteps / testsWithSteps).toFixed(1) : '-';
+                document.getElementById('avg-steps').textContent = avgSteps;
+            };
+
+            // Adım sayılarını hesapla
+            calculateStepsFromReports();
+
+            summaries.forEach(summary => {
+                totalTests += summary.totalTests;
+                successfulTests += summary.successfulTests;
+                failedTests += summary.failedTests;
+                totalDuration += summary.averageDuration * summary.totalTests;
+
+                // Kategori bilgilerini topla
+                if (summary.categories) {
+                    Object.keys(summary.categories).forEach(category => {
+                        categories[category] = (categories[category] || 0) + summary.categories[category];
+                    });
+                }
+
+                // Test sürelerini topla
+                if (summary.tests) {
+                    summary.tests.forEach(test => {
+                        testDurations.push({
+                            name: test.name,
+                            duration: test.duration,
+                            success: test.success
+                        });
+                    });
+                }
+            });
+
+            // Başarı oranı
+            const successRate = totalTests > 0 ? (successfulTests / totalTests * 100).toFixed(1) + '%' : '-';
+
+            // Ortalama süre
+            const avgDuration = totalTests > 0 ? formatDuration(totalDuration / totalTests) : '-';
+
+            // Metrikleri güncelle
+            document.getElementById('total-tests').textContent = totalTests;
+            document.getElementById('success-rate').textContent = successRate;
+            document.getElementById('avg-duration').textContent = avgDuration;
+
+            // Grafikleri güncelle
+            updateTestResultsChartFromData(successfulTests, failedTests);
+            updateCategoryChartFromData(categories);
+            updateDurationChartFromData(testDurations);
+        }
+
+        // Test sonuçları grafiğini verilerden güncelle
+        function updateTestResultsChartFromData(successCount, failedCount) {
+            const ctx = document.getElementById('test-results-chart').getContext('2d');
+
+            // Mevcut grafiği temizle
+            if (window.testResultsChart) {
+                window.testResultsChart.destroy();
+            }
+
+            // Yeni grafiği oluştur
+            window.testResultsChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Başarılı', 'Başarısız'],
+                    datasets: [{
+                        data: [successCount, failedCount],
+                        backgroundColor: ['#4CAF50', '#F44336'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = successCount + failedCount;
+                                    const value = context.raw;
+                                    const percentage = total > 0 ? Math.round(value / total * 100) : 0;
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Kategori grafiğini verilerden güncelle
+        function updateCategoryChartFromData(categories) {
+            const ctx = document.getElementById('category-chart').getContext('2d');
+
+            // Eğer kategori yoksa varsayılan kategori ekle
+            if (Object.keys(categories).length === 0) {
+                categories['default'] = 1;
+            }
+
+            // Mevcut grafiği temizle
+            if (window.categoryChart) {
+                window.categoryChart.destroy();
+            }
+
+            // Grafik verilerini oluştur
+            const categoryLabels = Object.keys(categories);
+            const categoryData = Object.values(categories);
+            const backgroundColors = categoryLabels.map(category => getCategoryColor(category));
+
+            // Yeni grafiği oluştur
+            window.categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryData,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = categoryData.reduce((a, b) => a + b, 0);
+                                    const value = context.raw;
+                                    const percentage = Math.round(value / total * 100);
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Süre grafiğini verilerden güncelle
+        function updateDurationChartFromData(testDurations) {
+            const ctx = document.getElementById('duration-chart').getContext('2d');
+
+            // En son 10 testi al
+            const recentTests = testDurations.slice(0, 10).reverse();
+
+            // Mevcut grafiği temizle
+            if (window.durationChart) {
+                window.durationChart.destroy();
+            }
+
+            // Yeni grafiği oluştur
+            window.durationChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: recentTests.map(test => test.name),
+                    datasets: [{
+                        label: 'Test Süresi (saniye)',
+                        data: recentTests.map(test => test.duration / 1000),
+                        backgroundColor: recentTests.map(test => test.success ? '#4CAF50' : '#F44336'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Süre (saniye)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Test Adı'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Son 10 Test Süresi'
+                        }
+                    }
+                }
+            });
+        }
+
         // Sayfa yüklendiğinde verileri al
         async function fetchInitialData() {
             const today = getTodayDate();
             document.getElementById('reportDate').value = today;
             const period = document.getElementById('reportPeriod').value || 'daily';
-            await fetchReportsByDate(today, period);
+
+            // Günlük raporları yükle
+            await loadDailyReportsTable();
         }
 
         // Sayfa yüklendiğinde çalıştır
@@ -1128,16 +1766,12 @@
 
             // Yenile butonu
             document.getElementById('refresh-btn').addEventListener('click', () => {
-                const date = document.getElementById('reportDate').value || getTodayDate();
-                const period = document.getElementById('reportPeriod').value || 'daily';
-                fetchReportsByDate(date, period);
+                loadDailyReportsTable();
             });
 
             // Tarih seçimi ve yükleme butonu
             document.getElementById('loadReportsBtn').addEventListener('click', () => {
-                const date = document.getElementById('reportDate').value || getTodayDate();
-                const period = document.getElementById('reportPeriod').value || 'daily';
-                fetchReportsByDate(date, period);
+                loadDailyReportsTable();
             });
 
             // Dönem değiştiğinde tarih formatını ayarla
@@ -1154,11 +1788,27 @@
                 }
             });
 
-            // Filtreleme olayları
-            document.getElementById('filterBrowser').addEventListener('change', applyFilters);
-            document.getElementById('filterCategory').addEventListener('change', applyFilters);
-            document.getElementById('filterStatus').addEventListener('change', applyFilters);
-            document.getElementById('sortBy').addEventListener('change', applyFilters);
+            // Sayfa başına gösterim değiştiğinde
+            document.getElementById('page-size-select').addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value);
+                currentPage = 1;
+                updatePagination();
+                updateTable();
+            });
+
+            // Arama butonu
+            document.getElementById('search-button').addEventListener('click', () => {
+                const query = document.getElementById('search-input').value;
+                searchReports(query);
+            });
+
+            // Arama input'u enter tuşu
+            document.getElementById('search-input').addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    const query = e.target.value;
+                    searchReports(query);
+                }
+            });
 
             // Rapor indirme butonu
             document.getElementById('downloadReportBtn').addEventListener('click', () => {
@@ -1186,8 +1836,11 @@
             document.getElementById('reportDate').value = getTodayDate();
         });
 
-        // showTestDetails fonksiyonunu global olarak tanımla
+        // Fonksiyonları global olarak tanımla
         window.showTestDetails = showTestDetails;
+        window.showReportDetails = showReportDetails;
+        window.goToPage = goToPage;
+        window.searchReports = searchReports;
     </script>
 </body>
 </html>

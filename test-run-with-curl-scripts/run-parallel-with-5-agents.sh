@@ -269,9 +269,11 @@ EOF
 echo -e "${GREEN}Paralel test çalıştırma isteği gönderiliyor...${NC}"
 
 # MAX_WORKERS ortam değişkeni ile 5 agent kullanarak çalıştır
-MAX_WORKERS=5 curl -X POST http://localhost:3002/api/test/run-parallel \
+MAX_WORKERS=5 curl -X POST http://localhost:3002/api/agent/run-parallel \
   -H "Content-Type: application/json" \
   -d "${TEST_PLANS}" \
   | jq .
 
 echo -e "${GREEN}Paralel test çalıştırma isteği tamamlandı.${NC}"
+echo -e "${YELLOW}Test sonuçları agent tarafından işleniyor. Sonuçları görmek için:${NC}"
+echo -e "${BLUE}curl http://localhost:3002/api/agent/completed-requests | jq .${NC}"

@@ -39,12 +39,32 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
-    const report = await reportManager.getReport(req.params.id);
-    
+    const { id } = req.params;
+    const report = await reportManager.getReport(id);
+
     if (!report) {
       return res.status(404).json({ error: 'Report not found' });
     }
-    
+
+    res.json(report);
+  } catch (error) {
+    console.error('Error getting report:', error);
+    res.status(500).json({ error: 'Failed to get report' });
+  }
+});
+
+/**
+ * @route GET /api/reports/:id
+ * @desc Get a specific report by ID
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const report = await reportManager.getReport(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
     res.json(report);
   } catch (error) {
     console.error('Error getting report:', error);
@@ -60,17 +80,17 @@ router.get('/summary/:period', async (req, res) => {
   try {
     const { period } = req.params;
     const { date } = req.query;
-    
+
     if (!['daily', 'weekly', 'monthly'].includes(period)) {
       return res.status(400).json({ error: 'Invalid period. Must be daily, weekly, or monthly' });
     }
-    
+
     const summary = await reportManager.getSummary(period, date);
-    
+
     if (!summary) {
       return res.status(404).json({ error: 'Summary not found' });
     }
-    
+
     res.json(summary);
   } catch (error) {
     console.error('Error getting summary:', error);
@@ -85,11 +105,11 @@ router.get('/summary/:period', async (req, res) => {
 router.get('/summaries/:period', async (req, res) => {
   try {
     const { period } = req.params;
-    
+
     if (!['daily', 'weekly', 'monthly'].includes(period)) {
       return res.status(400).json({ error: 'Invalid period. Must be daily, weekly, or monthly' });
     }
-    
+
     const summaries = await reportManager.getAllSummaries(period);
     res.json(summaries);
   } catch (error) {
@@ -106,17 +126,17 @@ router.get('/analyze/:period', async (req, res) => {
   try {
     const { period } = req.params;
     const { date } = req.query;
-    
+
     if (!['daily', 'weekly', 'monthly'].includes(period)) {
       return res.status(400).json({ error: 'Invalid period. Must be daily, weekly, or monthly' });
     }
-    
+
     const analysis = await reportAnalyzer.analyzeTestResults(period, date);
-    
+
     if (!analysis) {
       return res.status(404).json({ error: 'Analysis not found' });
     }
-    
+
     res.json(analysis);
   } catch (error) {
     console.error('Error analyzing test results:', error);
@@ -131,11 +151,11 @@ router.get('/analyze/:period', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const success = await reportManager.deleteReport(req.params.id);
-    
+
     if (!success) {
       return res.status(404).json({ error: 'Report not found' });
     }
-    
+
     res.json({ message: 'Report deleted successfully' });
   } catch (error) {
     console.error('Error deleting report:', error);
@@ -151,8 +171,8 @@ router.post('/cleanup', async (req, res) => {
   try {
     const { maxAgeDays = 30 } = req.body;
     const deletedCount = await reportManager.cleanupOldReports(maxAgeDays);
-    
-    res.json({ 
+
+    res.json({
       message: `${deletedCount} old reports cleaned up successfully`,
       deletedCount
     });
