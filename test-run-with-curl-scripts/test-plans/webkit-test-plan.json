@@ -5,9 +5,9 @@
   "headless": false,
   "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--window-size=1440,900"],
     "ignoreHTTPSErrors": true,
     "slowMo": 40,
+    "isFullscreen": true,
     "colorScheme": "dark"
   },
   "steps": [

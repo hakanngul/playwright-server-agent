@@ -5,9 +5,9 @@
   "headless": false,
   "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--width=1600", "--height=900"],
     "ignoreHTTPSErrors": true,
     "slowMo": 30,
+    "isFullscreen": true,
     "firefoxUserPrefs": {
       "media.volume_scale": "0.0",
       "browser.display.background_color": "#f0f0f0"

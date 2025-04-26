@@ -5,7 +5,6 @@
   "headless": false,
   "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--window-size=1920,1080", "--disable-gpu"],
     "ignoreHTTPSErrors": true,
     "slowMo": 50,
     "isFullscreen": true
@@ -13,7 +12,7 @@
   "steps": [
     {
       "action": "navigate",
-      "value": "https://www.google.com",
+      "target": "https://www.google.com",
       "description": "Google'a git"
     },
     {
@@ -29,7 +28,7 @@
     },
     {
       "action": "wait",
-      "value": "500",
+      "target": "500",
       "description": "Sonuçların yüklenmesini bekle"
     },
     {
@@ -40,16 +39,17 @@
     },
     {
       "action": "wait",
-      "value": "2000",
+      "target": "2000",
       "description": "Sonuçların yüklenmesini bekle"
     },
     {
       "action": "takeScreenshot",
+      "target": "playwright-page",
       "description": "Playwright sayfasının ekran görüntüsünü al"
     },
     {
       "action": "wait",
-      "value": "500",
+      "target": "500",
       "description": "Sonuçların yüklenmesini bekle"
     }
   ]

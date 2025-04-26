@@ -5,9 +5,9 @@
   "headless": false,
   "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--window-size=1600,900"],
     "ignoreHTTPSErrors": true,
-    "slowMo": 20
+    "slowMo": 20,
+    "isFullscreen": true
   },
   "steps": [
     {

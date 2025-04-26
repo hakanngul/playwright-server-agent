@@ -256,7 +256,8 @@ export class PlaywrightTestAdapter extends ITestRunner {
       case 'pressEscape':
         return `await page.keyboard.press('Escape');`;
       case 'takeScreenshot':
-        return `await page.screenshot({ path: '${this.options.screenshotsDir}/${step.target || `screenshot_${index}`}.png' });`;
+        const screenshotName = step.target || step.value || `screenshot_${index}`;
+        return `await page.screenshot({ path: '${this.options.screenshotsDir}/${screenshotName}.png', fullPage: true });`;
       case 'verifyText':
         return `await expect(page.locator('body')).toContainText('${step.value}');`;
       case 'verifyTitle':
