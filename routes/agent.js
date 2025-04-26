@@ -9,7 +9,10 @@ import AgentManager from '../services/agent/AgentManager.js';
 const router = express.Router();
 
 // Create agent manager instance
-const agentManager = new AgentManager();
+const agentManager = new AgentManager({
+  closeAgentAfterTest: true, // Test tamamlandıktan sonra agent'ı kapat
+  agentIdleTimeout: 5000 // 5 saniye sonra boşta kalan agent'ları kapat
+});
 
 // Export agent manager for graceful shutdown
 router.agentManager = agentManager;

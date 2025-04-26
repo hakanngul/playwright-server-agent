@@ -16,9 +16,10 @@ export class AgentManager extends EventEmitter {
     // Initialize options with defaults
     this.options = {
       maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1), // Default to CPU count - 1
-      agentIdleTimeout: options.agentIdleTimeout || 30 * 1000, // 30 seconds (was 5 minutes)
+      agentIdleTimeout: options.agentIdleTimeout || 5 * 1000, // 5 seconds (was 30 seconds)
       browserTypes: options.browserTypes || ['chromium', 'firefox'],
       headless: options.headless !== undefined ? options.headless : true,
+      closeAgentAfterTest: options.closeAgentAfterTest !== undefined ? options.closeAgentAfterTest : true, // Testi tamamladıktan sonra agent'ı kapat
       ...options
     };
 
@@ -566,8 +567,20 @@ export class AgentManager extends EventEmitter {
       // Mark request as failed
       this.queueSystem.fail(request.id, error);
     } finally {
-      // Mark agent as available
-      this._markAgentAsAvailable(agent.id);
+      // Test tamamlandıktan sonra agent'ı kapat veya kullanılabilir olarak işaretle
+      if (this.options.closeAgentAfterTest) {
+        console.log(`Closing agent ${agent.id} after test completion`);
+        try {
+          await this._terminateAgent(agent.id);
+        } catch (error) {
+          console.error(`Error terminating agent ${agent.id}:`, error);
+          // Hata durumunda agent'ı kullanılabilir olarak işaretle
+          this._markAgentAsAvailable(agent.id);
+        }
+      } else {
+        // Eski davranış: Agent'ı kullanılabilir olarak işaretle
+        this._markAgentAsAvailable(agent.id);
+      }
     }
   }
 
