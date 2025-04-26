@@ -17,7 +17,7 @@ const defaultConfig = {
     allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
   },
   test: {
-    usePlaywrightTestRunner: false,
+    // Artık sadece Playwright Test Runner kullanıyoruz
     workers: 5,
     headless: true,
     retries: 1,

@@ -7,7 +7,7 @@ import EventEmitter from 'events';
 import path from 'path';
 import { BrowserController } from '../browser/BrowserController.js';
 import { ElementInteractor } from '../browser/ElementInteractor.js';
-import { TestRunnerAdapter } from '../browser/TestRunnerAdapter.js';
+import { PlaywrightTestAdapter } from '../browser/PlaywrightTestAdapter.js';
 
 export class TestAgent extends EventEmitter {
   /**
@@ -39,7 +39,7 @@ export class TestAgent extends EventEmitter {
       headless: this.headless
     });
 
-    this.testRunner = new TestRunnerAdapter({
+    this.testRunner = new PlaywrightTestAdapter({
       browserType: this.browserType,
       headless: this.headless,
       screenshotsDir: this.screenshotsDir

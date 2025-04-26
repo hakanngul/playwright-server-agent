@@ -6,16 +6,20 @@
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
+import { ITestRunner } from '../interfaces/ITestRunner.js';
 
 /**
  * Adapts JSON test plans to Playwright Test Runner
+ * @implements {ITestRunner}
  */
-export class PlaywrightTestAdapter {
+export class PlaywrightTestAdapter extends ITestRunner {
   /**
    * Creates a new PlaywrightTestAdapter instance
    * @param {Object} options - Configuration options
    */
   constructor(options = {}) {
+    super();
+
     this.options = {
       testDir: options.testDir || path.join(process.cwd(), 'temp-tests'),
       outputDir: options.outputDir || path.join(process.cwd(), 'test-results'),
@@ -24,6 +28,10 @@ export class PlaywrightTestAdapter {
       workers: options.workers || undefined,
       browserTypes: options.browserTypes || ['chromium']
     };
+
+    this.onStepCompleted = null;
+    this.onTestCompleted = null;
+    this.browserManager = null;
 
     // Ensure directories exist
     this._ensureDirectoriesExist();
@@ -435,5 +443,55 @@ export class PlaywrightTestAdapter {
     // Run tests in parallel
     const testPromises = testPlans.map(testPlan => this.runTest(testPlan));
     return await Promise.all(testPromises);
+  }
+
+  /**
+   * Sets the callback for step completion
+   * @param {Function} callback - Callback function
+   */
+  setStepCompletedCallback(callback) {
+    this.onStepCompleted = callback;
+  }
+
+  /**
+   * Sets the callback for test completion
+   * @param {Function} callback - Callback function
+   */
+  setTestCompletedCallback(callback) {
+    this.onTestCompleted = callback;
+  }
+
+  /**
+   * Initializes the test runner
+   * @returns {Promise<void>}
+   */
+  async initialize() {
+    // Nothing to initialize for Playwright Test Runner
+    return Promise.resolve();
+  }
+
+  /**
+   * Closes the test runner
+   * @returns {Promise<void>}
+   */
+  async close() {
+    // Nothing to close for Playwright Test Runner
+    return Promise.resolve();
+  }
+
+  /**
+   * Gets the browser manager
+   * @returns {Object|null} Browser manager
+   */
+  getBrowserManager() {
+    return this.browserManager;
+  }
+
+  /**
+   * Sets the browser manager
+   * @param {Object} browserManager - Browser manager to use
+   */
+  setBrowserManager(browserManager) {
+    this.browserManager = browserManager;
   }
 }
