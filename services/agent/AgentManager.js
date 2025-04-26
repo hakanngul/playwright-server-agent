@@ -558,14 +558,23 @@ export class AgentManager extends EventEmitter {
       const result = await agent.runTest(request.testPlan);
 
       // Mark request as completed
-      this.queueSystem.complete(request.id, result);
-
-      console.log(`Agent ${agent.id} completed request ${request.id}`);
+      try {
+        this.queueSystem.complete(request.id, result);
+        console.log(`Agent ${agent.id} completed request ${request.id}`);
+      } catch (completeError) {
+        console.error(`Error marking request ${request.id} as complete:`, completeError);
+        // Continue execution even if marking as complete fails
+      }
     } catch (error) {
       console.error(`Agent ${agent.id} failed to process request ${request.id}:`, error);
 
       // Mark request as failed
-      this.queueSystem.fail(request.id, error);
+      try {
+        this.queueSystem.fail(request.id, error);
+      } catch (failError) {
+        console.error(`Error marking request ${request.id} as failed:`, failError);
+        // Continue execution even if marking as failed fails
+      }
     } finally {
       // Test tamamlandıktan sonra agent'ı kapat veya kullanılabilir olarak işaretle
       if (this.options.closeAgentAfterTest) {
@@ -575,12 +584,25 @@ export class AgentManager extends EventEmitter {
         } catch (error) {
           console.error(`Error terminating agent ${agent.id}:`, error);
           // Hata durumunda agent'ı kullanılabilir olarak işaretle
-          this._markAgentAsAvailable(agent.id);
+          try {
+            this._markAgentAsAvailable(agent.id);
+          } catch (markError) {
+            console.error(`Error marking agent ${agent.id} as available:`, markError);
+            // At this point, we've done all we can to recover
+          }
         }
       } else {
         // Eski davranış: Agent'ı kullanılabilir olarak işaretle
-        this._markAgentAsAvailable(agent.id);
+        try {
+          this._markAgentAsAvailable(agent.id);
+        } catch (markError) {
+          console.error(`Error marking agent ${agent.id} as available:`, markError);
+          // At this point, we've done all we can to recover
+        }
       }
+
+      // Process the next request regardless of what happened with this one
+      setTimeout(() => this._processNextRequest(), 100);
     }
   }
 

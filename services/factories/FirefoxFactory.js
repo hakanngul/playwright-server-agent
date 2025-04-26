@@ -24,7 +24,7 @@ export class FirefoxFactory extends BrowserFactory {
     if (options.headless === false || options.headless === 'false') {
       headlessMode = false;
     } else {
-      headlessMode = 'new'; // Yeni headless modu kullan (true yerine)
+      headlessMode = true; // Boolean değer olarak true kullan
     }
 
     const firefoxOptions = {
@@ -51,9 +51,9 @@ export class FirefoxFactory extends BrowserFactory {
         'media.navigator.enabled': false,
         'media.peerconnection.enabled': false,
 
-        // Pencere boyutu için varsayılan ayarlar
-        'browser.window.width': 1366,
-        'browser.window.height': 768,
+        // Pencere boyutu için varsayılan ayarlar - tam ekran için 0 değerleri kullanılır
+        'browser.window.width': 0,
+        'browser.window.height': 0,
         'browser.window.screenX': 0,
         'browser.window.screenY': 0,
 
@@ -98,7 +98,7 @@ export class FirefoxFactory extends BrowserFactory {
    */
   createContextOptions() {
     const contextOptions = {
-      viewport: { width: 1024, height: 768 }, // Firefox için sabit viewport
+      viewport: null, // Firefox için tam ekran modu için null viewport kullan
       locale: 'en-US',
       geolocation: { longitude: -122.084, latitude: 37.422 }, // Silicon Valley
       permissions: ['geolocation'],

@@ -85,16 +85,45 @@ export class PlaywrightTestAdapter {
    * @private
    */
   _generateSimpleTestContent(testPlan) {
+    const isFirefox = (testPlan.browserPreference || 'chromium') === 'firefox';
+    const isFullscreen = testPlan.isFullscreen === true;
+
     return `
     // @ts-check
     const { test, expect } = require('@playwright/test');
 
-    test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page }) => {
+    test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page, browser }) => {
       console.log('Test başlıyor: ${testPlan.name}');
+
+      ${isFirefox && isFullscreen ? `
+      // Firefox için tam ekran modu ayarla
+      await page.evaluate(() => {
+        // Firefox için document API kullanarak tam ekran boyutlarını ayarla
+        document.documentElement.style.width = window.innerWidth + 'px';
+        document.documentElement.style.height = window.innerHeight + 'px';
+
+        // Ekran boyutlarını konsola yazdır
+        console.log('Ekran boyutları:', {
+          width: document.documentElement.clientWidth,
+          height: document.documentElement.clientHeight
+        });
+      });
+      ` : ''}
 
       // Adım 1: Sayfaya git
       await page.goto('${testPlan.steps[0]?.target || 'https://only-testing-blog.blogspot.com/'}');
       console.log('Sayfa açıldı');
+
+      ${isFirefox && isFullscreen ? `
+      // Firefox için tam ekran modu tekrar kontrol et
+      await page.evaluate(() => {
+        // Ekran boyutlarını konsola yazdır
+        console.log('Sayfa açıldıktan sonra ekran boyutları:', {
+          width: document.documentElement.clientWidth,
+          height: document.documentElement.clientHeight
+        });
+      });
+      ` : ''}
 
       // Adım 2: Bekle
       await page.waitForTimeout(2000);
@@ -113,8 +142,8 @@ export class PlaywrightTestAdapter {
    * @private
    */
   _generateTestFileContent(testPlan) {
-    const browserType = testPlan.browserPreference || 'chromium';
-    const headless = testPlan.headless !== undefined ? testPlan.headless : this.options.headless;
+    const isFirefox = (testPlan.browserPreference || 'chromium') === 'firefox';
+    const isFullscreen = testPlan.isFullscreen === true;
 
     return `
     import { test, expect } from '@playwright/test';
@@ -124,6 +153,21 @@ export class PlaywrightTestAdapter {
         const stepResults = [];
 
         try {
+          ${isFirefox && isFullscreen ? `
+          // Firefox için tam ekran modu ayarla
+          await page.evaluate(() => {
+            // Firefox için document API kullanarak tam ekran boyutlarını ayarla
+            document.documentElement.style.width = window.innerWidth + 'px';
+            document.documentElement.style.height = window.innerHeight + 'px';
+
+            // Ekran boyutlarını konsola yazdır
+            console.log('Ekran boyutları:', {
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight
+            });
+          });
+          ` : ''}
+
           // Execute steps
           ${this._generateStepsCode(testPlan.steps)}
 
@@ -289,6 +333,10 @@ export class PlaywrightTestAdapter {
 
       // Create config file
       const configPath = path.join(this.options.testDir, `playwright.config.${Date.now()}.cjs`);
+
+      // Tam ekran modu kontrolü
+      const isFullscreen = testPlan.isFullscreen === true;
+
       const configContent = `
       // @ts-check
 
@@ -316,7 +364,7 @@ export class PlaywrightTestAdapter {
           {
             name: '${testPlan.browserPreference || 'chromium'}',
             use: {
-              browserName: '${testPlan.browserPreference || 'chromium'}'
+              browserName: '${testPlan.browserPreference || 'chromium'}'${isFullscreen ? ',\n              viewport: null' : ''}
             }
           }
         ]

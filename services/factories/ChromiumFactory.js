@@ -23,7 +23,7 @@ export class ChromiumFactory extends BrowserFactory {
     if (options.headless === false || options.headless === 'false') {
       headlessMode = false;
     } else {
-      headlessMode = 'new'; // Yeni headless modu kullan (true yerine)
+      headlessMode = true; // Headless modunu boolean olarak ayarla
     }
 
     const chromiumOptions = {

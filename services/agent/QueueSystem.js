@@ -237,8 +237,38 @@ export class QueueSystem extends EventEmitter {
    * @param {Error} error - Error object
    */
   fail(requestId, error) {
+    // Check if the request is being processed
     if (!this.processing.has(requestId)) {
-      throw new Error(`Request ${requestId} is not being processed`);
+      console.warn(`Warning: Attempt to fail request ${requestId} that is not being processed`);
+
+      // Try to find the request in the completed or failed lists
+      const completedRequest = this.completedRequests.find(req => req.id === requestId);
+      if (completedRequest) {
+        console.log(`Request ${requestId} was already completed`);
+        return completedRequest;
+      }
+
+      const failedRequest = this.failedRequests.find(req => req.id === requestId);
+      if (failedRequest) {
+        console.log(`Request ${requestId} was already marked as failed`);
+        return failedRequest;
+      }
+
+      // If we can't find the request, create a minimal failed request object
+      console.warn(`Creating minimal failed request object for ${requestId}`);
+      const minimalRequest = {
+        id: requestId,
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+        error: {
+          message: error.message,
+          stack: error.stack
+        }
+      };
+
+      this.failedRequests.unshift(minimalRequest);
+      this.emit('request:failed', minimalRequest);
+      return minimalRequest;
     }
 
     const request = this.processing.get(requestId);
