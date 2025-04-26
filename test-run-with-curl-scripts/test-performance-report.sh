@@ -105,7 +105,7 @@ echo -e "${BLUE}==================================================${NC}"
 
 # API'ye istek gönder
 RESPONSE=$(curl -s -X POST \
-  http://localhost:3002/api/test/run \
+  http://localhost:3002/api/agent/test-run \
   -H 'Content-Type: application/json' \
   -d @"$TEST_PLAN_FILE")
 
@@ -118,45 +118,36 @@ if [ $? -eq 0 ]; then
   echo -e "${GREEN}Test başarıyla tamamlandı.${NC}"
 
   # Test ID'sini al (farklı formatları dene)
-  TEST_ID=$(echo $RESPONSE | jq -r '.id // .reportId // empty')
+  TEST_ID=$(echo $RESPONSE | jq -r '.requestId // .id // .reportId // empty')
 
   if [ -n "$TEST_ID" ]; then
     echo -e "${GREEN}Test ID: ${TEST_ID}${NC}"
 
-    # Performans raporunu görüntüle
+    # Test durumunu görüntüle
     echo -e "${BLUE}==================================================${NC}"
-    echo -e "${GREEN}Performans raporu alınıyor...${NC}"
-    echo -e "${BLUE}==================================================${NC}"
-
-    curl -s http://localhost:3002/api/results/${TEST_ID}/performance | jq .
-
-    # Web Vitals metriklerini görüntüle
-    echo -e "${BLUE}==================================================${NC}"
-    echo -e "${GREEN}Web Vitals metrikleri alınıyor...${NC}"
+    echo -e "${GREEN}Test durumu alınıyor...${NC}"
     echo -e "${BLUE}==================================================${NC}"
 
-    curl -s http://localhost:3002/api/results/${TEST_ID}/web-vitals | jq .
+    curl -s http://localhost:3002/api/agent/test-status/${TEST_ID} | jq .
 
-    # Ağ metriklerini görüntüle
+    # Sistem durumunu görüntüle
     echo -e "${BLUE}==================================================${NC}"
-    echo -e "${GREEN}Ağ metrikleri alınıyor...${NC}"
-    echo -e "${BLUE}==================================================${NC}"
-
-    curl -s http://localhost:3002/api/results/${TEST_ID}/network-metrics | jq .
-
-    # Trend raporunu görüntüle
-    echo -e "${BLUE}==================================================${NC}"
-    echo -e "${GREEN}Trend raporu alınıyor...${NC}"
+    echo -e "${GREEN}Sistem durumu alınıyor...${NC}"
     echo -e "${BLUE}==================================================${NC}"
 
-    curl -s http://localhost:3002/api/performance/trend/Performans%20Test%20Plan%C4%B1 | jq .
+    curl -s http://localhost:3002/api/agent/system-metrics | jq .
 
-    # Optimizasyon önerilerini görüntüle
+    # Tamamlanan testleri görüntüle
     echo -e "${BLUE}==================================================${NC}"
-    echo -e "${GREEN}Optimizasyon önerileri alınıyor...${NC}"
+    echo -e "${GREEN}Tamamlanan testler alınıyor...${NC}"
     echo -e "${BLUE}==================================================${NC}"
 
-    curl -s http://localhost:3002/api/results/${TEST_ID}/optimization-recommendations | jq .
+    curl -s http://localhost:3002/api/agent/completed-requests | jq .
+
+    echo -e "${BLUE}==================================================${NC}"
+    echo -e "${GREEN}Test raporları sayfasını açabilirsiniz:${NC}"
+    echo -e "${YELLOW}http://localhost:3002/reports.html${NC}"
+    echo -e "${BLUE}==================================================${NC}"
   else
     echo -e "${RED}Test ID alınamadı.${NC}"
   fi

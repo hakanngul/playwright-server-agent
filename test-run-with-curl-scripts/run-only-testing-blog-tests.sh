@@ -124,4 +124,4 @@ rm "$TEMP_FILE"
 
 echo ""
 echo "Test execution request sent. Check server logs for results."
-echo "You can view test results with: curl http://localhost:3002/api/results/recent?limit=1"
+echo "You can view test reports at: http://localhost:3002/reports.html"

@@ -257,8 +257,9 @@ app.post('/api/test/run-parallel', async (req, res) => {
   }
 });
 
+// Legacy endpoint - redirect to agent-based endpoint
 app.post('/api/test/run', async (req, res) => {
-  console.log('\n--- Received test run request ---');
+  console.log('\n--- Received legacy test run request, redirecting to agent-based endpoint ---');
   try {
     const testPlan = req.body;
 
@@ -269,54 +270,18 @@ app.post('/api/test/run', async (req, res) => {
       });
     }
 
-    console.log(`Received test plan: ${testPlan.name} with ${testPlan.steps.length} steps`);
+    console.log(`Redirecting test plan: ${testPlan.name} with ${testPlan.steps.length} steps to agent-based endpoint`);
 
-    // Get browser preference from test plan
-    const browserPreference = testPlan.browserPreference || 'chromium';
-    console.log(`Browser preference from request: ${browserPreference}`);
+    // Forward to agent-based endpoint
+    const requestId = agentRoutes.agentManager.submitRequest(testPlan);
 
-    // Get headless mode preference from test plan
-    const headless = testPlan.headless !== undefined ? testPlan.headless : true;
-    console.log(`Headless mode from request: ${headless} (${headless ? 'invisible browser' : 'visible browser'})`);
-
-    // Create test agent with browser preference and options
-    const testAgent = new TestAgent(browserPreference, {
-      headless
+    res.json({
+      success: true,
+      requestId,
+      message: 'Test request submitted successfully (redirected from legacy endpoint)'
     });
-
-    // Step completion callback
-    testAgent.setStepCompletedCallback((result) => {
-      console.log(`Step ${result.step} completed: ${result.success ? 'Success' : 'Failed'}`);
-
-      // Send step completion message via Socket.io
-      io.emit('step_completed', {
-        stepIndex: result.step - 1,
-        step: {
-          action: result.action,
-          target: result.target,
-          value: result.value,
-          strategy: result.strategy,
-          description: result.description
-        },
-        result: result
-      });
-    });
-
-    // Run the test
-    const results = await testAgent.runTest(testPlan);
-
-    // Make sure to close the browser
-    try {
-      await testAgent.close();
-      console.log('Browser closed after test completion');
-    } catch (error) {
-      console.error('Error closing browser after test:', error);
-    }
-
-    console.log('Test completed, sending results to client');
-    res.json(results);
   } catch (error) {
-    console.error('Error running test:', error);
+    console.error('Error redirecting test request:', error);
     res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
