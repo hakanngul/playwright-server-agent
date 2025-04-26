@@ -18,16 +18,25 @@ export class EdgeFactory extends BrowserFactory {
   async createBrowser(options) {
     console.log('Using Microsoft Edge browser');
     // Edge için özel seçenekler (Chromium tabanlı olduğu için chromium kullanıyoruz)
+
+    // Yeni Playwright sürümlerinde headless modu için yeni yaklaşım
+    let headlessMode;
+    if (options.headless === false || options.headless === 'false') {
+      headlessMode = false;
+    } else {
+      headlessMode = 'new'; // Yeni headless modu kullan (true yerine)
+    }
+
     const edgeOptions = {
-      headless: options.headless, // Headless modunu açıkça belirt
+      headless: headlessMode,
       channel: 'msedge', // Microsoft Edge kanalını kullan
-      args: options.headless ? [] : ['--start-maximized', '--edge-webdriver'],
+      args: headlessMode ? [] : ['--start-maximized', '--edge-webdriver'],
       ignoreDefaultArgs: ['--enable-automation']
     };
-    
-    console.log(`Launching Edge with headless mode: ${options.headless ? 'true (invisible)' : 'false (visible)'}`);
+
+    console.log(`Launching Edge with headless mode: ${headlessMode ? 'true (invisible)' : 'false (visible)'}`);
     console.log(`Launch options: ${JSON.stringify(edgeOptions, null, 2)}`);
-    
+
     return await chromium.launch(edgeOptions);
   }
 

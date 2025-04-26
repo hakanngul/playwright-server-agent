@@ -17,15 +17,25 @@ export class ChromiumFactory extends BrowserFactory {
    */
   async createBrowser(options) {
     console.log('Using Chromium browser');
+
+    // Yeni Playwright sürümlerinde headless modu için yeni yaklaşım
+    let headlessMode;
+    if (options.headless === false || options.headless === 'false') {
+      headlessMode = false;
+    } else {
+      headlessMode = 'new'; // Yeni headless modu kullan (true yerine)
+    }
+
     const chromiumOptions = {
-      headless: options.headless, // Headless modunu açıkça belirt
-      args: options.headless ? [] : ['--start-maximized'],
-      ignoreDefaultArgs: ['--enable-automation']
+      headless: headlessMode,
+      args: headlessMode ? [] : ['--start-maximized'],
+      ignoreDefaultArgs: ['--enable-automation'],
+      executablePath: process.env.CHROME_PATH || undefined // Özel Chrome yolu varsa kullan
     };
-    
-    console.log(`Launching Chromium with headless mode: ${options.headless ? 'true (invisible)' : 'false (visible)'}`);
+
+    console.log(`Launching Chromium with headless mode: ${headlessMode ? 'true (invisible)' : 'false (visible)'}`);
     console.log(`Launch options: ${JSON.stringify(chromiumOptions, null, 2)}`);
-    
+
     return await chromium.launch(chromiumOptions);
   }
 
