@@ -1,14 +1,13 @@
 {
-  "name": "Google Arama Testi",
-  "description": "Google'a git ve arama yap",
+  "name": "Chromium Tam Ekran Testi",
+  "description": "Chromium tarayıcısı ile tam ekran modunda Google'a git ve arama yap",
   "browserPreference": "chromium",
   "headless": false,
-  "useBrowserPool": false,
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "browserOptions": {
     "args": ["--window-size=1920,1080", "--disable-gpu"],
     "ignoreHTTPSErrors": true,
-    "slowMo": 100,
+    "slowMo": 50,
     "isFullscreen": true
   },
   "steps": [

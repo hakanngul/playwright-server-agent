@@ -1,27 +1,39 @@
 {
-  "name": "Firefox Tarayıcı Testi",
-  "description": "Firefox tarayıcısı ile Google'a git ve arama yap",
+  "name": "Firefox Özel Ayarlar Testi",
+  "description": "Firefox tarayıcısı ile özel ayarlar kullanarak GitHub'a git ve arama yap",
   "browserPreference": "firefox",
   "headless": false,
-  "useBrowserPool": false,
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--width=1920", "--height=1080"],
+    "args": ["--width=1600", "--height=900"],
     "ignoreHTTPSErrors": true,
+    "slowMo": 30,
     "firefoxUserPrefs": {
-      "media.volume_scale": "0.0"
+      "media.volume_scale": "0.0",
+      "browser.display.background_color": "#f0f0f0"
     }
   },
   "steps": [
     {
       "action": "navigate",
-      "target": "https://www.google.com",
-      "description": "Google'a git"
+      "target": "https://github.com",
+      "description": "GitHub'a git"
+    },
+    {
+      "action": "wait",
+      "target": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "click",
+      "target": "//input[@name='q' or @aria-label='Search GitHub']",
+      "strategy": "xpath",
+      "description": "Arama kutusuna tıkla"
     },
     {
       "action": "type",
-      "target": "APjFqb",
-      "strategy": "id",
+      "target": "//input[@name='q' or @aria-label='Search GitHub']",
+      "strategy": "xpath",
       "value": "playwright firefox",
       "description": "Arama terimini yaz"
     },
@@ -36,8 +48,24 @@
     },
     {
       "action": "takeScreenshot",
-      "target": "firefox-google-results",
+      "target": "firefox-github-results",
       "description": "Sonuçların ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "//a[contains(@href, 'microsoft/playwright')]",
+      "strategy": "xpath",
+      "description": "Playwright repo'suna tıkla"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "firefox-playwright-repo",
+      "description": "Playwright repo sayfasının ekran görüntüsünü al"
     }
   ]
 }

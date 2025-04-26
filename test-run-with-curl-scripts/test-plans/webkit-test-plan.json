@@ -1,26 +1,42 @@
 {
-  "name": "WebKit Tarayıcı Testi",
-  "description": "WebKit tarayıcısı ile Google'a git ve arama yap",
+  "name": "WebKit Karanlık Mod Testi",
+  "description": "WebKit tarayıcısı ile karanlık modda MDN web sitesini test et",
   "browserPreference": "webkit",
   "headless": false,
-  "useBrowserPool": false,
-  "takeScreenshots": false,
+  "takeScreenshots": true,
   "browserOptions": {
-    "args": ["--window-size=1920,1080"],
+    "args": ["--window-size=1440,900"],
     "ignoreHTTPSErrors": true,
-    "slowMo": 50
+    "slowMo": 40,
+    "colorScheme": "dark"
   },
   "steps": [
     {
       "action": "navigate",
-      "target": "https://www.google.com",
-      "description": "Google'a git"
+      "target": "https://developer.mozilla.org/",
+      "description": "MDN web sitesine git"
+    },
+    {
+      "action": "wait",
+      "target": "1500",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "webkit-mdn-homepage-dark",
+      "description": "MDN ana sayfasının karanlık modda ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "//input[@type='search' or @placeholder='Search MDN']",
+      "strategy": "xpath",
+      "description": "Arama kutusuna tıkla"
     },
     {
       "action": "type",
-      "target": "APjFqb",
-      "strategy": "id",
-      "value": "playwright webkit",
+      "target": "//input[@type='search' or @placeholder='Search MDN']",
+      "strategy": "xpath",
+      "value": "CSS Grid Layout",
       "description": "Arama terimini yaz"
     },
     {
@@ -34,8 +50,24 @@
     },
     {
       "action": "takeScreenshot",
-      "target": "webkit-google-results",
-      "description": "Sonuçların ekran görüntüsünü al"
+      "target": "webkit-mdn-search-results-dark",
+      "description": "Arama sonuçlarının karanlık modda ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "//a[contains(text(), 'CSS Grid Layout') or contains(@href, 'CSS_Grid_Layout')]",
+      "strategy": "xpath",
+      "description": "CSS Grid Layout sayfasına git"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "webkit-mdn-css-grid-dark",
+      "description": "CSS Grid Layout sayfasının karanlık modda ekran görüntüsünü al"
     }
   ]
 }

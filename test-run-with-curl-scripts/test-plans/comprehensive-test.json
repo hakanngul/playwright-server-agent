@@ -1,169 +1,152 @@
 {
-  "name": "Kapsamlı Stratejiler Testi",
-  "description": "Only Testing Blog üzerinde tüm stratejileri test eder",
+  "name": "Kapsamlı Form Testi",
+  "description": "Tüm form elemanlarını ve etkileşimleri test eden kapsamlı test",
   "browserPreference": "chromium",
-  "headless": true,
-  "useBrowserPool": false,
-  "takeScreenshots": false,
+  "headless": false,
+  "takeScreenshots": true,
+  "browserOptions": {
+    "args": ["--window-size=1600,900"],
+    "ignoreHTTPSErrors": true,
+    "slowMo": 20
+  },
   "steps": [
     {
       "action": "navigate",
-      "value": "https://only-testing-blog.blogspot.com/2025/04/playwright-practice-page.html",
-      "description": "Playwright Practice sayfasına git"
+      "target": "https://demoqa.com/automation-practice-form",
+      "description": "DemoQA Form sayfasına git"
     },
     {
       "action": "wait",
-      "value": "1000",
+      "target": "2000",
       "description": "Sayfanın yüklenmesini bekle"
     },
     {
-      "action": "verifyTitle",
-      "value": "Only Testing",
-      "description": "Sayfa başlığını doğrula"
-    },
-    {
-      "action": "click",
-      "target": "clickBtn",
-      "strategy": "id",
-      "description": "Click Me butonuna tıkla"
-    },
-    {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
-    },
-    {
-      "action": "verifyText",
-      "target": "clickOutput",
-      "strategy": "id",
-      "value": "Button was clicked!",
-      "description": "Tıklama sonrası çıktıyı doğrula"
+      "action": "takeScreenshot",
+      "target": "form-initial",
+      "description": "Başlangıç durumunun ekran görüntüsünü al"
     },
     {
       "action": "type",
-      "target": "textInput",
-      "strategy": "id",
-      "value": "Playwright Test",
-      "description": "Metin kutusuna yaz"
+      "target": "#firstName",
+      "value": "John",
+      "description": "Ad alanını doldur"
+    },
+    {
+      "action": "type",
+      "target": "#lastName",
+      "value": "Doe",
+      "description": "Soyad alanını doldur"
+    },
+    {
+      "action": "type",
+      "target": "#userEmail",
+      "value": "john.doe@example.com",
+      "description": "E-posta alanını doldur"
+    },
+    {
+      "action": "click",
+      "target": "//label[text()='Male']",
+      "strategy": "xpath",
+      "description": "Cinsiyet seçeneğini işaretle"
+    },
+    {
+      "action": "type",
+      "target": "#userNumber",
+      "value": "1234567890",
+      "description": "Telefon numarası alanını doldur"
+    },
+    {
+      "action": "click",
+      "target": "#dateOfBirthInput",
+      "description": "Doğum tarihi alanına tıkla"
     },
     {
       "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
+      "target": "500",
+      "description": "Takvimin açılmasını bekle"
     },
     {
-      "action": "verifyText",
-      "target": "textOutput",
-      "strategy": "id",
-      "value": "You typed: Playwright Test",
-      "description": "Yazma sonrası çıktıyı doğrula"
+      "action": "click",
+      "target": "//div[contains(@class, 'react-datepicker__month-select')]",
+      "strategy": "xpath",
+      "description": "Ay seçimine tıkla"
     },
     {
-      "action": "select",
-      "target": "dropdown",
-      "strategy": "id",
-      "value": "option2",
-      "description": "Dropdown'dan Option 2'yi seç"
+      "action": "click",
+      "target": "//option[text()='June']",
+      "strategy": "xpath",
+      "description": "Haziran ayını seç"
     },
     {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
+      "action": "click",
+      "target": "//div[contains(@class, 'react-datepicker__year-select')]",
+      "strategy": "xpath",
+      "description": "Yıl seçimine tıkla"
     },
     {
-      "action": "verifyText",
-      "target": "dropdownOutput",
-      "strategy": "id",
-      "value": "Selected: option2",
-      "description": "Seçim sonrası çıktıyı doğrula"
+      "action": "click",
+      "target": "//option[text()='1990']",
+      "strategy": "xpath",
+      "description": "1990 yılını seç"
     },
     {
-      "action": "doubleClick",
-      "target": "doubleClickBtn",
-      "strategy": "id",
-      "description": "Double Click butonuna çift tıkla"
-    },
-    {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
-    },
-    {
-      "action": "verifyText",
-      "target": "doubleClickOutput",
-      "strategy": "id",
-      "value": "Double clicked!",
-      "description": "Çift tıklama sonrası çıktıyı doğrula"
-    },
-    {
-      "action": "hover",
-      "target": "rightClickArea",
-      "strategy": "id",
-      "description": "Sağ tıklama alanının üzerine gel"
+      "action": "click",
+      "target": "//div[text()='15' and contains(@class, 'react-datepicker__day')]",
+      "strategy": "xpath",
+      "description": "15. günü seç"
     },
     {
       "action": "wait",
-      "value": "500",
+      "target": "500",
       "description": "Kısa bekle"
     },
     {
-      "action": "rightClick",
-      "target": "rightClickArea",
-      "strategy": "id",
-      "description": "Sağ tıklama alanına sağ tıkla"
+      "action": "type",
+      "target": "#subjectsInput",
+      "value": "Computer Science",
+      "description": "Konu alanını doldur"
     },
     {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
     },
     {
-      "action": "verifyText",
-      "target": "rightClickOutput",
-      "strategy": "id",
-      "value": "Right-click detected!",
-      "description": "Sağ tıklama sonrası çıktıyı doğrula"
+      "action": "click",
+      "target": "//label[text()='Sports']",
+      "strategy": "xpath",
+      "description": "Hobi seçeneğini işaretle"
     },
     {
-      "action": "clickByRole",
-      "role": "button",
-      "options": {
-        "name": "Page 3"
-      },
-      "description": "Role ile Page 3 butonuna tıkla"
+      "action": "click",
+      "target": "//label[text()='Reading']",
+      "strategy": "xpath",
+      "description": "Başka bir hobi seçeneğini işaretle"
     },
     {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
-    },
-    {
-      "action": "verifyText",
-      "target": "pageContent",
-      "strategy": "id",
-      "value": "Page 3 Content",
-      "description": "Sayfa içeriğini doğrula"
-    },
-    {
-      "action": "clickByText",
-      "text": "Page 1",
-      "description": "Metne göre Page 1 butonuna tıkla"
-    },
-    {
-      "action": "wait",
-      "value": "500",
-      "description": "Kısa bekle"
-    },
-    {
-      "action": "verifyText",
-      "target": "pageContent",
-      "strategy": "id",
-      "value": "Page 1 Content",
-      "description": "Sayfa içeriğini doğrula"
+      "action": "type",
+      "target": "#currentAddress",
+      "value": "123 Main St, Anytown, USA",
+      "description": "Adres alanını doldur"
     },
     {
       "action": "takeScreenshot",
-      "description": "Kapsamlı test sonrası ekran görüntüsü al"
+      "target": "form-filled",
+      "description": "Doldurulmuş formun ekran görüntüsünü al"
+    },
+    {
+      "action": "click",
+      "target": "#submit",
+      "description": "Formu gönder butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sonuçların görüntülenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "form-submitted",
+      "description": "Gönderilmiş formun ekran görüntüsünü al"
     }
   ]
 }

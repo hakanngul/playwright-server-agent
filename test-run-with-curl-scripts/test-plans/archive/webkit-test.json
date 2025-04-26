@@ -16,8 +16,8 @@
     },
     {
       "action": "type",
-      "target": "input[name='q']",
-      "strategy": "css",
+      "target": "APjFqb",
+      "strategy": "id",
       "value": "WebKit Safari Test",
       "description": "Arama kutusuna yaz"
     },

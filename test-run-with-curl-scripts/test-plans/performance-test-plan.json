@@ -1,65 +1,75 @@
 {
-  "name": "Performans Test Planı",
-  "description": "Web Vitals ve performans metriklerini test etmek için örnek test planı",
-  "browser": "chromium",
+  "name": "Performans Metrikleri Testi",
+  "description": "Chromium tarayıcısı ile performans metriklerini toplayan test",
+  "browserPreference": "chromium",
   "headless": true,
+  "takeScreenshots": true,
+  "browserOptions": {
+    "args": ["--window-size=1920,1080", "--disable-gpu"],
+    "ignoreHTTPSErrors": true,
+    "slowMo": 0
+  },
   "steps": [
     {
       "action": "navigate",
-      "value": "https://only-testing-blog.blogspot.com/",
-      "description": "Test sayfasına git"
+      "target": "https://web.dev/",
+      "description": "web.dev sitesine git"
     },
     {
       "action": "wait",
-      "value": "2000",
-      "description": "2 saniye bekle"
+      "target": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
     },
     {
       "action": "takeScreenshot",
-      "value": "anasayfa",
-      "description": "Ekran görüntüsü al"
+      "target": "webdev-homepage",
+      "description": "web.dev ana sayfasının ekran görüntüsünü al"
     },
     {
       "action": "click",
-      "selector": "a[href='https://only-testing-blog.blogspot.com/2014/01/textbox.html']",
-      "description": "Textbox sayfasına git"
+      "target": "//a[contains(@href, '/measure/')]",
+      "strategy": "xpath",
+      "description": "Measure sayfasına git"
     },
     {
       "action": "wait",
-      "value": "2000",
-      "description": "2 saniye bekle"
+      "target": "3000",
+      "description": "Sayfanın yüklenmesini bekle"
     },
     {
       "action": "takeScreenshot",
-      "value": "textbox-sayfasi",
-      "description": "Ekran görüntüsü al"
+      "target": "webdev-measure",
+      "description": "Measure sayfasının ekran görüntüsünü al"
     },
     {
-      "action": "type",
-      "selector": "input[name='fname']",
-      "value": "Test Kullanıcı",
-      "description": "İsim alanını doldur"
-    },
-    {
-      "action": "type",
-      "selector": "input[name='lname']",
-      "value": "Performans Test",
-      "description": "Soyisim alanını doldur"
-    },
-    {
-      "action": "click",
-      "selector": "input[type='submit']",
-      "description": "Formu gönder"
+      "action": "navigate",
+      "target": "https://web.dev/vitals/",
+      "description": "Web Vitals sayfasına git"
     },
     {
       "action": "wait",
-      "value": "2000",
-      "description": "2 saniye bekle"
+      "target": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
     },
     {
       "action": "takeScreenshot",
-      "value": "form-sonuc",
-      "description": "Ekran görüntüsü al"
+      "target": "webdev-vitals",
+      "description": "Web Vitals sayfasının ekran görüntüsünü al"
+    },
+    {
+      "action": "navigate",
+      "target": "https://web.dev/lighthouse-performance/",
+      "description": "Lighthouse Performance sayfasına git"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "webdev-lighthouse",
+      "description": "Lighthouse Performance sayfasının ekran görüntüsünü al"
     }
   ]
 }
