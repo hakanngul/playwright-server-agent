@@ -103,10 +103,15 @@ export class PlaywrightTestAdapter extends ITestRunner {
     // @ts-check
     import { test, expect } from '@playwright/test';
 
-    test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page }) => {
+    test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page, browser }) => {
       console.log('Test başlıyor: ${testPlan.name}');
 
-      ${isFullscreen ? '// Tam ekran modunu etkinleştir\n      await page.setViewportSize({ width: 0, height: 0 });\n' : ''}
+      // Test yapılandırmasını global olarak ayarla
+      await page.evaluate((config) => {
+        window.__testConfig = config;
+      }, { isFullscreen: ${isFullscreen} });
+
+      ${isFullscreen ? '// Tam ekran modunu etkinleştir\n      try {\n        // Tarayıcı türünü al\n        const browserName = browser.browserType().name();\n        console.log(`Tarayıcı türü: ${browserName}`);\n        \n        if (browserName === "firefox") {\n          // Firefox için özel tam ekran yaklaşımı\n          await page.setViewportSize({ width: 0, height: 0 });\n          await page.evaluate(() => {\n            document.documentElement.style.overflow = "hidden";\n            document.body.style.overflow = "hidden";\n            document.documentElement.style.width = "100vw";\n            document.documentElement.style.height = "100vh";\n            document.body.style.width = "100vw";\n            document.body.style.height = "100vh";\n            document.documentElement.style.margin = "0";\n            document.body.style.margin = "0";\n            document.documentElement.style.padding = "0";\n            document.body.style.padding = "0";\n          });\n        } else {\n          // Diğer tarayıcılar için standart tam ekran API\'si\n          await page.evaluate(() => {\n            if (document.documentElement.requestFullscreen) {\n              document.documentElement.requestFullscreen().catch(e => console.error("Tam ekran hatası:", e));\n            } else if (document.documentElement.webkitRequestFullscreen) {\n              document.documentElement.webkitRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));\n            } else if (document.documentElement.msRequestFullscreen) {\n              document.documentElement.msRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));\n            }\n          });\n          await page.waitForTimeout(500); // Tam ekran geçişi için bekle\n        }\n      } catch (e) {\n        console.log(\'Tam ekran modu etkinleştirilemedi:\', e);\n      }\n' : ''}
 
       // Adım 1: Sayfaya git
       await page.goto('${testPlan.steps[0]?.target || 'https://only-testing-blog.blogspot.com/'}');
@@ -216,7 +221,61 @@ export class PlaywrightTestAdapter extends ITestRunner {
   _generateStepCode(step, index) {
     switch (step.action) {
       case 'navigate':
-        return `await page.goto('${step.target}', { waitUntil: 'networkidle' });`;
+        return `
+        // Sayfaya git
+        await page.goto('${step.target}', { waitUntil: 'networkidle' });
+
+        // Tam ekran modunu kontrol et ve gerekirse etkinleştir
+        try {
+          // Test yapılandırmasını kontrol et
+          const testConfig = await page.evaluate(() => {
+            return window.__testConfig || {};
+          });
+
+          if (testConfig.isFullscreen) {
+            // Tarayıcı türünü al
+            const browserName = await browser.browserType().name();
+
+            if (browserName === "firefox") {
+              // Firefox için özel tam ekran yaklaşımı
+              await page.setViewportSize({ width: 0, height: 0 });
+              await page.evaluate(() => {
+                document.documentElement.style.overflow = "hidden";
+                document.body.style.overflow = "hidden";
+                document.documentElement.style.width = "100vw";
+                document.documentElement.style.height = "100vh";
+                document.body.style.width = "100vw";
+                document.body.style.height = "100vh";
+                document.documentElement.style.margin = "0";
+                document.body.style.margin = "0";
+                document.documentElement.style.padding = "0";
+                document.body.style.padding = "0";
+              });
+            } else {
+              // Diğer tarayıcılar için tam ekran durumunu kontrol et
+              const isFullscreen = await page.evaluate(() => {
+                return document.fullscreenElement !== null;
+              });
+
+              if (!isFullscreen) {
+                console.log('Navigate sonrası tam ekran modu etkinleştiriliyor...');
+                await page.evaluate(() => {
+                  if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  }
+                });
+                // Tam ekran geçişi için bekle
+                await page.waitForTimeout(500);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Navigate sonrası tam ekran kontrolünde hata:', e);
+        }`;
       case 'click':
         if (step.strategy === 'xpath') {
           return `await page.locator('xpath=${step.target}').click();`;
@@ -257,7 +316,72 @@ export class PlaywrightTestAdapter extends ITestRunner {
         return `await page.keyboard.press('Escape');`;
       case 'takeScreenshot':
         const screenshotName = step.target || step.value || `screenshot_${index}`;
-        return `await page.screenshot({ path: '${this.options.screenshotsDir}/${screenshotName}.png', fullPage: true });`;
+        return `
+        // Tam ekran modunda ekran görüntüsü al
+        try {
+          // Test yapılandırmasını kontrol et
+          const testConfig = await page.evaluate(() => {
+            return window.__testConfig || {};
+          });
+
+          // Tarayıcı türünü al
+          const browserName = await browser.browserType().name();
+
+          if (testConfig.isFullscreen) {
+            if (browserName === "firefox") {
+              // Firefox için özel tam ekran yaklaşımı
+              await page.setViewportSize({ width: 0, height: 0 });
+              await page.evaluate(() => {
+                document.documentElement.style.overflow = "hidden";
+                document.body.style.overflow = "hidden";
+                document.documentElement.style.width = "100vw";
+                document.documentElement.style.height = "100vh";
+                document.body.style.width = "100vw";
+                document.body.style.height = "100vh";
+                document.documentElement.style.margin = "0";
+                document.body.style.margin = "0";
+                document.documentElement.style.padding = "0";
+                document.body.style.padding = "0";
+              });
+            } else {
+              // Diğer tarayıcılar için tam ekran durumunu kontrol et
+              const isFullscreen = await page.evaluate(() => {
+                return document.fullscreenElement !== null;
+              });
+
+              if (!isFullscreen) {
+                console.log('Tam ekran modu etkinleştiriliyor...');
+                await page.evaluate(() => {
+                  if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen().catch(e => console.error("Tam ekran hatası:", e));
+                  }
+                });
+                // Tam ekran geçişi için bekle
+                await page.waitForTimeout(500);
+              }
+            }
+          }
+
+          // Ekran görüntüsü al
+          await page.screenshot({
+            path: '${this.options.screenshotsDir}/${screenshotName}.png',
+            fullPage: true,
+            timeout: 5000
+          });
+
+          console.log('Ekran görüntüsü alındı: ${screenshotName}.png');
+        } catch (e) {
+          console.error('Ekran görüntüsü alınırken hata oluştu:', e);
+          // Hata olsa bile devam et, normal ekran görüntüsü almayı dene
+          await page.screenshot({
+            path: '${this.options.screenshotsDir}/${screenshotName}.png',
+            fullPage: true
+          });
+        }`;
       case 'verifyText':
         return `await expect(page.locator('body')).toContainText('${step.value}');`;
       case 'verifyTitle':
@@ -311,10 +435,34 @@ export class PlaywrightTestAdapter extends ITestRunner {
       // Fullscreen özelliğini kontrol et
       const isFullscreen = browserOptions.isFullscreen || false;
 
+      // Tam ekran için tarayıcı argümanlarını ekle
+      if (isFullscreen) {
+        // Tarayıcı türüne göre tam ekran argümanlarını ekle
+        const fullscreenArgs = {
+          chromium: ['--start-fullscreen'],
+          firefox: ['-kiosk'],
+          webkit: ['--kiosk']
+        };
+
+        // browserOptions.args dizisini oluştur veya mevcut diziye ekle
+        if (!browserOptions.args) {
+          browserOptions.args = [];
+        }
+
+        // Tarayıcı türüne göre tam ekran argümanlarını ekle
+        const browserType = testPlan.browserPreference || 'chromium';
+        if (fullscreenArgs[browserType]) {
+          browserOptions.args.push(...fullscreenArgs[browserType]);
+        }
+      }
+
       // Create config file
       const configPath = path.join(this.options.testDir, `playwright.config.${Date.now()}.cjs`);
       const configContent = `
       // @ts-check
+
+      // Tarayıcı argümanlarını tanımla
+      const args = ${JSON.stringify([...(this.options.browserOptions?.args || []), ...(browserOptions?.args || [])])};
 
       /** @type {import('@playwright/test').PlaywrightTestConfig} */
       const config = {
@@ -336,31 +484,41 @@ export class PlaywrightTestAdapter extends ITestRunner {
           trace: 'on-first-retry',
           screenshot: 'only-on-failure',
           // Tam ekran modu için viewport ayarı
-          viewport: ${isFullscreen ? 'null' : '{ width: 1280, height: 720 }'},
+          viewport: ${isFullscreen ? 'null' : '{ width: 1920, height: 720 }'},
           // Tarayıcı özelliklerini ekleyelim (önce test planından, sonra genel ayarlardan)
           launchOptions: {
             ...${JSON.stringify(this.options.browserOptions || {})},
             ...${JSON.stringify(browserOptions || {})},
-            args: ${JSON.stringify([...(this.options.browserOptions?.args || []), ...(browserOptions?.args || [])])}
+            args: args,
+            ignoreDefaultArgs: ${isFullscreen ? '["--disable-extensions"]' : 'undefined'}
           }
         },
         projects: [
           {
             name: 'chromium',
             use: {
-              browserName: 'chromium'
+              browserName: 'chromium',
+              launchOptions: {
+                args: ${isFullscreen ? '[...args, "--start-fullscreen"]' : 'args'}
+              }
             }
           },
           {
             name: 'firefox',
             use: {
-              browserName: 'firefox'
+              browserName: 'firefox',
+              launchOptions: {
+                args: ${isFullscreen ? '[...args, "-kiosk"]' : 'args'}
+              }
             }
           },
           {
             name: 'webkit',
             use: {
-              browserName: 'webkit'
+              browserName: 'webkit',
+              launchOptions: {
+                args: ${isFullscreen ? '[...args, "--kiosk"]' : 'args'}
+              }
             }
           }
         ]
@@ -531,5 +689,20 @@ export class PlaywrightTestAdapter extends ITestRunner {
    */
   setBrowserManager(browserManager) {
     this.browserManager = browserManager;
+  }
+
+  /**
+   * Tam ekran modunu etkinleştirmek için yardımcı metot
+   * @param {Object} testPlan - Test planı
+   * @returns {Object} Güncellenmiş test planı
+   */
+  enableFullScreen(testPlan) {
+    if (!testPlan.browserOptions) {
+      testPlan.browserOptions = {};
+    }
+
+    testPlan.browserOptions.isFullscreen = true;
+
+    return testPlan;
   }
 }

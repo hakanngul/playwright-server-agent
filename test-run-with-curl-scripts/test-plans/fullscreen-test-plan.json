@@ -1,0 +1,68 @@
+{
+  "name": "Tam Ekran Modu Testi",
+  "description": "Tam ekran modunda çalışan bir test",
+  "browserPreference": "firefox",
+  "headless": false,
+  "takeScreenshots": true,
+  "browserOptions": {
+    "ignoreHTTPSErrors": true,
+    "slowMo": 50,
+    "isFullscreen": true,
+    "firefoxUserPrefs": {
+      "media.volume_scale": "0.0",
+      "browser.display.background_color": "#f0f0f0"
+    },
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "steps": [
+    {
+      "action": "navigate",
+      "target": "https://playwright.dev/",
+      "description": "Örnek sayfaya git"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "navigate",
+      "target": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "fullscreen-google",
+      "description": "Google'ın tam ekran modunda ekran görüntüsünü al"
+    },
+    {
+      "action": "type",
+      "target": "APjFqb",
+      "strategy": "id",
+      "value": "playwright fullscreen mode",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "fullscreen-search-results",
+      "description": "Arama sonuçlarının tam ekran modunda ekran görüntüsünü al"
+    }
+  ]
+}

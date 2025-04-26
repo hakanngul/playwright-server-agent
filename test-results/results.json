@@ -1,6 +1,6 @@
 {
   "config": {
-    "configFile": "/Users/hakangul/Desktop/playwright-server-agent/temp-tests/playwright.config.1745702509441.cjs",
+    "configFile": "/Users/hakangul/Desktop/playwright-server-agent/temp-tests/playwright.config.1745705062577.cjs",
     "rootDir": "/Users/hakangul/Desktop/playwright-server-agent/temp-tests",
     "forbidOnly": false,
     "fullyParallel": false,
@@ -94,13 +94,13 @@
   },
   "suites": [
     {
-      "title": "geli_mi__etkile_imler_testi_1745702509441.spec.mjs",
-      "file": "geli_mi__etkile_imler_testi_1745702509441.spec.mjs",
+      "title": "tam_ekran_modu_testi_1745705062576.spec.mjs",
+      "file": "tam_ekran_modu_testi_1745705062576.spec.mjs",
       "column": 0,
       "line": 0,
       "specs": [
         {
-          "title": "Gelişmiş Etkileşimler Testi",
+          "title": "Tam Ekran Modu Testi",
           "ok": true,
           "tags": [],
           "tests": [
@@ -108,18 +108,21 @@
               "timeout": 30000,
               "annotations": [],
               "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
+              "projectId": "firefox",
+              "projectName": "firefox",
               "results": [
                 {
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 5746,
+                  "duration": 9219,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "Test başlıyor: Gelişmiş Etkileşimler Testi\n"
+                      "text": "Test başlıyor: Tam Ekran Modu Testi\n"
+                    },
+                    {
+                      "text": "Tarayıcı türü: firefox\n"
                     },
                     {
                       "text": "Sayfa açıldı\n"
@@ -133,7 +136,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2025-04-26T21:21:51.301Z",
+                  "startTime": "2025-04-26T22:04:23.740Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -141,8 +144,8 @@
               "status": "expected"
             }
           ],
-          "id": "678f033e6c62d2e72e7f-d48600c60c092156efba",
-          "file": "geli_mi__etkile_imler_testi_1745702509441.spec.mjs",
+          "id": "b5fdca5a199accccfbe0-b2213e4e30554fd48a15",
+          "file": "tam_ekran_modu_testi_1745705062576.spec.mjs",
           "line": 5,
           "column": 5
         }
@@ -151,8 +154,8 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-04-26T21:21:50.484Z",
-    "duration": 7612.598,
+    "startTime": "2025-04-26T22:04:23.292Z",
+    "duration": 11021.349999999999,
     "expected": 1,
     "skipped": 0,
     "unexpected": 0,
