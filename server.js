@@ -145,7 +145,10 @@ if (!fs.existsSync(dataDir)) {
 
 // Screenshots, videos ve traces desteği kaldırıldı
 
-// Serve static files from the client/build directory
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from the client/build directory (for backward compatibility)
 app.use(express.static(path.join(__dirname, 'client/build')));
 
 // Use API routes

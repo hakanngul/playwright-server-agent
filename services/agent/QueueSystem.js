@@ -8,13 +8,24 @@ import EventEmitter from 'events';
 export class QueueSystem extends EventEmitter {
   constructor(options = {}) {
     super();
-    this.queue = [];
+
+    // Kategori bazlı kuyruklar
+    this.queues = {
+      critical: [],    // Kritik testler
+      regression: [],  // Regresyon testleri
+      functional: [],  // Fonksiyonel testler
+      performance: [], // Performans testleri
+      default: []      // Diğer testler
+    };
+
     this.processing = new Map(); // Map of requestId -> request being processed
     this.options = {
       maxQueueSize: options.maxQueueSize || 100,
-      requestTimeout: options.requestTimeout || 30 * 60 * 1000, // 30 minutes default
+      requestTimeout: options.requestTimeout || 30 * 60 * 1000, // 30 dakika
+      queueTimeout: options.queueTimeout || 60 * 60 * 1000, // 1 saat
+      timeoutCheckInterval: options.timeoutCheckInterval || 60 * 1000 // 1 dakika
     };
-    
+
     // Setup periodic queue check
     this._setupPeriodicCheck();
   }
@@ -25,34 +36,69 @@ export class QueueSystem extends EventEmitter {
    * @returns {string} Request ID
    */
   enqueue(request) {
-    if (this.queue.length >= this.options.maxQueueSize) {
+    // Tüm kuyrukların toplam boyutunu kontrol et
+    const totalQueueSize = Object.values(this.queues).reduce((total, queue) => total + queue.length, 0);
+    if (totalQueueSize >= this.options.maxQueueSize) {
       throw new Error('Queue is full. Please try again later.');
     }
 
     // Generate a unique request ID
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Öncelik hesapla
+    const calculatedPriority = this._calculatePriority(request);
+
     // Add metadata to the request
     const queuedRequest = {
       ...request,
       id: requestId,
       status: 'queued',
-      priority: request.priority || 1, // Default priority is 1 (lower number = higher priority)
+      priority: calculatedPriority,
       queuedAt: new Date().toISOString(),
       startedAt: null,
       completedAt: null
     };
-    
-    // Add to queue
-    this.queue.push(queuedRequest);
-    
-    // Sort queue by priority
-    this._sortQueue();
-    
+
+    // Kategori belirle
+    const category = request.testPlan.category || 'default';
+    if (!this.queues[category]) {
+      this.queues[category] = [];
+    }
+
+    // İsteği ilgili kuyruğa ekle
+    this.queues[category].push(queuedRequest);
+
+    // Tüm kuyrukları sırala
+    this._sortAllQueues();
+
     // Emit event
     this.emit('request:queued', queuedRequest);
-    
+
     return requestId;
+  }
+
+  /**
+   * Calculate priority for a request
+   * @param {Object} request - Test request
+   * @returns {number} Calculated priority (1-10, 1 is highest)
+   * @private
+   */
+  _calculatePriority(request) {
+    let basePriority = request.priority || 5; // 1-10 arası (1 en yüksek)
+
+    // Test türüne göre öncelik ayarlama
+    if (request.testPlan.type === 'critical') {
+      basePriority -= 2; // Kritik testlere daha yüksek öncelik
+    } else if (request.testPlan.type === 'regression') {
+      basePriority += 1; // Regresyon testlerine daha düşük öncelik
+    }
+
+    // Kullanıcı rolüne göre öncelik ayarlama
+    if (request.user && request.user.role === 'admin') {
+      basePriority -= 1; // Admin kullanıcılara daha yüksek öncelik
+    }
+
+    return Math.max(1, Math.min(10, basePriority)); // 1-10 arasında sınırla
   }
 
   /**
@@ -60,24 +106,30 @@ export class QueueSystem extends EventEmitter {
    * @returns {Object|null} Next request or null if queue is empty
    */
   dequeue() {
-    if (this.queue.length === 0) {
-      return null;
+    // Öncelikli kategorileri kontrol et
+    const categories = ['critical', 'functional', 'regression', 'performance', 'default'];
+
+    for (const category of categories) {
+      if (this.queues[category] && this.queues[category].length > 0) {
+        // Kuyruktan bir istek al
+        const request = this.queues[category].shift();
+
+        // İstek durumunu güncelle
+        request.status = 'processing';
+        request.startedAt = new Date().toISOString();
+
+        // İşlenen istekler haritasına ekle
+        this.processing.set(request.id, request);
+
+        // Olay tetikle
+        this.emit('request:processing', request);
+
+        return request;
+      }
     }
-    
-    // Get the next request (highest priority first)
-    const request = this.queue.shift();
-    
-    // Update request status
-    request.status = 'processing';
-    request.startedAt = new Date().toISOString();
-    
-    // Add to processing map
-    this.processing.set(request.id, request);
-    
-    // Emit event
-    this.emit('request:processing', request);
-    
-    return request;
+
+    // Hiçbir kuyrukta istek yoksa
+    return null;
   }
 
   /**
@@ -89,20 +141,20 @@ export class QueueSystem extends EventEmitter {
     if (!this.processing.has(requestId)) {
       throw new Error(`Request ${requestId} is not being processed`);
     }
-    
+
     const request = this.processing.get(requestId);
-    
+
     // Update request status
     request.status = 'completed';
     request.completedAt = new Date().toISOString();
     request.result = result;
-    
+
     // Remove from processing map
     this.processing.delete(requestId);
-    
+
     // Emit event
     this.emit('request:completed', request);
-    
+
     return request;
   }
 
@@ -115,9 +167,9 @@ export class QueueSystem extends EventEmitter {
     if (!this.processing.has(requestId)) {
       throw new Error(`Request ${requestId} is not being processed`);
     }
-    
+
     const request = this.processing.get(requestId);
-    
+
     // Update request status
     request.status = 'failed';
     request.completedAt = new Date().toISOString();
@@ -125,13 +177,13 @@ export class QueueSystem extends EventEmitter {
       message: error.message,
       stack: error.stack
     };
-    
+
     // Remove from processing map
     this.processing.delete(requestId);
-    
+
     // Emit event
     this.emit('request:failed', request);
-    
+
     return request;
   }
 
@@ -140,10 +192,14 @@ export class QueueSystem extends EventEmitter {
    * @returns {Object} Queue status
    */
   getStatus() {
+    // Tüm kuyrukların toplam boyutunu hesapla
+    const totalQueuedRequests = Object.values(this.queues).reduce((total, queue) => total + queue.length, 0);
+
     return {
-      queuedRequests: this.queue.length,
+      queuedRequests: totalQueuedRequests,
       processingRequests: this.processing.size,
-      totalRequests: this.queue.length + this.processing.size
+      totalRequests: totalQueuedRequests + this.processing.size,
+      queuesByCategory: this.getQueueStatusByCategory()
     };
   }
 
@@ -152,7 +208,12 @@ export class QueueSystem extends EventEmitter {
    * @returns {Array} Queued requests
    */
   getQueuedRequests() {
-    return [...this.queue];
+    // Tüm kuyrukları birleştir
+    const allRequests = [];
+    for (const category in this.queues) {
+      allRequests.push(...this.queues[category]);
+    }
+    return allRequests;
   }
 
   /**
@@ -168,15 +229,30 @@ export class QueueSystem extends EventEmitter {
    * @returns {boolean} True if queue has requests
    */
   hasQueuedRequests() {
-    return this.queue.length > 0;
+    // Herhangi bir kuyrukta istek var mı kontrol et
+    for (const category in this.queues) {
+      if (this.queues[category].length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
-   * Sort queue by priority
+   * Sort all queues by priority
    * @private
    */
-  _sortQueue() {
-    this.queue.sort((a, b) => a.priority - b.priority);
+  _sortAllQueues() {
+    for (const category in this.queues) {
+      this.queues[category].sort((a, b) => {
+        // Önce önceliğe göre sırala (düşük sayı = yüksek öncelik)
+        const priorityDiff = a.priority - b.priority;
+        if (priorityDiff !== 0) return priorityDiff;
+
+        // Öncelikler eşitse, önce eklenen önce çalışsın (FIFO)
+        return new Date(a.queuedAt) - new Date(b.queuedAt);
+      });
+    }
   }
 
   /**
@@ -186,24 +262,60 @@ export class QueueSystem extends EventEmitter {
   _setupPeriodicCheck() {
     setInterval(() => {
       const now = Date.now();
-      
-      // Check for timed out processing requests
+
+      // İşlenen isteklerin zaman aşımı kontrolü
       for (const [requestId, request] of this.processing.entries()) {
         const startTime = new Date(request.startedAt).getTime();
         if (now - startTime > this.options.requestTimeout) {
-          // Request has timed out
-          this.fail(requestId, new Error('Request timed out'));
+          console.log(`Request ${requestId} timed out after ${this.options.requestTimeout/1000} seconds of processing`);
+          this.fail(requestId, new Error(`Request timed out after ${this.options.requestTimeout/1000} seconds of processing`));
         }
       }
-    }, 60000); // Check every minute
+
+      // Kuyrukta bekleyen isteklerin zaman aşımı kontrolü
+      for (const category in this.queues) {
+        const expiredRequests = [];
+
+        for (const request of this.queues[category]) {
+          const queueTime = now - new Date(request.queuedAt).getTime();
+          if (queueTime > this.options.queueTimeout) {
+            expiredRequests.push(request);
+          }
+        }
+
+        // Zaman aşımına uğrayan istekleri kaldır
+        for (const request of expiredRequests) {
+          console.log(`Request ${request.id} expired after ${this.options.queueTimeout/1000} seconds in queue`);
+          this.queues[category] = this.queues[category].filter(r => r.id !== request.id);
+          this.emit('request:expired', request);
+        }
+      }
+    }, this.options.timeoutCheckInterval); // Belirtilen aralıklarla kontrol et
   }
 
   /**
    * Clear the queue
    */
   clear() {
-    this.queue = [];
+    // Tüm kuyrukları temizle
+    for (const category in this.queues) {
+      this.queues[category] = [];
+    }
     this.emit('queue:cleared');
+  }
+
+  /**
+   * Get queue status by category
+   * @returns {Object} Queue status by category
+   */
+  getQueueStatusByCategory() {
+    const status = {};
+
+    for (const category in this.queues) {
+      status[category] = this.queues[category].length;
+    }
+
+    return status;
   }
 }
 

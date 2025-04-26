@@ -87,6 +87,37 @@ router.get('/system-status', (req, res) => {
   }
 });
 
+// Get system metrics
+router.get('/system-metrics', (req, res) => {
+  try {
+    const metrics = agentManager.systemMonitor.getMetrics();
+
+    // Agent istatistiklerini ekle
+    const agentStats = {
+      total: agentManager.agents.size,
+      available: agentManager.availableAgents.size,
+      busy: agentManager.busyAgents.size,
+      limit: agentManager.dynamicAgentOptions.currentLimit
+    };
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      metrics: {
+        system: metrics,
+        agents: agentStats,
+        queue: agentManager.queueSystem.getStatus()
+      }
+    });
+  } catch (error) {
+    console.error('Error getting system metrics:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 // Get queued requests
 router.get('/queued-requests', (req, res) => {
   try {
@@ -118,6 +149,38 @@ router.get('/processing-requests', (req, res) => {
     });
   } catch (error) {
     console.error('Error getting processing requests:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Get active agents
+router.get('/active-agents', (req, res) => {
+  try {
+    const agents = [];
+
+    // Convert agents map to array
+    for (const [agentId, agent] of agentManager.agents.entries()) {
+      agents.push({
+        id: agentId,
+        browserType: agent.browserType,
+        headless: agent.headless,
+        status: agentManager.availableAgents.has(agentId) ? 'idle' : 'busy',
+        createdAt: agent.createdAt,
+        lastActiveAt: agent.lastActiveAt,
+        currentRequest: agent.currentRequest
+      });
+    }
+
+    res.json({
+      success: true,
+      count: agents.length,
+      agents
+    });
+  } catch (error) {
+    console.error('Error getting active agents:', error);
     res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined

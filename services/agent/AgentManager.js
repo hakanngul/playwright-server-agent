@@ -7,6 +7,7 @@ import EventEmitter from 'events';
 import os from 'os';
 import { TestAgent } from './TestAgent.js';
 import QueueSystem from './QueueSystem.js';
+import SystemMonitor from './SystemMonitor.js';
 
 export class AgentManager extends EventEmitter {
   constructor(options = {}) {
@@ -32,13 +33,104 @@ export class AgentManager extends EventEmitter {
       requestTimeout: options.requestTimeout || 30 * 60 * 1000
     });
 
+    // Initialize system monitor
+    this.systemMonitor = new SystemMonitor({
+      cpuThresholdHigh: options.cpuThresholdHigh || 80,
+      cpuThresholdLow: options.cpuThresholdLow || 20,
+      memoryThresholdHigh: options.memoryThresholdHigh || 80,
+      memoryThresholdLow: options.memoryThresholdLow || 20
+    });
+
+    // Dinamik agent sayısı ayarları
+    this.dynamicAgentOptions = {
+      enabled: options.dynamicAgentScaling !== false,
+      minAgents: options.minAgents || 1,
+      maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1),
+      currentLimit: options.maxAgents || Math.max(1, os.cpus().length - 1)
+    };
+
     // Setup event listeners
     this._setupEventListeners();
+    this._setupSystemMonitorListeners();
 
     // Start processing loop
     this._startProcessingLoop();
 
     console.log(`AgentManager initialized with max ${this.options.maxAgents} agents`);
+  }
+
+  /**
+   * Setup system monitor event listeners
+   * @private
+   */
+  _setupSystemMonitorListeners() {
+    // Yüksek kaynak kullanımında agent sayısını azalt
+    this.systemMonitor.on('resources:high', (metrics) => {
+      if (!this.dynamicAgentOptions.enabled) return;
+
+      console.log(`High resource usage detected: CPU ${metrics.cpu.toFixed(2)}%, Memory ${metrics.memory.toFixed(2)}%`);
+
+      // Agent sayısı limitini azalt
+      const newLimit = Math.max(
+        this.dynamicAgentOptions.minAgents,
+        Math.floor(this.dynamicAgentOptions.currentLimit * 0.8) // %20 azalt
+      );
+
+      if (newLimit < this.dynamicAgentOptions.currentLimit) {
+        console.log(`Reducing agent limit from ${this.dynamicAgentOptions.currentLimit} to ${newLimit}`);
+        this.dynamicAgentOptions.currentLimit = newLimit;
+
+        // Fazla agent'ları kapat (sadece boşta olanları)
+        this._optimizeAgentCount();
+      }
+    });
+
+    // Düşük kaynak kullanımında agent sayısını artır
+    this.systemMonitor.on('resources:low', (metrics) => {
+      if (!this.dynamicAgentOptions.enabled) return;
+
+      console.log(`Low resource usage detected: CPU ${metrics.cpu.toFixed(2)}%, Memory ${metrics.memory.toFixed(2)}%`);
+
+      // Agent sayısı limitini artır
+      const newLimit = Math.min(
+        this.dynamicAgentOptions.maxAgents,
+        Math.floor(this.dynamicAgentOptions.currentLimit * 1.2) // %20 artır
+      );
+
+      if (newLimit > this.dynamicAgentOptions.currentLimit) {
+        console.log(`Increasing agent limit from ${this.dynamicAgentOptions.currentLimit} to ${newLimit}`);
+        this.dynamicAgentOptions.currentLimit = newLimit;
+      }
+    });
+  }
+
+  /**
+   * Optimize agent count based on current limits
+   * @private
+   */
+  _optimizeAgentCount() {
+    // Eğer mevcut agent sayısı limitten fazlaysa
+    if (this.agents.size > this.dynamicAgentOptions.currentLimit) {
+      // Kapatılacak agent sayısı
+      const agentsToTerminate = this.agents.size - this.dynamicAgentOptions.currentLimit;
+
+      // Boşta olan agent'ları bul
+      const idleAgents = Array.from(this.availableAgents)
+        .map(agentId => this.agents.get(agentId))
+        .sort((a, b) => {
+          // En uzun süre boşta olanları önce kapat
+          return new Date(a.lastActiveAt) - new Date(b.lastActiveAt);
+        });
+
+      // Boşta olan agent'ları kapat (limit kadar)
+      for (let i = 0; i < Math.min(agentsToTerminate, idleAgents.length); i++) {
+        const agent = idleAgents[i];
+        console.log(`Terminating idle agent ${agent.id} for resource optimization`);
+        this._terminateAgent(agent.id).catch(err => {
+          console.error(`Error terminating agent ${agent.id}:`, err);
+        });
+      }
+    }
   }
 
   /**
@@ -115,8 +207,21 @@ export class AgentManager extends EventEmitter {
    * @private
    */
   _createAgent(options = {}) {
+    // Mevcut agent sayısı limiti aşıyorsa yeni agent oluşturma
+    if (this.agents.size >= this.dynamicAgentOptions.currentLimit) {
+      console.log(`Cannot create new agent: limit of ${this.dynamicAgentOptions.currentLimit} agents reached`);
+      return null;
+    }
+
+    // Sistem kaynaklarını kontrol et
+    const metrics = this.systemMonitor.getMetrics();
+    if (metrics.cpu > 90 || metrics.memory > 90) {
+      console.log(`Cannot create new agent: system resources are too high (CPU: ${metrics.cpu.toFixed(2)}%, Memory: ${metrics.memory.toFixed(2)}%)`);
+      return null;
+    }
+
     // Generate a unique agent ID
-    const agentId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const agentId = `agent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // Determine browser type
     const browserType = options.browserType || this.options.browserTypes[0];
@@ -332,6 +437,13 @@ export class AgentManager extends EventEmitter {
   async _processNextRequest() {
     // Check if there are any requests in the queue
     if (!this.queueSystem.hasQueuedRequests()) {
+      return;
+    }
+
+    // Sistem kaynaklarını kontrol et
+    const metrics = this.systemMonitor.getMetrics();
+    if (metrics.cpu > 95 || metrics.memory > 95) {
+      console.log(`Skipping request processing: system resources are critical (CPU: ${metrics.cpu.toFixed(2)}%, Memory: ${metrics.memory.toFixed(2)}%)`);
       return;
     }
 

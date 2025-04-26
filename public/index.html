@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Server Agent - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            font-weight: 600;
+            background-color: #f1f3f5;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .progress {
+            height: 10px;
+            margin-top: 5px;
+        }
+        .table th {
+            font-weight: 600;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .agent-status-idle {
+            color: #28a745;
+        }
+        .agent-status-busy {
+            color: #dc3545;
+        }
+        .priority-high {
+            background-color: #dc3545;
+            color: white;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: black;
+        }
+        .priority-low {
+            background-color: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4 text-center">Playwright Server Agent Dashboard</h1>
+        
+        <!-- System Metrics -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>System Resources</span>
+                        <span id="last-updated" class="badge bg-secondary"></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="metric-value" id="cpu-usage">0%</div>
+                                <div class="metric-label">CPU Usage</div>
+                                <div class="progress">
+                                    <div id="cpu-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="metric-value" id="memory-usage">0%</div>
+                                <div class="metric-label">Memory Usage</div>
+                                <div class="progress">
+                                    <div id="memory-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Agent Status</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4 text-center">
+                                <div class="metric-value" id="total-agents">0</div>
+                                <div class="metric-label">Total Agents</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="metric-value agent-status-idle" id="available-agents">0</div>
+                                <div class="metric-label">Available</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="metric-value agent-status-busy" id="busy-agents">0</div>
+                                <div class="metric-label">Busy</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Agent Limit:</span>
+                                <span id="agent-limit">0</span>
+                            </div>
+                            <div class="progress">
+                                <div id="agent-progress" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Queue Status -->
+        <div class="card">
+            <div class="card-header">Queue Status</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="queued-requests">0</div>
+                        <div class="metric-label">Queued</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="processing-requests">0</div>
+                        <div class="metric-label">Processing</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="total-requests">0</div>
+                        <div class="metric-label">Total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Agents -->
+        <div class="card">
+            <div class="card-header">Active Agents</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Agent ID</th>
+                                <th>Browser</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Last Active</th>
+                                <th>Current Request</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agents-table-body">
+                            <!-- Agents will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Queued Requests -->
+        <div class="card">
+            <div class="card-header">Queued Requests</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>Test Name</th>
+                                <th>Browser</th>
+                                <th>Priority</th>
+                                <th>Category</th>
+                                <th>Queued At</th>
+                                <th>Wait Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queue-table-body">
+                            <!-- Queued requests will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Processing Requests -->
+        <div class="card">
+            <div class="card-header">Processing Requests</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Request ID</th>
+                                <th>Test Name</th>
+                                <th>Browser</th>
+                                <th>Agent ID</th>
+                                <th>Started At</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processing-table-body">
+                            <!-- Processing requests will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Refresh Button -->
+    <button id="refresh-btn" class="btn btn-primary refresh-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+        </svg>
+        Refresh
+    </button>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Format date function
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+        
+        // Format duration function
+        function formatDuration(ms) {
+            if (!ms) return '0s';
+            
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+        
+        // Format wait time function
+        function formatWaitTime(queuedAt) {
+            if (!queuedAt) return 'N/A';
+            
+            const queuedTime = new Date(queuedAt).getTime();
+            const now = Date.now();
+            const waitTime = now - queuedTime;
+            
+            return formatDuration(waitTime);
+        }
+        
+        // Get priority class
+        function getPriorityClass(priority) {
+            if (priority <= 3) return 'priority-high';
+            if (priority <= 7) return 'priority-medium';
+            return 'priority-low';
+        }
+        
+        // Update dashboard function
+        async function updateDashboard() {
+            try {
+                // Fetch system metrics
+                const metricsResponse = await fetch('/api/agent/system-metrics');
+                const metricsData = await metricsResponse.json();
+                
+                if (metricsData.success) {
+                    const { system, agents, queue } = metricsData.metrics;
+                    
+                    // Update system metrics
+                    document.getElementById('cpu-usage').textContent = `${system.cpu.toFixed(1)}%`;
+                    document.getElementById('memory-usage').textContent = `${system.memory.toFixed(1)}%`;
+                    document.getElementById('cpu-progress').style.width = `${system.cpu}%`;
+                    document.getElementById('memory-progress').style.width = `${system.memory}%`;
+                    
+                    // Update CPU progress bar color
+                    const cpuProgress = document.getElementById('cpu-progress');
+                    if (system.cpu > 80) {
+                        cpuProgress.className = 'progress-bar bg-danger';
+                    } else if (system.cpu > 60) {
+                        cpuProgress.className = 'progress-bar bg-warning';
+                    } else {
+                        cpuProgress.className = 'progress-bar bg-success';
+                    }
+                    
+                    // Update memory progress bar color
+                    const memoryProgress = document.getElementById('memory-progress');
+                    if (system.memory > 80) {
+                        memoryProgress.className = 'progress-bar bg-danger';
+                    } else if (system.memory > 60) {
+                        memoryProgress.className = 'progress-bar bg-warning';
+                    } else {
+                        memoryProgress.className = 'progress-bar bg-success';
+                    }
+                    
+                    // Update agent metrics
+                    document.getElementById('total-agents').textContent = agents.total;
+                    document.getElementById('available-agents').textContent = agents.available;
+                    document.getElementById('busy-agents').textContent = agents.busy;
+                    document.getElementById('agent-limit').textContent = agents.limit;
+                    
+                    // Update agent progress
+                    const agentPercentage = agents.total > 0 ? (agents.total / agents.limit) * 100 : 0;
+                    document.getElementById('agent-progress').style.width = `${agentPercentage}%`;
+                    
+                    // Update queue metrics
+                    document.getElementById('queued-requests').textContent = queue.queuedRequests;
+                    document.getElementById('processing-requests').textContent = queue.processingRequests;
+                    document.getElementById('total-requests').textContent = queue.totalRequests;
+                    
+                    // Update last updated time
+                    document.getElementById('last-updated').textContent = `Updated: ${formatDate(metricsData.timestamp)}`;
+                }
+                
+                // Fetch active agents
+                const agentsResponse = await fetch('/api/agent/active-agents');
+                const agentsData = await agentsResponse.json();
+                
+                if (agentsData.success) {
+                    const agentsTableBody = document.getElementById('agents-table-body');
+                    agentsTableBody.innerHTML = '';
+                    
+                    if (agentsData.agents.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="6" class="text-center">No active agents</td>';
+                        agentsTableBody.appendChild(row);
+                    } else {
+                        agentsData.agents.forEach(agent => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${agent.id}</td>
+                                <td>${agent.browserType}</td>
+                                <td><span class="badge ${agent.status === 'idle' ? 'bg-success' : 'bg-danger'}">${agent.status}</span></td>
+                                <td>${formatDate(agent.createdAt)}</td>
+                                <td>${formatDate(agent.lastActiveAt)}</td>
+                                <td>${agent.currentRequest || 'None'}</td>
+                            `;
+                            agentsTableBody.appendChild(row);
+                        });
+                    }
+                }
+                
+                // Fetch queued requests
+                const queuedResponse = await fetch('/api/agent/queued-requests');
+                const queuedData = await queuedResponse.json();
+                
+                if (queuedData.success) {
+                    const queueTableBody = document.getElementById('queue-table-body');
+                    queueTableBody.innerHTML = '';
+                    
+                    if (queuedData.requests.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="7" class="text-center">No queued requests</td>';
+                        queueTableBody.appendChild(row);
+                    } else {
+                        queuedData.requests.forEach(request => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${request.id}</td>
+                                <td>${request.testPlan.name}</td>
+                                <td>${request.browserType || request.testPlan.browserPreference || 'chromium'}</td>
+                                <td><span class="badge ${getPriorityClass(request.priority)}">${request.priority}</span></td>
+                                <td>${request.testPlan.category || 'default'}</td>
+                                <td>${formatDate(request.queuedAt)}</td>
+                                <td>${formatWaitTime(request.queuedAt)}</td>
+                            `;
+                            queueTableBody.appendChild(row);
+                        });
+                    }
+                }
+                
+                // Fetch processing requests
+                const processingResponse = await fetch('/api/agent/processing-requests');
+                const processingData = await processingResponse.json();
+                
+                if (processingData.success) {
+                    const processingTableBody = document.getElementById('processing-table-body');
+                    processingTableBody.innerHTML = '';
+                    
+                    if (processingData.requests.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="6" class="text-center">No processing requests</td>';
+                        processingTableBody.appendChild(row);
+                    } else {
+                        processingData.requests.forEach(request => {
+                            const startTime = new Date(request.startedAt).getTime();
+                            const now = Date.now();
+                            const duration = now - startTime;
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${request.id}</td>
+                                <td>${request.testPlan.name}</td>
+                                <td>${request.browserType || request.testPlan.browserPreference || 'chromium'}</td>
+                                <td>${request.agentId || 'N/A'}</td>
+                                <td>${formatDate(request.startedAt)}</td>
+                                <td>${formatDuration(duration)}</td>
+                            `;
+                            processingTableBody.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+        
+        // Initial update
+        updateDashboard();
+        
+        // Set up auto-refresh
+        setInterval(updateDashboard, 5000); // Refresh every 5 seconds
+        
+        // Manual refresh button
+        document.getElementById('refresh-btn').addEventListener('click', updateDashboard);
+    </script>
+</body>
+</html>
