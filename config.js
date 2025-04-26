@@ -26,8 +26,8 @@ const defaultConfig = {
   },
   paths: {
     // Screenshots, videos ve traces desteği kaldırıldı
-    reportsDir: path.join(__dirname, 'reports'),
-    testPlansDir: path.join(__dirname, 'test-plans')
+    reportsDir: path.join(__dirname, 'reports')
+    // testPlansDir kaldırıldı - farklı bir mimariye geçiş için
   },
   performance: {
     // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
