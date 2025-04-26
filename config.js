@@ -17,12 +17,12 @@ const defaultConfig = {
     allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
   },
   test: {
-    usePlaywrightTestRunner: true,
+    usePlaywrightTestRunner: false,
     workers: 5,
     headless: true,
     retries: 1,
     timeout: 30000,
-    browserTypes: ['chromium', 'firefox']
+    browserTypes: ['chromium', 'firefox', 'webkit', 'edge']
   },
   paths: {
     // Screenshots, videos ve traces desteği kaldırıldı

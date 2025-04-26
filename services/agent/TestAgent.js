@@ -61,6 +61,9 @@ export class TestAgent extends EventEmitter {
       // Initialize browser controller
       await this.browserController.initialize();
 
+      // TestRunner'a BrowserController'ın tarayıcı yöneticisini ver
+      this.testRunner.setBrowserManager(this.browserController.browserManager);
+
       // Initialize test runner
       await this.testRunner.initialize();
 

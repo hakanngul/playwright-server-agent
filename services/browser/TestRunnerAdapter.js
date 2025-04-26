@@ -62,6 +62,14 @@ export class TestRunnerAdapter extends ITestRunner {
   }
 
   /**
+   * Sets the browser manager
+   * @param {BrowserManager} browserManager - Browser manager to use
+   */
+  setBrowserManager(browserManager) {
+    this.testRunner.browserManager = browserManager;
+  }
+
+  /**
    * Closes the test runner
    * @returns {Promise<void>}
    */
