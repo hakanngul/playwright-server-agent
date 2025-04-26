@@ -1,0 +1,59 @@
+{
+  "name": "Firefox Tam Ekran Testi",
+  "description": "Firefox tarayıcısında tam ekran modunu test eder",
+  "browserPreference": "firefox",
+  "headless": false,
+  "isFullscreen": true,
+  "steps": [
+    {
+      "action": "navigate",
+      "target": "https://www.google.com",
+      "description": "Google sayfasına git"
+    },
+    {
+      "action": "wait",
+      "target": 2000,
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "type",
+      "target": "input[name='q']",
+      "value": "Firefox tam ekran modu test",
+      "description": "Arama kutusuna yaz"
+    },
+    {
+      "action": "wait",
+      "target": 1000,
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "target": 3000,
+      "description": "3 saniye bekle"
+    },
+    {
+      "action": "navigate",
+      "target": "https://only-testing-blog.blogspot.com/",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "target": 2000,
+      "description": "2 saniye bekle"
+    },
+    {
+      "action": "click",
+      "target": "#post-body-4292417847084983089 > div:nth-child(1) > button:nth-child(1)",
+      "description": "Show Me Alert butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "target": 2000,
+      "description": "2 saniye bekle"
+    }
+  ]
+}

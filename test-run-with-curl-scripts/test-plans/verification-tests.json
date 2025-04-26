@@ -2,8 +2,8 @@
   "name": "Doğrulama İşlemleri Testi",
   "description": "Only Testing Blog üzerinde doğrulama işlemlerini test eder",
   "browserPreference": "firefox",
-  "headless": true,
-  "useBrowserPool": false,
+  "headless": false,
+  "useBrowserPool": true,
   "takeScreenshots": false,
   "steps": [
     {
