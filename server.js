@@ -201,7 +201,8 @@ app.get('/api/browsers', (_req, res) => {
   const browsers = [
     { id: 'chromium', name: 'Chromium' },
     { id: 'firefox', name: 'Firefox' },
-    { id: 'edge', name: 'Microsoft Edge' }
+    { id: 'edge', name: 'Microsoft Edge' },
+    { id: 'webkit', name: 'WebKit (Safari)' }
   ];
 
   res.json(browsers);

@@ -229,7 +229,7 @@
 
     <div class="container">
         <div class="alert-container"></div>
-        
+
         <h1 class="mb-4">Test Oluştur</h1>
 
         <!-- Test Creation Form -->
@@ -251,7 +251,7 @@
                             <input type="text" class="form-control" id="test-plan-description">
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="test-plan-browser" class="form-label">Tarayıcı</label>
@@ -259,6 +259,7 @@
                                 <option value="chromium">Chromium</option>
                                 <option value="firefox">Firefox</option>
                                 <option value="edge">Edge</option>
+                                <option value="webkit">WebKit (Safari)</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -276,21 +277,21 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <hr>
-                    
+
                     <!-- Test Steps -->
                     <h5 class="mb-3">Test Adımları</h5>
                     <div id="test-steps-container">
                         <!-- Test steps will be added here -->
                         <p class="text-muted">Henüz test adımı eklenmemiş.</p>
                     </div>
-                    
+
                     <button type="button" id="add-step-btn" class="btn btn-outline-primary mt-3">
                         <i class="material-icons align-middle me-1">add</i>
                         Adım Ekle
                     </button>
-                    
+
                     <div class="d-flex justify-content-end mt-4">
                         <button type="button" id="clear-form-btn" class="btn btn-outline-secondary me-2">
                             <i class="material-icons align-middle me-1">clear</i>
@@ -317,7 +318,7 @@
                 <div class="modal-body">
                     <form id="step-form">
                         <input type="hidden" id="step-index" value="-1">
-                        
+
                         <div class="mb-3">
                             <label for="step-action" class="form-label">Eylem</label>
                             <select class="form-select" id="step-action" required>
@@ -331,12 +332,12 @@
                                 <option value="assert">Doğrula (assert)</option>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3" id="step-target-group">
                             <label for="step-target" class="form-label">Hedef Element</label>
                             <input type="text" class="form-control" id="step-target">
                         </div>
-                        
+
                         <div class="mb-3" id="step-strategy-group">
                             <label for="step-strategy" class="form-label">Seçim Stratejisi</label>
                             <select class="form-select" id="step-strategy">
@@ -348,12 +349,12 @@
                                 <option value="text">Text</option>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3" id="step-value-group">
                             <label for="step-value" class="form-label">Değer</label>
                             <input type="text" class="form-control" id="step-value">
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="step-description" class="form-label">Açıklama</label>
                             <input type="text" class="form-control" id="step-description">
@@ -388,7 +389,7 @@
         $(document).ready(function() {
             // Setup event listeners
             setupEventListeners();
-            
+
             // Initialize form fields
             updateStepFormFields();
         });
@@ -425,10 +426,10 @@
         // Update step form fields based on selected action
         function updateStepFormFields() {
             const action = $('#step-action').val();
-            
+
             // Hide all fields first
             $('#step-target-group, #step-strategy-group, #step-value-group').hide();
-            
+
             // Show relevant fields based on action
             switch (action) {
                 case 'navigate':
@@ -460,7 +461,7 @@
             $('#test-plan-browser').val('chromium');
             $('#test-plan-headless').val('true');
             $('#test-plan-browser-pool').val('false');
-            
+
             currentTestPlan = {
                 name: '',
                 description: '',
@@ -470,7 +471,7 @@
                 takeScreenshots: false,
                 steps: []
             };
-            
+
             renderTestSteps();
         }
 
@@ -482,7 +483,7 @@
             $('#step-strategy').val('css');
             $('#step-value').val('');
             $('#step-description').val('');
-            
+
             updateStepFormFields();
         }
 
@@ -490,22 +491,22 @@
         function renderTestSteps() {
             const container = $('#test-steps-container');
             container.empty();
-            
+
             if (currentTestPlan.steps.length === 0) {
                 container.append('<p class="text-muted">Henüz test adımı eklenmemiş.</p>');
                 return;
             }
-            
+
             currentTestPlan.steps.forEach((step, index) => {
                 const stepCard = $('<div class="step-card"></div>');
-                
+
                 // Step header
                 const stepHeader = $('<div class="step-header"></div>');
-                
+
                 // Step title
                 const stepTitle = $('<div class="step-title"></div>');
                 let icon = 'code';
-                
+
                 switch (step.action) {
                     case 'navigate': icon = 'open_in_browser'; break;
                     case 'click': icon = 'touch_app'; break;
@@ -515,15 +516,15 @@
                     case 'takeScreenshot': icon = 'photo_camera'; break;
                     case 'assert': icon = 'check_circle'; break;
                 }
-                
+
                 stepTitle.append(`<i class="material-icons">${icon}</i>`);
                 stepTitle.append(`<span>${index + 1}. ${step.action}</span>`);
-                
+
                 stepHeader.append(stepTitle);
-                
+
                 // Step actions
                 const stepActions = $('<div class="step-actions"></div>');
-                
+
                 // Edit button
                 const editBtn = $('<button class="btn btn-sm btn-outline-primary"></button>')
                     .html('<i class="material-icons">edit</i>')
@@ -531,7 +532,7 @@
                     .on('click', function() {
                         editStep(index);
                     });
-                
+
                 // Delete button
                 const deleteBtn = $('<button class="btn btn-sm btn-outline-danger"></button>')
                     .html('<i class="material-icons">delete</i>')
@@ -539,7 +540,7 @@
                     .on('click', function() {
                         deleteStep(index);
                     });
-                
+
                 // Move up button
                 if (index > 0) {
                     const moveUpBtn = $('<button class="btn btn-sm btn-outline-secondary"></button>')
@@ -550,7 +551,7 @@
                         });
                     stepActions.append(moveUpBtn);
                 }
-                
+
                 // Move down button
                 if (index < currentTestPlan.steps.length - 1) {
                     const moveDownBtn = $('<button class="btn btn-sm btn-outline-secondary"></button>')
@@ -561,27 +562,27 @@
                         });
                     stepActions.append(moveDownBtn);
                 }
-                
+
                 stepActions.append(editBtn, deleteBtn);
                 stepHeader.append(stepActions);
-                
+
                 stepCard.append(stepHeader);
-                
+
                 // Step details
                 const stepDetails = $('<div class="step-details mt-2"></div>');
-                
+
                 if (step.description) {
                     stepDetails.append(`<div><strong>Açıklama:</strong> ${step.description}</div>`);
                 }
-                
+
                 if (step.target) {
                     stepDetails.append(`<div><strong>Hedef:</strong> ${step.target} (${step.strategy || 'css'})</div>`);
                 }
-                
+
                 if (step.value) {
                     stepDetails.append(`<div><strong>Değer:</strong> ${step.value}</div>`);
                 }
-                
+
                 stepCard.append(stepDetails);
                 container.append(stepCard);
             });
@@ -595,19 +596,19 @@
             const strategy = $('#step-strategy').val();
             const value = $('#step-value').val();
             const description = $('#step-description').val();
-            
+
             // Validate form
             if (!action) {
                 alert('Eylem seçmelisiniz.');
                 return;
             }
-            
+
             // Create step object
             const step = {
                 action: action,
                 description: description
             };
-            
+
             // Add additional properties based on action
             switch (action) {
                 case 'navigate':
@@ -651,10 +652,10 @@
                     step.value = value;
                     break;
             }
-            
+
             // Get step index
             const stepIndex = parseInt($('#step-index').val());
-            
+
             if (stepIndex >= 0) {
                 // Update existing step
                 currentTestPlan.steps[stepIndex] = step;
@@ -662,7 +663,7 @@
                 // Add new step
                 currentTestPlan.steps.push(step);
             }
-            
+
             // Close modal and render steps
             $('#addStepModal').modal('hide');
             renderTestSteps();
@@ -671,7 +672,7 @@
         // Edit step
         function editStep(index) {
             const step = currentTestPlan.steps[index];
-            
+
             // Set form values
             $('#step-index').val(index);
             $('#step-action').val(step.action);
@@ -679,14 +680,14 @@
             $('#step-strategy').val(step.strategy || 'css');
             $('#step-value').val(step.value || '');
             $('#step-description').val(step.description || '');
-            
+
             // Update form fields
             updateStepFormFields();
-            
+
             // Set modal title
             $('#addStepModalLabel').text('Test Adımını Düzenle');
             $('#save-step-btn').text('Güncelle');
-            
+
             // Show modal
             $('#addStepModal').modal('show');
         }
@@ -715,25 +716,25 @@
             const browserPreference = $('#test-plan-browser').val();
             const headless = $('#test-plan-headless').val() === 'true';
             const useBrowserPool = $('#test-plan-browser-pool').val() === 'true';
-            
+
             // Validate form
             if (!name) {
                 alert('Test planı adı gereklidir.');
                 return;
             }
-            
+
             if (currentTestPlan.steps.length === 0) {
                 alert('En az bir test adımı eklemelisiniz.');
                 return;
             }
-            
+
             // Update current test plan
             currentTestPlan.name = name;
             currentTestPlan.description = description;
             currentTestPlan.browserPreference = browserPreference;
             currentTestPlan.headless = headless;
             currentTestPlan.useBrowserPool = useBrowserPool;
-            
+
             // Save test plan
             $.ajax({
                 url: '/api/test-plans',
@@ -763,16 +764,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `;
-            
+
             // Add alert to container
             const alertContainer = $('.alert-container');
             alertContainer.empty().append(alertHtml);
-            
+
             // Auto-dismiss after 5 seconds
             setTimeout(function() {
                 $('.alert').alert('close');
             }, 5000);
-            
+
             // Scroll to top
             window.scrollTo(0, 0);
         }

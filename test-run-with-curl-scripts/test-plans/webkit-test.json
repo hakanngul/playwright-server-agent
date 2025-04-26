@@ -1,0 +1,39 @@
+{
+  "name": "WebKit Test",
+  "description": "WebKit tarayıcısı ile basit bir test",
+  "browserPreference": "webkit",
+  "headless": false,
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "type",
+      "target": "input[name='q']",
+      "strategy": "css",
+      "value": "WebKit Safari Test",
+      "description": "Arama kutusuna yaz"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "1 saniye bekle"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "value": "3000",
+      "description": "3 saniye bekle"
+    }
+  ]
+}

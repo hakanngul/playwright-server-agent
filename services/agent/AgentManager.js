@@ -17,7 +17,7 @@ export class AgentManager extends EventEmitter {
     this.options = {
       maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1), // Default to CPU count - 1
       agentIdleTimeout: options.agentIdleTimeout || 5 * 1000, // 5 seconds (was 30 seconds)
-      browserTypes: options.browserTypes || ['chromium', 'firefox'],
+      browserTypes: options.browserTypes || ['chromium', 'firefox', 'webkit', 'edge'],
       headless: options.headless !== undefined ? options.headless : true,
       closeAgentAfterTest: options.closeAgentAfterTest !== undefined ? options.closeAgentAfterTest : true, // Testi tamamladıktan sonra agent'ı kapat
       ...options
