@@ -95,12 +95,18 @@ export class PlaywrightTestAdapter extends ITestRunner {
    * @private
    */
   _generateSimpleTestContent(testPlan) {
+    // Tarayıcı özelliklerini al
+    const browserOptions = testPlan.browserOptions || {};
+    const isFullscreen = browserOptions.isFullscreen || false;
+
     return `
     // @ts-check
     import { test, expect } from '@playwright/test';
 
     test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page }) => {
       console.log('Test başlıyor: ${testPlan.name}');
+
+      ${isFullscreen ? '// Tam ekran modunu etkinleştir\n      await page.setViewportSize({ width: 0, height: 0 });\n' : ''}
 
       // Adım 1: Sayfaya git
       await page.goto('${testPlan.steps[0]?.target || 'https://only-testing-blog.blogspot.com/'}');
@@ -301,6 +307,9 @@ export class PlaywrightTestAdapter extends ITestRunner {
 
       const startTime = Date.now();
 
+      // Fullscreen özelliğini kontrol et
+      const isFullscreen = browserOptions.isFullscreen || false;
+
       // Create config file
       const configPath = path.join(this.options.testDir, `playwright.config.${Date.now()}.cjs`);
       const configContent = `
@@ -325,6 +334,8 @@ export class PlaywrightTestAdapter extends ITestRunner {
           navigationTimeout: 15000,
           trace: 'on-first-retry',
           screenshot: 'only-on-failure',
+          // Tam ekran modu için viewport ayarı
+          viewport: ${isFullscreen ? 'null' : '{ width: 1280, height: 720 }'},
           // Tarayıcı özelliklerini ekleyelim (önce test planından, sonra genel ayarlardan)
           launchOptions: {
             ...${JSON.stringify(this.options.browserOptions || {})},
