@@ -17,7 +17,7 @@ const defaultConfig = {
     allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
   },
   test: {
-    usePlaywrightTestRunner: false,
+    usePlaywrightTestRunner: true,
     workers: 5,
     headless: true,
     retries: 1,
@@ -26,7 +26,7 @@ const defaultConfig = {
   },
   paths: {
     // Screenshots, videos ve traces desteği kaldırıldı
-    reportsDir: path.join(__dirname, 'reports')
+    reportsDir: path.join(__dirname, 'data/reports')
     // testPlansDir kaldırıldı - farklı bir mimariye geçiş için
   },
   performance: {

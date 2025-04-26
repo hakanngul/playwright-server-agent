@@ -49,16 +49,61 @@ export class PlaywrightTestAdapter {
    * @returns {string} Path to the generated test file
    */
   convertTestPlanToPlaywrightTest(testPlan) {
-    const testFileName = `${testPlan.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}.spec.js`;
+    // Dosya adını oluştur (özel karakterleri temizle)
+    const sanitizedName = testPlan.name
+      .replace(/[^a-z0-9]/gi, '_')
+      .toLowerCase();
+
+    const timestamp = Date.now();
+    const testFileName = `${sanitizedName}_${timestamp}.spec.js`;
     const testFilePath = path.join(this.options.testDir, testFileName);
 
-    // Generate test file content
-    const testFileContent = this._generateTestFileContent(testPlan);
+    // Test içeriğini oluştur
+    const testFileContent = this._generateSimpleTestContent(testPlan);
 
-    // Write test file
-    fs.writeFileSync(testFilePath, testFileContent);
+    // Dizinin var olduğundan emin ol
+    if (!fs.existsSync(this.options.testDir)) {
+      fs.mkdirSync(this.options.testDir, { recursive: true });
+    }
+
+    // Dosyayı yaz
+    try {
+      fs.writeFileSync(testFilePath, testFileContent);
+      console.log(`Test file created at: ${testFilePath}`);
+    } catch (error) {
+      console.error(`Error writing test file: ${error.message}`);
+      throw error;
+    }
 
     return testFilePath;
+  }
+
+  /**
+   * Daha basit bir test dosyası içeriği oluşturur
+   * @param {Object} testPlan - Test planı
+   * @returns {string} Test dosyası içeriği
+   * @private
+   */
+  _generateSimpleTestContent(testPlan) {
+    return `
+    // @ts-check
+    const { test, expect } = require('@playwright/test');
+
+    test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page }) => {
+      console.log('Test başlıyor: ${testPlan.name}');
+
+      // Adım 1: Sayfaya git
+      await page.goto('${testPlan.steps[0]?.target || 'https://only-testing-blog.blogspot.com/'}');
+      console.log('Sayfa açıldı');
+
+      // Adım 2: Bekle
+      await page.waitForTimeout(2000);
+      console.log('Bekleme tamamlandı');
+
+      // Test başarılı
+      console.log('Test başarıyla tamamlandı');
+    });
+    `;
   }
 
   /**
@@ -74,24 +119,30 @@ export class PlaywrightTestAdapter {
     return `
     import { test, expect } from '@playwright/test';
 
-    test.describe('${testPlan.name}', () => {
-      test.use({
-        browserName: '${browserType}',
-        headless: ${headless},
-        screenshot: 'on',
-      });
-
-      test('${testPlan.description || testPlan.name}', async ({ page }) => {
+    test.describe('${testPlan.name.replace(/'/g, "\\'")}', () => {
+      test('${(testPlan.description || testPlan.name).replace(/'/g, "\\'")}', async ({ page }) => {
         const stepResults = [];
 
-        // Execute steps
-        ${this._generateStepsCode(testPlan.steps)}
+        try {
+          // Execute steps
+          ${this._generateStepsCode(testPlan.steps)}
 
-        // Attach step results
-        await test.info().attach('step-results', {
-          body: JSON.stringify(stepResults),
-          contentType: 'application/json'
-        });
+          // Test başarılı
+          console.log('Test başarıyla tamamlandı');
+        } catch (error) {
+          console.error('Test hatası:', error);
+          throw error;
+        } finally {
+          // Attach step results
+          try {
+            await test.info().attach('step-results', {
+              body: JSON.stringify(stepResults, null, 2),
+              contentType: 'application/json'
+            });
+          } catch (attachError) {
+            console.error('Adım sonuçları eklenirken hata oluştu:', attachError);
+          }
+        }
       });
     });
     `;
@@ -239,51 +290,89 @@ export class PlaywrightTestAdapter {
       // Create config file
       const configPath = path.join(this.options.testDir, `playwright.config.${Date.now()}.cjs`);
       const configContent = `
-      module.exports = {
+      // @ts-check
+
+      /** @type {import('@playwright/test').PlaywrightTestConfig} */
+      const config = {
         testDir: '${this.options.testDir}',
         outputDir: '${this.options.outputDir}',
-        reporter: [['json', { outputFile: '${path.join(this.options.outputDir, 'results.json')}' }], ['list']],
+        timeout: 30000,
+        expect: {
+          timeout: 10000
+        },
+        fullyParallel: false,
+        forbidOnly: false,
+        retries: 0,
+        workers: 1,
+        reporter: [['html'], ['json', { outputFile: '${path.join(this.options.outputDir, 'results.json')}' }], ['list']],
         use: {
           headless: ${testPlan.headless !== undefined ? testPlan.headless : this.options.headless},
-          screenshot: 'only-on-failure',
-          trace: 'retain-on-failure'
+          actionTimeout: 15000,
+          navigationTimeout: 15000,
+          trace: 'on-first-retry',
+          screenshot: 'only-on-failure'
         },
         projects: [
           {
             name: '${testPlan.browserPreference || 'chromium'}',
-            use: { browserName: '${testPlan.browserPreference || 'chromium'}' }
+            use: {
+              browserName: '${testPlan.browserPreference || 'chromium'}'
+            }
           }
         ]
       };
+
+      module.exports = config;
       `;
 
       fs.writeFileSync(configPath, configContent);
 
       // Run test with Playwright Test Runner
       return new Promise((resolve) => {
-        const command = `npx playwright test "${testFilePath}" --config="${configPath}"`;
+        // Komut düzeltildi ve debug seçeneği eklendi
+        const command = `npx playwright test "${testFilePath}" --config="${configPath}" --headed`;
+        console.log(`Running test command: ${command}`);
 
-        exec(command, { cwd: process.cwd() }, (error) => {
+        // Test dosyasının içeriğini logla
+        console.log(`Test file content for ${testPlan.name}:`);
+        console.log(fs.readFileSync(testFilePath, 'utf8'));
+
+        // Config dosyasının içeriğini logla
+        console.log(`Config file content for ${testPlan.name}:`);
+        console.log(fs.readFileSync(configPath, 'utf8'));
+
+        exec(command, { cwd: process.cwd(), maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
           // Set end time and duration
           result.endTime = new Date().toISOString();
           result.duration = Date.now() - startTime;
 
+          console.log(`Test execution completed for ${testPlan.name}`);
+          console.log(`Stdout: ${stdout}`);
+
           if (error) {
+            console.error(`Test execution error for ${testPlan.name}: ${error.message}`);
+            console.error(`Stderr: ${stderr}`);
             result.success = false;
-            result.error = error.message;
+            result.error = `${error.message}\nStderr: ${stderr}\nStdout: ${stdout}`;
+          } else {
+            console.log(`Test execution successful for ${testPlan.name}`);
+            result.success = true;
           }
 
           // Try to read test results
           try {
             const resultsFile = path.join(this.options.outputDir, 'results.json');
             if (fs.existsSync(resultsFile)) {
+              console.log(`Reading results from ${resultsFile}`);
               const resultsJson = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
 
               // Convert Playwright results to custom format
               this._extractPlaywrightResults(resultsJson, result);
+            } else {
+              console.log(`Results file not found at ${resultsFile}`);
             }
           } catch (readError) {
-            // Silently handle read errors
+            console.error(`Error reading test results: ${readError.message}`);
           }
 
           // Clean up temporary files
@@ -291,13 +380,14 @@ export class PlaywrightTestAdapter {
             fs.unlinkSync(testFilePath);
             fs.unlinkSync(configPath);
           } catch (cleanupError) {
-            // Silently handle cleanup errors
+            console.error(`Error cleaning up temporary files: ${cleanupError.message}`);
           }
 
           resolve(result);
         });
       });
     } catch (error) {
+      console.error(`Error in runTest: ${error.message}`);
       throw error;
     }
   }

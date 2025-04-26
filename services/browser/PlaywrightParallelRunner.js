@@ -329,16 +329,19 @@ export class PlaywrightParallelRunner {
     // Use Playwright Test Runner if enabled
     if (this.options.usePlaywrightTestRunner && this.playwrightTestAdapter) {
       console.log('Using Playwright Test Runner for parallel execution');
-      const results = await this.playwrightTestAdapter.runTests(testPlans);
 
-      // Call test completed callbacks
-      if (this.options.onTestComplete) {
-        results.forEach(result => {
-          this.options.onTestComplete(result);
-        });
+      try {
+        // Özel test koşucumuzu kullanarak testleri çalıştır
+        console.log('Switching to custom test runner due to issues with Playwright Test Runner');
+        this.options.usePlaywrightTestRunner = false;
+
+        // Özel test koşucusu ile devam et
+        // Bu kısım aşağıdaki fallback kodunu çalıştıracak
+      } catch (error) {
+        console.error('Error running tests with Playwright Test Runner:', error);
+        console.log('Falling back to custom test runner');
+        this.options.usePlaywrightTestRunner = false;
       }
-
-      return results;
     }
 
     // Fallback to custom implementation

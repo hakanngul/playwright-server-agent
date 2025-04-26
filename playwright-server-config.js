@@ -45,7 +45,7 @@ export default {
     tracesDir: path.join(__dirname, 'traces'),
 
     // Directory for reports
-    reportsDir: path.join(__dirname, 'reports')
+    reportsDir: path.join(__dirname, 'data/reports')
 
     // testPlansDir kaldırıldı - farklı bir mimariye geçiş için
   },

@@ -202,6 +202,48 @@ export class AgentManager extends EventEmitter {
   }
 
   /**
+   * Set the maximum number of agents
+   * @param {number} limit - Maximum number of agents
+   */
+  setAgentLimit(limit) {
+    if (typeof limit !== 'number' || limit < 1) {
+      throw new Error('Agent limit must be a positive number');
+    }
+
+    const oldLimit = this.dynamicAgentOptions.currentLimit;
+    this.dynamicAgentOptions.currentLimit = Math.min(limit, this.dynamicAgentOptions.maxAgents);
+
+    console.log(`Agent limit changed from ${oldLimit} to ${this.dynamicAgentOptions.currentLimit}`);
+
+    // If the new limit is lower, optimize agent count
+    if (this.dynamicAgentOptions.currentLimit < oldLimit) {
+      this._optimizeAgentCount();
+    }
+  }
+
+  /**
+   * Process the queue immediately
+   * This can be called to start processing without waiting for the next interval
+   */
+  processQueue() {
+    console.log('Manually triggering queue processing');
+    // Process multiple requests at once based on available agents
+    const availableSlots = this.dynamicAgentOptions.currentLimit - this.busyAgents.size;
+
+    if (availableSlots <= 0) {
+      console.log('No available slots for processing requests');
+      return;
+    }
+
+    console.log(`Processing up to ${availableSlots} requests from queue`);
+
+    // Process multiple requests
+    for (let i = 0; i < availableSlots; i++) {
+      this._processNextRequest();
+    }
+  }
+
+  /**
    * Create a new agent
    * @param {Object} options - Agent options
    * @returns {string} Agent ID

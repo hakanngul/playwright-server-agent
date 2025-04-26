@@ -211,4 +211,55 @@ router.get('/completed-requests', (req, res) => {
   }
 });
 
+// Submit multiple test requests in parallel
+router.post('/run-parallel', async (req, res) => {
+  try {
+    const { testPlans } = req.body;
+
+    if (!testPlans || !Array.isArray(testPlans) || testPlans.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid test plans format. Request must include an array of test plans.'
+      });
+    }
+
+    console.log(`\n--- Received parallel test run request with ${testPlans.length} test plans ---`);
+
+    // Set maximum number of agents to use
+    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : 5;
+    console.log(`Using maximum ${maxAgents} agents for parallel execution`);
+
+    // Submit all test plans to the agent manager
+    const requestIds = [];
+    for (const testPlan of testPlans) {
+      if (!testPlan || !testPlan.steps || !Array.isArray(testPlan.steps)) {
+        console.warn(`Skipping invalid test plan: ${testPlan?.name || 'unnamed'}`);
+        continue;
+      }
+
+      // Submit the request to the agent manager
+      const requestId = agentManager.submitRequest(testPlan);
+      requestIds.push({ id: requestId, name: testPlan.name });
+      console.log(`Test plan "${testPlan.name}" submitted with ID: ${requestId}`);
+    }
+
+    // Set agent limit temporarily for this batch
+    agentManager.setAgentLimit(maxAgents);
+
+    // Start processing immediately
+    agentManager.processQueue();
+
+    res.json({
+      success: true,
+      message: `${requestIds.length} test requests submitted for parallel execution`,
+      requestIds: requestIds
+    });
+  } catch (error) {
+    console.error('Error submitting parallel test requests:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 export default router;
