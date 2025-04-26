@@ -18,7 +18,7 @@ const defaultConfig = {
   },
   test: {
     usePlaywrightTestRunner: false,
-    workers: 4,
+    workers: 5,
     headless: true,
     retries: 1,
     timeout: 30000,
