@@ -3,14 +3,9 @@
  * Adapts JSON test plans to Playwright Test Runner
  */
 
-import { test as baseTest } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Adapts JSON test plans to Playwright Test Runner
@@ -32,8 +27,6 @@ export class PlaywrightTestAdapter {
 
     // Ensure directories exist
     this._ensureDirectoriesExist();
-
-    console.log(`PlaywrightTestAdapter created with testDir: ${this.options.testDir}, outputDir: ${this.options.outputDir}`);
   }
 
   /**
@@ -41,19 +34,12 @@ export class PlaywrightTestAdapter {
    * @private
    */
   _ensureDirectoriesExist() {
-    // Create test directory if it doesn't exist
-    if (!fs.existsSync(this.options.testDir)) {
-      fs.mkdirSync(this.options.testDir, { recursive: true });
-    }
+    const dirs = [this.options.testDir, this.options.outputDir, this.options.screenshotsDir];
 
-    // Create output directory if it doesn't exist
-    if (!fs.existsSync(this.options.outputDir)) {
-      fs.mkdirSync(this.options.outputDir, { recursive: true });
-    }
-
-    // Create screenshots directory if it doesn't exist
-    if (!fs.existsSync(this.options.screenshotsDir)) {
-      fs.mkdirSync(this.options.screenshotsDir, { recursive: true });
+    for (const dir of dirs) {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
     }
   }
 
@@ -88,7 +74,6 @@ export class PlaywrightTestAdapter {
     return `
     import { test, expect } from '@playwright/test';
 
-    // Test metadata
     test.describe('${testPlan.name}', () => {
       test.use({
         browserName: '${browserType}',
@@ -97,32 +82,14 @@ export class PlaywrightTestAdapter {
       });
 
       test('${testPlan.description || testPlan.name}', async ({ page }) => {
-        // Performance metrics
-        const performanceData = {
-          steps: [],
-          webVitals: null,
-          networkMetrics: null
-        };
+        const stepResults = [];
 
         // Execute steps
         ${this._generateStepsCode(testPlan.steps)}
 
-        // Collect Web Vitals
-        performanceData.webVitals = await page.evaluate(() => {
-          if (!window.performance || !window.performance.timing) return null;
-
-          const timing = window.performance.timing;
-          return {
-            ttfb: timing.responseStart - timing.requestStart,
-            fcp: window.performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
-            lcp: window.performance.getEntriesByType('largest-contentful-paint')[0]?.startTime,
-            cls: window.performance.getEntriesByType('layout-shift').reduce((sum, entry) => sum + entry.value, 0)
-          };
-        });
-
-        // Attach performance data
-        await test.info().attach('performance-metrics', {
-          body: JSON.stringify(performanceData),
+        // Attach step results
+        await test.info().attach('step-results', {
+          body: JSON.stringify(stepResults),
           contentType: 'application/json'
         });
       });
@@ -145,18 +112,17 @@ export class PlaywrightTestAdapter {
           const stepStartTime = Date.now();
           try {
             ${stepCode}
-            performanceData.steps.push({
+            stepResults.push({
               step: ${index + 1},
               action: '${step.action}',
               target: '${step.target || ''}',
               value: '${step.value || ''}',
               description: '${step.description || ''}',
               duration: Date.now() - stepStartTime,
-              success: true,
-              error: null
+              success: true
             });
           } catch (error) {
-            performanceData.steps.push({
+            stepResults.push({
               step: ${index + 1},
               action: '${step.action}',
               target: '${step.target || ''}',
@@ -265,11 +231,7 @@ export class PlaywrightTestAdapter {
         duration: 0,
         steps: [],
         success: false,
-        error: null,
-        performance: {
-          webVitals: null,
-          networkMetrics: null
-        }
+        error: null
       };
 
       const startTime = Date.now();
@@ -298,19 +260,15 @@ export class PlaywrightTestAdapter {
       fs.writeFileSync(configPath, configContent);
 
       // Run test with Playwright Test Runner
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const command = `npx playwright test "${testFilePath}" --config="${configPath}"`;
-        console.log(`Running command: ${command}`);
 
-        exec(command, { cwd: process.cwd() }, (error, stdout, stderr) => {
+        exec(command, { cwd: process.cwd() }, (error) => {
           // Set end time and duration
           result.endTime = new Date().toISOString();
           result.duration = Date.now() - startTime;
 
-          console.log(`Test execution completed in ${result.duration}ms`);
-
           if (error) {
-            console.error(`Test execution error: ${error.message}`);
             result.success = false;
             result.error = error.message;
           }
@@ -325,7 +283,7 @@ export class PlaywrightTestAdapter {
               this._extractPlaywrightResults(resultsJson, result);
             }
           } catch (readError) {
-            console.error(`Error reading test results: ${readError.message}`);
+            // Silently handle read errors
           }
 
           // Clean up temporary files
@@ -333,14 +291,13 @@ export class PlaywrightTestAdapter {
             fs.unlinkSync(testFilePath);
             fs.unlinkSync(configPath);
           } catch (cleanupError) {
-            console.error(`Error cleaning up temporary files: ${cleanupError.message}`);
+            // Silently handle cleanup errors
           }
 
           resolve(result);
         });
       });
     } catch (error) {
-      console.error(`Error running test with Playwright Test Runner: ${error.message}`);
       throw error;
     }
   }
@@ -352,32 +309,26 @@ export class PlaywrightTestAdapter {
    * @private
    */
   _extractPlaywrightResults(playwrightResults, result) {
-    if (playwrightResults && playwrightResults.suites && playwrightResults.suites.length > 0) {
-      const suite = playwrightResults.suites[0];
-      if (suite.specs && suite.specs.length > 0) {
-        const spec = suite.specs[0];
+    if (playwrightResults?.suites?.[0]?.specs?.[0]) {
+      const spec = playwrightResults.suites[0].specs[0];
 
-        result.success = spec.ok;
-        if (!spec.ok && spec.error) {
-          result.error = spec.error.message;
-        }
+      result.success = spec.ok;
+      if (!spec.ok && spec.error) {
+        result.error = spec.error.message;
+      }
 
-        if (spec.tests && spec.tests.length > 0) {
-          const test = spec.tests[0];
-          result.duration = test.duration;
+      if (spec.tests?.[0]) {
+        const test = spec.tests[0];
+        result.duration = test.duration;
 
-          // Extract step results and performance metrics
-          if (test.attachments) {
-            const perfAttachment = test.attachments.find(a => a.name === 'performance-metrics');
-            if (perfAttachment && perfAttachment.body) {
-              try {
-                const perfData = JSON.parse(perfAttachment.body);
-                result.steps = perfData.steps || [];
-                result.performance.webVitals = perfData.webVitals;
-                result.performance.networkMetrics = perfData.networkMetrics;
-              } catch (e) {
-                console.error('Error parsing performance metrics:', e);
-              }
+        // Extract step results
+        if (test.attachments) {
+          const stepsAttachment = test.attachments.find(a => a.name === 'step-results');
+          if (stepsAttachment?.body) {
+            try {
+              result.steps = JSON.parse(stepsAttachment.body);
+            } catch (e) {
+              // Silently handle parsing errors
             }
           }
         }
@@ -391,8 +342,6 @@ export class PlaywrightTestAdapter {
    * @returns {Promise<Array<Object>>} Test results
    */
   async runTests(testPlans) {
-    console.log(`Running ${testPlans.length} tests with Playwright Test Runner`);
-
     // Run tests in parallel
     const testPromises = testPlans.map(testPlan => this.runTest(testPlan));
     return await Promise.all(testPromises);
