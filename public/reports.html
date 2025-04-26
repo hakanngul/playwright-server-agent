@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Raporları - Playwright Server Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .badge-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        .badge-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .priority-high {
+            background-color: #dc3545;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .priority-low {
+            background-color: #28a745;
+        }
+        .test-result-success {
+            border-left: 5px solid #28a745;
+        }
+        .test-result-failed {
+            border-left: 5px solid #dc3545;
+        }
+        .test-result-pending {
+            border-left: 5px solid #ffc107;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .step-details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .step-success {
+            border-left: 3px solid #28a745;
+        }
+        .step-failed {
+            border-left: 3px solid #dc3545;
+        }
+        .performance-metric {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .test-category {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 75%;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+            margin-right: 5px;
+        }
+        .category-functional {
+            background-color: #007bff;
+            color: white;
+        }
+        .category-regression {
+            background-color: #6f42c1;
+            color: white;
+        }
+        .category-performance {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .category-critical {
+            background-color: #dc3545;
+            color: white;
+        }
+        .category-default {
+            background-color: #6c757d;
+            color: white;
+        }
+        .last-updated {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .nav-link {
+            font-weight: 500;
+        }
+        .table th {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">Playwright Server Agent</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/reports.html">Test Raporları</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <h1 class="mt-4 mb-4">Test Raporları</h1>
+        <div id="last-updated" class="last-updated mb-3"></div>
+
+        <!-- Test Sonuçları Özeti -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Test Sonuçları Özeti</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="test-results-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Kategori Dağılımı</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="category-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Süresi ve Performans -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Test Süresi Dağılımı</div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="duration-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Performans Metrikleri</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 text-center mb-3">
+                                <div class="performance-metric" id="avg-duration">-</div>
+                                <div class="metric-label">Ortalama Test Süresi</div>
+                            </div>
+                            <div class="col-md-6 text-center mb-3">
+                                <div class="performance-metric" id="success-rate">-</div>
+                                <div class="metric-label">Başarı Oranı</div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <div class="performance-metric" id="total-tests">-</div>
+                                <div class="metric-label">Toplam Test</div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <div class="performance-metric" id="avg-steps">-</div>
+                                <div class="metric-label">Ortalama Adım Sayısı</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Son Tamamlanan Testler -->
+        <div class="card">
+            <div class="card-header">Son Tamamlanan Testler</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Test Adı</th>
+                                <th>Kategori</th>
+                                <th>Tarayıcı</th>
+                                <th>Durum</th>
+                                <th>Süre</th>
+                                <th>Tamamlanma Zamanı</th>
+                                <th>Detaylar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="completed-tests-table">
+                            <!-- Tamamlanan testler burada listelenecek -->
+                            <tr>
+                                <td colspan="7" class="text-center">Henüz tamamlanan test yok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Detayları Modal -->
+        <div class="modal fade" id="testDetailsModal" tabindex="-1" aria-labelledby="testDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="testDetailsModalLabel">Test Detayları</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="testDetailsContent">
+                        <!-- Test detayları burada gösterilecek -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button id="refresh-btn" class="btn btn-primary refresh-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+        </svg>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Test sonuçlarını saklayacak dizi
+        let completedTests = [];
+        
+        // Socket.io bağlantısı
+        const socket = io();
+        
+        // Socket.io olayları
+        socket.on('connect', () => {
+            console.log('Socket.io bağlantısı kuruldu');
+            updateLastUpdated();
+        });
+        
+        socket.on('welcome', (data) => {
+            console.log('Server mesajı:', data.message);
+        });
+        
+        socket.on('request:completed', (data) => {
+            console.log('Test tamamlandı:', data);
+            // Tamamlanan testi listeye ekle
+            completedTests.unshift(data);
+            // Maksimum 100 test sakla
+            if (completedTests.length > 100) {
+                completedTests.pop();
+            }
+            // Tabloyu ve grafikleri güncelle
+            updateCompletedTestsTable();
+            updateCharts();
+            updatePerformanceMetrics();
+            updateLastUpdated();
+        });
+        
+        socket.on('request:failed', (data) => {
+            console.log('Test başarısız:', data);
+            // Başarısız testi listeye ekle
+            completedTests.unshift(data);
+            // Maksimum 100 test sakla
+            if (completedTests.length > 100) {
+                completedTests.pop();
+            }
+            // Tabloyu ve grafikleri güncelle
+            updateCompletedTestsTable();
+            updateCharts();
+            updatePerformanceMetrics();
+            updateLastUpdated();
+        });
+        
+        // Tarih formatı fonksiyonu
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+        
+        // Süre formatı fonksiyonu
+        function formatDuration(ms) {
+            if (!ms) return '0s';
+            
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+        
+        // Test süresini hesaplama fonksiyonu
+        function calculateTestDuration(test) {
+            if (!test.completedAt || !test.startedAt) return 0;
+            
+            const startTime = new Date(test.startedAt).getTime();
+            const endTime = new Date(test.completedAt).getTime();
+            return endTime - startTime;
+        }
+        
+        // Kategori rengini belirleme fonksiyonu
+        function getCategoryClass(category) {
+            switch (category) {
+                case 'functional': return 'category-functional';
+                case 'regression': return 'category-regression';
+                case 'performance': return 'category-performance';
+                case 'critical': return 'category-critical';
+                default: return 'category-default';
+            }
+        }
+        
+        // Tamamlanan testler tablosunu güncelleme
+        function updateCompletedTestsTable() {
+            const tableBody = document.getElementById('completed-tests-table');
+            tableBody.innerHTML = '';
+            
+            if (completedTests.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="7" class="text-center">Henüz tamamlanan test yok</td>';
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            completedTests.forEach((test, index) => {
+                const row = document.createElement('tr');
+                const isSuccess = test.status === 'completed';
+                const testDuration = calculateTestDuration(test);
+                const category = test.testPlan.category || 'default';
+                
+                row.innerHTML = `
+                    <td>${test.testPlan.name}</td>
+                    <td><span class="test-category ${getCategoryClass(category)}">${category}</span></td>
+                    <td>${test.testPlan.browserPreference || 'chromium'}</td>
+                    <td><span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span></td>
+                    <td>${formatDuration(testDuration)}</td>
+                    <td>${formatDate(test.completedAt)}</td>
+                    <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${index})">Detaylar</button></td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Test detaylarını gösterme
+        function showTestDetails(index) {
+            const test = completedTests[index];
+            const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
+            const modalContent = document.getElementById('testDetailsContent');
+            
+            const isSuccess = test.status === 'completed';
+            const testDuration = calculateTestDuration(test);
+            const category = test.testPlan.category || 'default';
+            
+            let stepsHtml = '';
+            if (test.result && test.result.steps) {
+                test.result.steps.forEach((step, stepIndex) => {
+                    const stepSuccess = step.success !== false;
+                    stepsHtml += `
+                        <div class="step-details ${stepSuccess ? 'step-success' : 'step-failed'} mb-2">
+                            <div><strong>Adım ${stepIndex + 1}:</strong> ${step.description || step.action}</div>
+                            <div><strong>Eylem:</strong> ${step.action}</div>
+                            <div><strong>Hedef:</strong> ${step.target}</div>
+                            <div><strong>Değer:</strong> ${step.value || '-'}</div>
+                            <div><strong>Durum:</strong> <span class="badge ${stepSuccess ? 'badge-success' : 'badge-danger'}">${stepSuccess ? 'Başarılı' : 'Başarısız'}</span></div>
+                            ${step.error ? `<div><strong>Hata:</strong> ${step.error}</div>` : ''}
+                            ${step.screenshot ? `<div class="mt-2"><img src="${step.screenshot}" class="img-fluid" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                        </div>
+                    `;
+                });
+            } else if (test.error) {
+                stepsHtml = `
+                    <div class="alert alert-danger">
+                        <strong>Hata:</strong> ${test.error.message}
+                        ${test.error.stack ? `<pre>${test.error.stack}</pre>` : ''}
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = `
+                <div class="card ${isSuccess ? 'test-result-success' : 'test-result-failed'} mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">${test.testPlan.name}</h5>
+                        <div class="mb-3">
+                            <span class="test-category ${getCategoryClass(category)}">${category}</span>
+                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Tarayıcı:</strong> ${test.testPlan.browserPreference || 'chromium'}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Süre:</strong> ${formatDuration(testDuration)}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Başlangıç:</strong> ${formatDate(test.startedAt)}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Bitiş:</strong> ${formatDate(test.completedAt)}
+                            </div>
+                        </div>
+                        <h6>Test Adımları:</h6>
+                        ${stepsHtml}
+                    </div>
+                </div>
+            `;
+            
+            modal.show();
+        }
+        
+        // Grafikleri güncelleme
+        function updateCharts() {
+            updateTestResultsChart();
+            updateCategoryChart();
+            updateDurationChart();
+        }
+        
+        // Test sonuçları grafiğini güncelleme
+        function updateTestResultsChart() {
+            const ctx = document.getElementById('test-results-chart').getContext('2d');
+            
+            // Başarılı ve başarısız test sayılarını hesapla
+            const successCount = completedTests.filter(test => test.status === 'completed').length;
+            const failedCount = completedTests.filter(test => test.status === 'failed').length;
+            
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.testResultsChart) {
+                window.testResultsChart.data.datasets[0].data = [successCount, failedCount];
+                window.testResultsChart.update();
+            } else {
+                window.testResultsChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Başarılı', 'Başarısız'],
+                        datasets: [{
+                            data: [successCount, failedCount],
+                            backgroundColor: ['#28a745', '#dc3545'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Test Sonuçları'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Kategori grafiğini güncelleme
+        function updateCategoryChart() {
+            const ctx = document.getElementById('category-chart').getContext('2d');
+            
+            // Kategorilere göre test sayılarını hesapla
+            const categories = {};
+            completedTests.forEach(test => {
+                const category = test.testPlan.category || 'default';
+                categories[category] = (categories[category] || 0) + 1;
+            });
+            
+            const categoryLabels = Object.keys(categories);
+            const categoryData = Object.values(categories);
+            const categoryColors = categoryLabels.map(category => {
+                switch (category) {
+                    case 'functional': return '#007bff';
+                    case 'regression': return '#6f42c1';
+                    case 'performance': return '#fd7e14';
+                    case 'critical': return '#dc3545';
+                    default: return '#6c757d';
+                }
+            });
+            
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.categoryChart) {
+                window.categoryChart.data.labels = categoryLabels;
+                window.categoryChart.data.datasets[0].data = categoryData;
+                window.categoryChart.data.datasets[0].backgroundColor = categoryColors;
+                window.categoryChart.update();
+            } else {
+                window.categoryChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            data: categoryData,
+                            backgroundColor: categoryColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Kategori Dağılımı'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Süre grafiğini güncelleme
+        function updateDurationChart() {
+            const ctx = document.getElementById('duration-chart').getContext('2d');
+            
+            // Test sürelerini hesapla
+            const durations = completedTests.map(test => {
+                return {
+                    name: test.testPlan.name,
+                    duration: calculateTestDuration(test),
+                    success: test.status === 'completed'
+                };
+            });
+            
+            // En son 10 testi al
+            const recentTests = durations.slice(0, 10).reverse();
+            
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.durationChart) {
+                window.durationChart.data.labels = recentTests.map(test => test.name);
+                window.durationChart.data.datasets[0].data = recentTests.map(test => test.duration / 1000);
+                window.durationChart.data.datasets[0].backgroundColor = recentTests.map(test => test.success ? '#28a745' : '#dc3545');
+                window.durationChart.update();
+            } else {
+                window.durationChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: recentTests.map(test => test.name),
+                        datasets: [{
+                            label: 'Test Süresi (saniye)',
+                            data: recentTests.map(test => test.duration / 1000),
+                            backgroundColor: recentTests.map(test => test.success ? '#28a745' : '#dc3545'),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Süre (saniye)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Test Adı'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Son 10 Test Süresi'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Performans metriklerini güncelleme
+        function updatePerformanceMetrics() {
+            // Toplam test sayısı
+            document.getElementById('total-tests').textContent = completedTests.length;
+            
+            // Başarı oranı
+            const successCount = completedTests.filter(test => test.status === 'completed').length;
+            const successRate = completedTests.length > 0 ? (successCount / completedTests.length * 100).toFixed(1) + '%' : '-';
+            document.getElementById('success-rate').textContent = successRate;
+            
+            // Ortalama test süresi
+            const durations = completedTests.map(test => calculateTestDuration(test));
+            const avgDuration = durations.length > 0 ? formatDuration(durations.reduce((a, b) => a + b, 0) / durations.length) : '-';
+            document.getElementById('avg-duration').textContent = avgDuration;
+            
+            // Ortalama adım sayısı
+            let totalSteps = 0;
+            let testsWithSteps = 0;
+            completedTests.forEach(test => {
+                if (test.result && test.result.steps) {
+                    totalSteps += test.result.steps.length;
+                    testsWithSteps++;
+                }
+            });
+            const avgSteps = testsWithSteps > 0 ? (totalSteps / testsWithSteps).toFixed(1) : '-';
+            document.getElementById('avg-steps').textContent = avgSteps;
+        }
+        
+        // Son güncelleme zamanını güncelleme
+        function updateLastUpdated() {
+            document.getElementById('last-updated').textContent = `Son Güncelleme: ${formatDate(new Date())}`;
+        }
+        
+        // Sayfa yüklendiğinde verileri al
+        async function fetchInitialData() {
+            try {
+                // Tamamlanan testleri al
+                const completedResponse = await fetch('/api/agent/completed-requests');
+                const completedData = await completedResponse.json();
+                
+                if (completedData.success) {
+                    completedTests = completedData.requests;
+                    updateCompletedTestsTable();
+                    updateCharts();
+                    updatePerformanceMetrics();
+                    updateLastUpdated();
+                }
+            } catch (error) {
+                console.error('Veri alınırken hata oluştu:', error);
+            }
+        }
+        
+        // Sayfa yüklendiğinde çalıştır
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchInitialData();
+            
+            // Yenile butonu
+            document.getElementById('refresh-btn').addEventListener('click', fetchInitialData);
+        });
+        
+        // showTestDetails fonksiyonunu global olarak tanımla
+        window.showTestDetails = showTestDetails;
+    </script>
+</body>
+</html>

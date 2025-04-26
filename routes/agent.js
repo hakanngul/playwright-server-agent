@@ -191,4 +191,24 @@ router.get('/active-agents', (req, res) => {
   }
 });
 
+// Get completed requests
+router.get('/completed-requests', (req, res) => {
+  try {
+    // Tamamlanan ve başarısız olan istekleri al
+    const completedRequests = agentManager.queueSystem.getCompletedRequests();
+
+    res.json({
+      success: true,
+      count: completedRequests.length,
+      requests: completedRequests
+    });
+  } catch (error) {
+    console.error('Error getting completed requests:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 export default router;

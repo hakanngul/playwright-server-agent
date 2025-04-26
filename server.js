@@ -1,6 +1,6 @@
 import express from 'express';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -80,37 +80,33 @@ const PORT = process.env.PORT || 3002;
 // Create HTTP server
 const server = http.createServer(app);
 
-// Create WebSocket server
-const wss = new WebSocketServer({ server });
+// Create Socket.io server
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    methods: ['GET', 'POST']
+  }
+});
 
-// Array to store WebSocket connections
-const clients = [];
+// Make io available globally for other modules
+global.io = io;
 
-// WebSocket connection handler
-wss.on('connection', (ws) => {
-  console.log('WebSocket connection established');
-
-  // Add new connection to clients array
-  clients.push(ws);
+// Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('Socket.io connection established', socket.id);
 
   // Connection closed handler
-  ws.on('close', () => {
-    console.log('WebSocket connection closed');
-    // Remove connection from clients array
-    const index = clients.indexOf(ws);
-    if (index !== -1) {
-      clients.splice(index, 1);
-    }
+  socket.on('disconnect', () => {
+    console.log('Socket.io connection closed', socket.id);
   });
+
+  // Send initial data to the client
+  socket.emit('welcome', { message: 'Connected to Playwright Server Agent' });
 });
 
 // Function to broadcast message to all clients
 function broadcastMessage(message) {
-  clients.forEach(client => {
-    if (client.readyState === 1) { // 1 = OPEN in WebSocket
-      client.send(JSON.stringify(message));
-    }
-  });
+  io.emit('message', message);
 }
 
 // Middleware
@@ -237,9 +233,8 @@ app.post('/api/test/run-parallel', async (req, res) => {
     parallelTestManager.setTestCompletedCallback((result) => {
       console.log(`Test completed: ${result.name}, success: ${result.success}`);
 
-      // Send test completion message via WebSocket
-      broadcastMessage({
-        type: 'test_completed',
+      // Send test completion message via Socket.io
+      io.emit('test_completed', {
         testName: result.name,
         result: result
       });
@@ -293,9 +288,8 @@ app.post('/api/test/run', async (req, res) => {
     testAgent.setStepCompletedCallback((result) => {
       console.log(`Step ${result.step} completed: ${result.success ? 'Success' : 'Failed'}`);
 
-      // Send step completion message via WebSocket
-      broadcastMessage({
-        type: 'step_completed',
+      // Send step completion message via Socket.io
+      io.emit('step_completed', {
         stepIndex: result.step - 1,
         step: {
           action: result.action,

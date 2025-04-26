@@ -16,7 +16,7 @@ export class AgentManager extends EventEmitter {
     // Initialize options with defaults
     this.options = {
       maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1), // Default to CPU count - 1
-      agentIdleTimeout: options.agentIdleTimeout || 5 * 60 * 1000, // 5 minutes
+      agentIdleTimeout: options.agentIdleTimeout || 30 * 1000, // 30 seconds (was 5 minutes)
       browserTypes: options.browserTypes || ['chromium', 'firefox'],
       headless: options.headless !== undefined ? options.headless : true,
       ...options
@@ -46,7 +46,8 @@ export class AgentManager extends EventEmitter {
       enabled: options.dynamicAgentScaling !== false,
       minAgents: options.minAgents || 1,
       maxAgents: options.maxAgents || Math.max(1, os.cpus().length - 1),
-      currentLimit: options.maxAgents || Math.max(1, os.cpus().length - 1)
+      // Başlangıçta daha düşük bir limit ile başla (2 veya CPU sayısının yarısı)
+      currentLimit: options.initialAgents || Math.min(2, Math.max(1, Math.floor(os.cpus().length / 2)))
     };
 
     // Setup event listeners
@@ -382,24 +383,49 @@ export class AgentManager extends EventEmitter {
     // Queue system events
     this.queueSystem.on('request:queued', (request) => {
       this.emit('request:queued', request);
+      // Socket.io entegrasyonu için global.io kullanılacak
+      if (global.io) {
+        global.io.emit('request:queued', request);
+      }
     });
 
     this.queueSystem.on('request:processing', (request) => {
       this.emit('request:processing', request);
+      if (global.io) {
+        global.io.emit('request:processing', request);
+      }
     });
 
     this.queueSystem.on('request:completed', (request) => {
       this.emit('request:completed', request);
+      if (global.io) {
+        global.io.emit('request:completed', {
+          id: request.id,
+          testPlan: request.testPlan,
+          result: request.result,
+          status: 'completed',
+          completedAt: request.completedAt
+        });
+      }
     });
 
     this.queueSystem.on('request:failed', (request) => {
       this.emit('request:failed', request);
+      if (global.io) {
+        global.io.emit('request:failed', {
+          id: request.id,
+          testPlan: request.testPlan,
+          error: request.error,
+          status: 'failed',
+          completedAt: request.completedAt
+        });
+      }
     });
 
     // Setup periodic check for idle agents
     setInterval(() => {
       this._checkIdleAgents();
-    }, 60000); // Check every minute
+    }, 15000); // Check every 15 seconds
   }
 
   /**
@@ -509,6 +535,7 @@ export class AgentManager extends EventEmitter {
    */
   _checkIdleAgents() {
     const now = Date.now();
+    let terminatedCount = 0;
 
     // Check each available agent
     for (const agentId of this.availableAgents) {
@@ -528,6 +555,22 @@ export class AgentManager extends EventEmitter {
         this._terminateAgent(agentId).catch(err => {
           console.error(`Error terminating agent ${agentId}:`, err);
         });
+
+        terminatedCount++;
+      }
+    }
+
+    // Eğer agent sonlandırıldıysa ve hiç meşgul agent yoksa, agent limitini azalt
+    if (terminatedCount > 0 && this.busyAgents.size === 0) {
+      // Minimum agent limitinden aşağı düşme
+      const newLimit = Math.max(
+        this.dynamicAgentOptions.minAgents,
+        this.dynamicAgentOptions.currentLimit - terminatedCount
+      );
+
+      if (newLimit < this.dynamicAgentOptions.currentLimit) {
+        console.log(`Reducing agent limit from ${this.dynamicAgentOptions.currentLimit} to ${newLimit} due to idle agents`);
+        this.dynamicAgentOptions.currentLimit = newLimit;
       }
     }
   }

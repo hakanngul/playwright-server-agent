@@ -68,7 +68,7 @@
 <body>
     <div class="container">
         <h1 class="mb-4 text-center">Playwright Server Agent Dashboard</h1>
-        
+
         <!-- System Metrics -->
         <div class="row">
             <div class="col-md-6">
@@ -97,7 +97,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">Agent Status</div>
@@ -129,7 +129,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Queue Status -->
         <div class="card">
             <div class="card-header">Queue Status</div>
@@ -150,7 +150,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Active Agents -->
         <div class="card">
             <div class="card-header">Active Agents</div>
@@ -174,7 +174,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Queued Requests -->
         <div class="card">
             <div class="card-header">Queued Requests</div>
@@ -199,7 +199,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Processing Requests -->
         <div class="card">
             <div class="card-header">Processing Requests</div>
@@ -224,7 +224,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Refresh Button -->
     <button id="refresh-btn" class="btn btn-primary refresh-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
@@ -233,7 +233,7 @@
         </svg>
         Refresh
     </button>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Format date function
@@ -242,53 +242,57 @@
             const date = new Date(dateString);
             return date.toLocaleString();
         }
-        
+
         // Format duration function
         function formatDuration(ms) {
             if (!ms) return '0s';
-            
+
             const seconds = Math.floor(ms / 1000);
             if (seconds < 60) return `${seconds}s`;
-            
+
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
             return `${minutes}m ${remainingSeconds}s`;
         }
-        
+
         // Format wait time function
         function formatWaitTime(queuedAt) {
             if (!queuedAt) return 'N/A';
-            
+
             const queuedTime = new Date(queuedAt).getTime();
             const now = Date.now();
             const waitTime = now - queuedTime;
-            
+
             return formatDuration(waitTime);
         }
-        
+
         // Get priority class
         function getPriorityClass(priority) {
             if (priority <= 3) return 'priority-high';
             if (priority <= 7) return 'priority-medium';
             return 'priority-low';
         }
-        
+
         // Update dashboard function
         async function updateDashboard() {
             try {
                 // Fetch system metrics
                 const metricsResponse = await fetch('/api/agent/system-metrics');
                 const metricsData = await metricsResponse.json();
-                
+
                 if (metricsData.success) {
                     const { system, agents, queue } = metricsData.metrics;
-                    
+
                     // Update system metrics
                     document.getElementById('cpu-usage').textContent = `${system.cpu.toFixed(1)}%`;
-                    document.getElementById('memory-usage').textContent = `${system.memory.toFixed(1)}%`;
+
+                    // Process bellek kullanımını göster (daha doğru)
+                    const memoryValue = system.processMemory ? system.processMemory.percentage : system.memory;
+                    document.getElementById('memory-usage').textContent = `${memoryValue.toFixed(1)}%`;
+
                     document.getElementById('cpu-progress').style.width = `${system.cpu}%`;
-                    document.getElementById('memory-progress').style.width = `${system.memory}%`;
-                    
+                    document.getElementById('memory-progress').style.width = `${memoryValue}%`;
+
                     // Update CPU progress bar color
                     const cpuProgress = document.getElementById('cpu-progress');
                     if (system.cpu > 80) {
@@ -298,44 +302,44 @@
                     } else {
                         cpuProgress.className = 'progress-bar bg-success';
                     }
-                    
+
                     // Update memory progress bar color
                     const memoryProgress = document.getElementById('memory-progress');
-                    if (system.memory > 80) {
+                    if (memoryValue > 80) {
                         memoryProgress.className = 'progress-bar bg-danger';
-                    } else if (system.memory > 60) {
+                    } else if (memoryValue > 60) {
                         memoryProgress.className = 'progress-bar bg-warning';
                     } else {
                         memoryProgress.className = 'progress-bar bg-success';
                     }
-                    
+
                     // Update agent metrics
                     document.getElementById('total-agents').textContent = agents.total;
                     document.getElementById('available-agents').textContent = agents.available;
                     document.getElementById('busy-agents').textContent = agents.busy;
                     document.getElementById('agent-limit').textContent = agents.limit;
-                    
+
                     // Update agent progress
                     const agentPercentage = agents.total > 0 ? (agents.total / agents.limit) * 100 : 0;
                     document.getElementById('agent-progress').style.width = `${agentPercentage}%`;
-                    
+
                     // Update queue metrics
                     document.getElementById('queued-requests').textContent = queue.queuedRequests;
                     document.getElementById('processing-requests').textContent = queue.processingRequests;
                     document.getElementById('total-requests').textContent = queue.totalRequests;
-                    
+
                     // Update last updated time
                     document.getElementById('last-updated').textContent = `Updated: ${formatDate(metricsData.timestamp)}`;
                 }
-                
+
                 // Fetch active agents
                 const agentsResponse = await fetch('/api/agent/active-agents');
                 const agentsData = await agentsResponse.json();
-                
+
                 if (agentsData.success) {
                     const agentsTableBody = document.getElementById('agents-table-body');
                     agentsTableBody.innerHTML = '';
-                    
+
                     if (agentsData.agents.length === 0) {
                         const row = document.createElement('tr');
                         row.innerHTML = '<td colspan="6" class="text-center">No active agents</td>';
@@ -355,15 +359,15 @@
                         });
                     }
                 }
-                
+
                 // Fetch queued requests
                 const queuedResponse = await fetch('/api/agent/queued-requests');
                 const queuedData = await queuedResponse.json();
-                
+
                 if (queuedData.success) {
                     const queueTableBody = document.getElementById('queue-table-body');
                     queueTableBody.innerHTML = '';
-                    
+
                     if (queuedData.requests.length === 0) {
                         const row = document.createElement('tr');
                         row.innerHTML = '<td colspan="7" class="text-center">No queued requests</td>';
@@ -384,15 +388,15 @@
                         });
                     }
                 }
-                
+
                 // Fetch processing requests
                 const processingResponse = await fetch('/api/agent/processing-requests');
                 const processingData = await processingResponse.json();
-                
+
                 if (processingData.success) {
                     const processingTableBody = document.getElementById('processing-table-body');
                     processingTableBody.innerHTML = '';
-                    
+
                     if (processingData.requests.length === 0) {
                         const row = document.createElement('tr');
                         row.innerHTML = '<td colspan="6" class="text-center">No processing requests</td>';
@@ -402,7 +406,7 @@
                             const startTime = new Date(request.startedAt).getTime();
                             const now = Date.now();
                             const duration = now - startTime;
-                            
+
                             const row = document.createElement('tr');
                             row.innerHTML = `
                                 <td>${request.id}</td>
@@ -420,13 +424,13 @@
                 console.error('Error updating dashboard:', error);
             }
         }
-        
+
         // Initial update
         updateDashboard();
-        
+
         // Set up auto-refresh
         setInterval(updateDashboard, 5000); // Refresh every 5 seconds
-        
+
         // Manual refresh button
         document.getElementById('refresh-btn').addEventListener('click', updateDashboard);
     </script>

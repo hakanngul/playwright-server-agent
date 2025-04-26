@@ -11,19 +11,30 @@ export class QueueSystem extends EventEmitter {
 
     // Kategori bazlı kuyruklar
     this.queues = {
-      critical: [],    // Kritik testler
-      regression: [],  // Regresyon testleri
+      critical: [],    // Kritik testler - En yüksek öncelik
+      security: [],    // Güvenlik testleri
       functional: [],  // Fonksiyonel testler
+      regression: [],  // Regresyon testleri
       performance: [], // Performans testleri
-      default: []      // Diğer testler
+      accessibility: [], // Erişilebilirlik testleri
+      mobile: [],      // Mobil görünüm testleri
+      api: [],         // API testleri
+      integration: [], // Entegrasyon testleri
+      default: []      // Diğer testler - En düşük öncelik
     };
 
     this.processing = new Map(); // Map of requestId -> request being processed
+
+    // Tamamlanan ve başarısız istekleri saklamak için diziler
+    this.completedRequests = [];
+    this.failedRequests = [];
+
     this.options = {
       maxQueueSize: options.maxQueueSize || 100,
       requestTimeout: options.requestTimeout || 30 * 60 * 1000, // 30 dakika
       queueTimeout: options.queueTimeout || 60 * 60 * 1000, // 1 saat
-      timeoutCheckInterval: options.timeoutCheckInterval || 60 * 1000 // 1 dakika
+      timeoutCheckInterval: options.timeoutCheckInterval || 60 * 1000, // 1 dakika
+      maxCompletedRequests: options.maxCompletedRequests || 100 // Son 100 tamamlanan isteği sakla
     };
 
     // Setup periodic queue check
@@ -85,11 +96,51 @@ export class QueueSystem extends EventEmitter {
    * @private
    */
   _calculatePriority(request) {
-    let basePriority = request.priority || 5; // 1-10 arası (1 en yüksek)
+    // Eğer kullanıcı tarafından öncelik belirtilmişse kullan
+    if (request.priority !== undefined) {
+      return Math.max(1, Math.min(10, request.priority)); // 1-10 arası (1 en yüksek)
+    }
+
+    // Temel öncelik (5 = orta)
+    let basePriority = 5;
+
+    // Test kategorisine göre öncelik ayarlama
+    const category = request.testPlan.category || 'default';
+    switch (category) {
+      case 'critical':
+        basePriority -= 3; // En yüksek öncelik
+        break;
+      case 'security':
+        basePriority -= 2;
+        break;
+      case 'functional':
+        basePriority -= 1;
+        break;
+      case 'regression':
+        basePriority += 1;
+        break;
+      case 'performance':
+        basePriority += 0;
+        break;
+      case 'accessibility':
+        basePriority += 1;
+        break;
+      case 'mobile':
+        basePriority += 1;
+        break;
+      case 'api':
+        basePriority += 0;
+        break;
+      case 'integration':
+        basePriority += 0;
+        break;
+      default:
+        basePriority += 2; // En düşük öncelik
+    }
 
     // Test türüne göre öncelik ayarlama
     if (request.testPlan.type === 'critical') {
-      basePriority -= 2; // Kritik testlere daha yüksek öncelik
+      basePriority -= 1; // Kritik testlere daha yüksek öncelik
     } else if (request.testPlan.type === 'regression') {
       basePriority += 1; // Regresyon testlerine daha düşük öncelik
     }
@@ -97,9 +148,11 @@ export class QueueSystem extends EventEmitter {
     // Kullanıcı rolüne göre öncelik ayarlama
     if (request.user && request.user.role === 'admin') {
       basePriority -= 1; // Admin kullanıcılara daha yüksek öncelik
+    } else if (request.user && request.user.role === 'tester') {
+      basePriority -= 0.5; // Test ekibine orta öncelik
     }
 
-    return Math.max(1, Math.min(10, basePriority)); // 1-10 arasında sınırla
+    return Math.max(1, Math.min(10, basePriority)); // 1-10 arasında sınırla (1 = en yüksek, 10 = en düşük)
   }
 
   /**
@@ -107,8 +160,19 @@ export class QueueSystem extends EventEmitter {
    * @returns {Object|null} Next request or null if queue is empty
    */
   dequeue() {
-    // Öncelikli kategorileri kontrol et
-    const categories = ['critical', 'functional', 'regression', 'performance', 'default'];
+    // Öncelikli kategorileri kontrol et (öncelik sırasına göre)
+    const categories = [
+      'critical',
+      'security',
+      'functional',
+      'api',
+      'integration',
+      'performance',
+      'regression',
+      'accessibility',
+      'mobile',
+      'default'
+    ];
 
     for (const category of categories) {
       if (this.queues[category] && this.queues[category].length > 0) {
@@ -153,6 +217,14 @@ export class QueueSystem extends EventEmitter {
     // Remove from processing map
     this.processing.delete(requestId);
 
+    // Tamamlanan istekler listesine ekle
+    this.completedRequests.unshift(request); // En son tamamlanan isteği başa ekle
+
+    // Maksimum sayıyı aşarsa en eski isteği sil
+    if (this.completedRequests.length > this.options.maxCompletedRequests) {
+      this.completedRequests.pop();
+    }
+
     // Emit event
     this.emit('request:completed', request);
 
@@ -181,6 +253,14 @@ export class QueueSystem extends EventEmitter {
 
     // Remove from processing map
     this.processing.delete(requestId);
+
+    // Başarısız istekler listesine ekle
+    this.failedRequests.unshift(request); // En son başarısız olan isteği başa ekle
+
+    // Maksimum sayıyı aşarsa en eski isteği sil
+    if (this.failedRequests.length > this.options.maxCompletedRequests) {
+      this.failedRequests.pop();
+    }
 
     // Emit event
     this.emit('request:failed', request);
@@ -319,6 +399,23 @@ export class QueueSystem extends EventEmitter {
     }
 
     return status;
+  }
+
+  /**
+   * Get completed and failed requests
+   * @returns {Array} Completed and failed requests
+   */
+  getCompletedRequests() {
+    // Tamamlanan ve başarısız istekleri birleştir
+    const allCompletedRequests = [...this.completedRequests, ...this.failedRequests];
+
+    // Tamamlanma zamanına göre sırala (en son tamamlanan en üstte)
+    allCompletedRequests.sort((a, b) => {
+      return new Date(b.completedAt) - new Date(a.completedAt);
+    });
+
+    // Maksimum sayıda istek döndür
+    return allCompletedRequests.slice(0, this.options.maxCompletedRequests);
   }
 }
 
