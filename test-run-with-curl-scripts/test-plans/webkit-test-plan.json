@@ -1,0 +1,41 @@
+{
+  "name": "WebKit Tarayıcı Testi",
+  "description": "WebKit tarayıcısı ile Google'a git ve arama yap",
+  "browserPreference": "webkit",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "browserOptions": {
+    "args": ["--window-size=1920,1080"],
+    "ignoreHTTPSErrors": true,
+    "slowMo": 50
+  },
+  "steps": [
+    {
+      "action": "navigate",
+      "target": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "type",
+      "target": "APjFqb",
+      "strategy": "id",
+      "value": "playwright webkit",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "webkit-google-results",
+      "description": "Sonuçların ekran görüntüsünü al"
+    }
+  ]
+}

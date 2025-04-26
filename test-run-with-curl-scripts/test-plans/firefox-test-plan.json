@@ -1,0 +1,43 @@
+{
+  "name": "Firefox Tarayıcı Testi",
+  "description": "Firefox tarayıcısı ile Google'a git ve arama yap",
+  "browserPreference": "firefox",
+  "headless": false,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "browserOptions": {
+    "args": ["--width=1920", "--height=1080"],
+    "ignoreHTTPSErrors": true,
+    "firefoxUserPrefs": {
+      "media.volume_scale": "0.0"
+    }
+  },
+  "steps": [
+    {
+      "action": "navigate",
+      "target": "https://www.google.com",
+      "description": "Google'a git"
+    },
+    {
+      "action": "type",
+      "target": "APjFqb",
+      "strategy": "id",
+      "value": "playwright firefox",
+      "description": "Arama terimini yaz"
+    },
+    {
+      "action": "pressEnter",
+      "description": "Enter tuşuna bas"
+    },
+    {
+      "action": "wait",
+      "target": "2000",
+      "description": "Sonuçların yüklenmesini bekle"
+    },
+    {
+      "action": "takeScreenshot",
+      "target": "firefox-google-results",
+      "description": "Sonuçların ekran görüntüsünü al"
+    }
+  ]
+}

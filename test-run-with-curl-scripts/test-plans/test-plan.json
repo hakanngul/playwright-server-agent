@@ -5,6 +5,11 @@
   "headless": false,
   "useBrowserPool": false,
   "takeScreenshots": false,
+  "browserOptions": {
+    "args": ["--window-size=1920,1080", "--disable-gpu"],
+    "ignoreHTTPSErrors": true,
+    "slowMo": 100
+  },
   "steps": [
     {
       "action": "navigate",

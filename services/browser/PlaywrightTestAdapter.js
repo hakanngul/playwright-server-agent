@@ -281,12 +281,16 @@ export class PlaywrightTestAdapter extends ITestRunner {
     const testFilePath = this.convertTestPlanToPlaywrightTest(testPlan);
 
     try {
+      // Test planından tarayıcı özelliklerini al
+      const browserOptions = testPlan.browserOptions || {};
+
       // Create result object
       const result = {
         name: testPlan.name,
         description: testPlan.description,
         browserType: testPlan.browserPreference || 'chromium',
         headless: testPlan.headless !== undefined ? testPlan.headless : this.options.headless,
+        browserOptions: browserOptions,
         startTime: new Date().toISOString(),
         endTime: null,
         duration: 0,
@@ -321,10 +325,11 @@ export class PlaywrightTestAdapter extends ITestRunner {
           navigationTimeout: 15000,
           trace: 'on-first-retry',
           screenshot: 'only-on-failure',
-          // Tarayıcı özelliklerini ekleyelim
+          // Tarayıcı özelliklerini ekleyelim (önce test planından, sonra genel ayarlardan)
           launchOptions: {
             ...${JSON.stringify(this.options.browserOptions || {})},
-            args: ${JSON.stringify(this.options.browserOptions?.args || [])}
+            ...${JSON.stringify(browserOptions || {})},
+            args: ${JSON.stringify([...(this.options.browserOptions?.args || []), ...(browserOptions?.args || [])])}
           }
         },
         projects: [
