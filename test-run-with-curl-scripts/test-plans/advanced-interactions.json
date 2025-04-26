@@ -2,7 +2,7 @@
   "name": "Gelişmiş Etkileşimler Testi",
   "description": "Only Testing Blog üzerinde gelişmiş etkileşimleri test eder",
   "browserPreference": "chromium",
-  "headless": true,
+  "headless": false,
   "useBrowserPool": false,
   "takeScreenshots": false,
   "steps": [

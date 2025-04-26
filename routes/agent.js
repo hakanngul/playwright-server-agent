@@ -17,15 +17,44 @@ router.agentManager = agentManager;
 // Submit a test request
 router.post('/test-run', async (req, res) => {
   try {
-    const testPlan = req.body;
+    const requestData = req.body;
+    let testPlan;
 
-    if (!testPlan || !testPlan.steps || !Array.isArray(testPlan.steps)) {
-      return res.status(400).json({
-        error: 'Invalid test plan format. Test plan must include steps array.'
-      });
+    // Check if request contains a testPlanId
+    if (requestData.testPlanId) {
+      // Get test plan from file system
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+
+      const TEST_PLANS_DIR = path.join(__dirname, '..', 'test-run-with-curl-scripts', 'test-plans');
+      const filePath = path.join(TEST_PLANS_DIR, `${requestData.testPlanId}.json`);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          error: `Test plan with ID ${requestData.testPlanId} not found`
+        });
+      }
+
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      testPlan = JSON.parse(fileContent);
+
+      console.log(`Loaded test plan from file: ${testPlan.name} with ${testPlan.steps.length} steps`);
+    } else {
+      // Use the test plan from request body
+      testPlan = requestData;
+
+      if (!testPlan || !testPlan.steps || !Array.isArray(testPlan.steps)) {
+        return res.status(400).json({
+          error: 'Invalid test plan format. Test plan must include steps array.'
+        });
+      }
+
+      console.log(`Received test plan: ${testPlan.name} with ${testPlan.steps.length} steps`);
     }
-
-    console.log(`Received test plan: ${testPlan.name} with ${testPlan.steps.length} steps`);
 
     // Submit the request to the agent manager
     const requestId = agentManager.submitRequest(testPlan);

@@ -10,6 +10,7 @@ import reportRoutes from './routes/reports.js';
 import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
 import agentRoutes from './routes/agent.js';
+import testPlansRoutes from './routes/test-plans.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
@@ -161,6 +162,9 @@ app.use('/api/status', statusRoutes);
 
 // Use agent routes
 app.use('/api/agent', agentRoutes);
+
+// Use test plans routes
+app.use('/api/test-plans', testPlansRoutes);
 
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
