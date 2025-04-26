@@ -1,9 +1,9 @@
 {
   "name": "Doğrulama İşlemleri Testi",
   "description": "Only Testing Blog üzerinde doğrulama işlemlerini test eder",
-  "browserPreference": "chromium",
-  "headless": true,
-  "useBrowserPool": false,
+  "browserPreference": "webkit",
+  "headless": false,
+  "useBrowserPool": true,
   "takeScreenshots": false,
   "steps": [
     {

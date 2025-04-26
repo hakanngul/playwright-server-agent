@@ -26,7 +26,9 @@ export class PlaywrightTestAdapter extends ITestRunner {
       screenshotsDir: options.screenshotsDir || path.join(process.cwd(), 'screenshots'),
       headless: options.headless !== undefined ? options.headless : true,
       workers: options.workers || undefined,
-      browserTypes: options.browserTypes || ['chromium']
+      browserTypes: options.browserTypes || ['chromium'],
+      // Tarayıcı özelliklerini ekleyelim
+      browserOptions: options.browserOptions || {}
     };
 
     this.onStepCompleted = null;
@@ -63,7 +65,7 @@ export class PlaywrightTestAdapter extends ITestRunner {
       .toLowerCase();
 
     const timestamp = Date.now();
-    const testFileName = `${sanitizedName}_${timestamp}.spec.js`;
+    const testFileName = `${sanitizedName}_${timestamp}.spec.mjs`;
     const testFilePath = path.join(this.options.testDir, testFileName);
 
     // Test içeriğini oluştur
@@ -95,7 +97,7 @@ export class PlaywrightTestAdapter extends ITestRunner {
   _generateSimpleTestContent(testPlan) {
     return `
     // @ts-check
-    const { test, expect } = require('@playwright/test');
+    import { test, expect } from '@playwright/test';
 
     test('${testPlan.name.replace(/'/g, "\\'")}', async ({ page }) => {
       console.log('Test başlıyor: ${testPlan.name}');
@@ -318,13 +320,30 @@ export class PlaywrightTestAdapter extends ITestRunner {
           actionTimeout: 15000,
           navigationTimeout: 15000,
           trace: 'on-first-retry',
-          screenshot: 'only-on-failure'
+          screenshot: 'only-on-failure',
+          // Tarayıcı özelliklerini ekleyelim
+          launchOptions: {
+            ...${JSON.stringify(this.options.browserOptions || {})},
+            args: ${JSON.stringify(this.options.browserOptions?.args || [])}
+          }
         },
         projects: [
           {
-            name: '${testPlan.browserPreference || 'chromium'}',
+            name: 'chromium',
             use: {
-              browserName: '${testPlan.browserPreference || 'chromium'}'
+              browserName: 'chromium'
+            }
+          },
+          {
+            name: 'firefox',
+            use: {
+              browserName: 'firefox'
+            }
+          },
+          {
+            name: 'webkit',
+            use: {
+              browserName: 'webkit'
             }
           }
         ]
@@ -337,8 +356,10 @@ export class PlaywrightTestAdapter extends ITestRunner {
 
       // Run test with Playwright Test Runner
       return new Promise((resolve) => {
-        // Komut düzeltildi ve debug seçeneği eklendi
-        const command = `npx playwright test "${testFilePath}" --config="${configPath}" --headed`;
+        // Komut düzeltildi ve tarayıcı türü eklendi
+        const browserType = testPlan.browserPreference || 'chromium';
+        const headlessMode = testPlan.headless !== undefined ? testPlan.headless : this.options.headless;
+        const command = `npx playwright test "${testFilePath}" --config="${configPath}" --project=${browserType} ${headlessMode ? '' : '--headed'}`;
         console.log(`Running test command: ${command}`);
 
         // Test dosyasının içeriğini logla

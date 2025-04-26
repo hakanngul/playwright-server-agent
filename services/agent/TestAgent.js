@@ -5,8 +5,6 @@
 
 import EventEmitter from 'events';
 import path from 'path';
-import { BrowserController } from '../browser/BrowserController.js';
-import { ElementInteractor } from '../browser/ElementInteractor.js';
 import { PlaywrightTestAdapter } from '../browser/PlaywrightTestAdapter.js';
 
 export class TestAgent extends EventEmitter {
@@ -34,15 +32,16 @@ export class TestAgent extends EventEmitter {
     this.initialized = false;
     this.busy = false;
 
-    // Create component instances
-    this.browserController = new BrowserController(browserType, {
-      headless: this.headless
-    });
-
+    // Artık sadece PlaywrightTestAdapter kullanıyoruz
     this.testRunner = new PlaywrightTestAdapter({
       browserType: this.browserType,
       headless: this.headless,
-      screenshotsDir: this.screenshotsDir
+      screenshotsDir: this.screenshotsDir,
+      // Diğer tarayıcı özelliklerini burada ekleyebilirsiniz
+      browserOptions: {
+        ...options.browserOptions,
+        args: options.browserOptions?.args || []
+      }
     });
 
     this.elementInteractor = null; // Will be initialized after browser is ready
@@ -58,20 +57,8 @@ export class TestAgent extends EventEmitter {
     }
 
     try {
-      // Initialize browser controller
-      await this.browserController.initialize();
-
-      // TestRunner'a BrowserController'ın tarayıcı yöneticisini ver
-      this.testRunner.setBrowserManager(this.browserController.browserManager);
-
       // Initialize test runner
       await this.testRunner.initialize();
-
-      // Create element interactor with the initialized page
-      this.elementInteractor = new ElementInteractor(
-        this.browserController.getPage(),
-        this.screenshotsDir
-      );
 
       // Set step completed callback
       if (this.onStepCompleted) {
@@ -166,10 +153,11 @@ export class TestAgent extends EventEmitter {
 
   /**
    * Gets the current page
-   * @returns {Object} Playwright page object
+   * @returns {Object|null} Playwright page object or null
    */
   getPage() {
-    return this.browserController.getPage();
+    // Artık doğrudan bir sayfa döndüremiyoruz çünkü Playwright Test Runner kendi sayfasını yönetiyor
+    return null;
   }
 
   /**
@@ -178,18 +166,11 @@ export class TestAgent extends EventEmitter {
    */
   async close() {
     try {
-      // Close test runner first
+      // Close test runner
       if (this.testRunner) {
         await this.testRunner.close();
       }
 
-      // Then close browser controller
-      if (this.browserController) {
-        await this.browserController.close();
-      }
-
-      // Clear element interactor
-      this.elementInteractor = null;
       this.initialized = false;
       this.busy = false;
 
