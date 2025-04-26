@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Server Agent - Dashboard</title>
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary-color: #03dac6;
+            --background-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --error-color: #b00020;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --text-hint: rgba(0, 0, 0, 0.38);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding-top: 80px;
+            padding-bottom: 40px;
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 500;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: 500;
+        }
+
+        .nav-link.active {
+            color: white !important;
+        }
+
+        .card {
+            margin-bottom: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            background-color: var(--surface-color);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            font-weight: 500;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .material-icons {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 16px;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .progress {
+            height: 8px;
+            margin-top: 8px;
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table th {
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-top: none;
+            border-bottom-width: 1px;
+        }
+
+        .table td {
+            border-color: rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background-color: var(--primary-variant);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn .material-icons {
+            font-size: 24px;
+        }
+
+        .agent-status-idle {
+            color: #4caf50;
+        }
+
+        .agent-status-busy {
+            color: #f44336;
+        }
+
+        .priority-high {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .priority-medium {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .priority-low {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .badge-success {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .badge-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .badge-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="material-icons align-middle me-2">theater_comedy</i>
+                Playwright Server Agent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="material-icons align-middle me-1">dashboard</i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html">
+                            <i class="material-icons align-middle me-1">assessment</i>
+                            Test Raporları
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 class="mb-4">Playwright Server Agent Dashboard</h1>
+
+        <!-- System Metrics -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="material-icons">memory</i>
+                            <span>Sistem Kaynakları</span>
+                        </div>
+                        <span id="last-updated" class="badge bg-secondary"></span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="metric-value" id="cpu-usage">0%</div>
+                                <div class="metric-label">CPU Kullanımı</div>
+                                <div class="progress">
+                                    <div id="cpu-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="metric-value" id="memory-usage">0%</div>
+                                <div class="metric-label">Bellek Kullanımı</div>
+                                <div class="progress">
+                                    <div id="memory-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="material-icons">group</i>
+                        <span>Agent Durumu</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4 text-center">
+                                <div class="metric-value" id="total-agents">0</div>
+                                <div class="metric-label">Toplam Agent</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="metric-value agent-status-idle" id="available-agents">0</div>
+                                <div class="metric-label">Müsait</div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="metric-value agent-status-busy" id="busy-agents">0</div>
+                                <div class="metric-label">Meşgul</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Agent Limiti:</span>
+                                <span id="agent-limit">0</span>
+                            </div>
+                            <div class="progress">
+                                <div id="agent-progress" class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Status -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">queue</i>
+                <span>Kuyruk Durumu</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="queued-requests">0</div>
+                        <div class="metric-label">Kuyrukta</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="processing-requests">0</div>
+                        <div class="metric-label">İşleniyor</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="metric-value" id="total-requests">0</div>
+                        <div class="metric-label">Toplam</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Agents -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">computer</i>
+                <span>Aktif Agent'lar</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Agent ID</th>
+                                <th>Tarayıcı</th>
+                                <th>Durum</th>
+                                <th>Oluşturulma</th>
+                                <th>Son Aktivite</th>
+                                <th>Mevcut İstek</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agents-table-body">
+                            <!-- Agents will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queued Requests -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">list</i>
+                <span>Kuyrukta Bekleyen İstekler</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>İstek ID</th>
+                                <th>Test Adı</th>
+                                <th>Tarayıcı</th>
+                                <th>Öncelik</th>
+                                <th>Kategori</th>
+                                <th>Kuyruğa Eklenme</th>
+                                <th>Bekleme Süresi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queue-table-body">
+                            <!-- Queued requests will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Requests -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">hourglass_top</i>
+                <span>İşlenen İstekler</span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <label for="pageSize" class="me-2">Sayfa başına göster:</label>
+                        <select id="pageSize" class="form-select form-select-sm" style="width: 80px;">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>İstek ID</th>
+                                <th>Test Adı</th>
+                                <th>Tarayıcı</th>
+                                <th>Agent ID</th>
+                                <th>Başlangıç</th>
+                                <th>Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processing-table-body">
+                            <!-- Processing requests will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span id="processingTableInfo">Gösterilen: 0 - 0 / 0</span>
+                    </div>
+                    <div class="btn-group">
+                        <button id="prevPageProcessing" class="btn btn-sm btn-outline-primary">
+                            <i class="material-icons" style="font-size: 16px;">chevron_left</i>
+                        </button>
+                        <button id="nextPageProcessing" class="btn btn-sm btn-outline-primary">
+                            <i class="material-icons" style="font-size: 16px;">chevron_right</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button id="refresh-btn" class="refresh-btn">
+        <i class="material-icons">refresh</i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+
+
+        // Format date function
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('tr-TR');
+        }
+
+        // Format duration function
+        function formatDuration(ms) {
+            if (!ms) return '0s';
+
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+
+        // Data table variables for processing requests
+        let processingRequests = [];
+        let filteredProcessingRequests = [];
+        let currentPageProcessing = 1;
+        let pageSizeProcessing = 10;
+
+        // Format wait time function
+        function formatWaitTime(queuedAt) {
+            if (!queuedAt) return 'N/A';
+
+            const queuedTime = new Date(queuedAt).getTime();
+            const now = Date.now();
+            const waitTime = now - queuedTime;
+
+            return formatDuration(waitTime);
+        }
+
+        // Get priority class
+        function getPriorityClass(priority) {
+            if (priority <= 3) return 'priority-high';
+            if (priority <= 7) return 'priority-medium';
+            return 'priority-low';
+        }
+
+        // Update dashboard function
+        async function updateDashboard() {
+            try {
+                // Fetch system metrics
+                const metricsResponse = await fetch('/api/agent/system-metrics');
+                const metricsData = await metricsResponse.json();
+
+                if (metricsData.success) {
+                    const { system, agents, queue } = metricsData.metrics;
+
+                    // Update system metrics
+                    document.getElementById('cpu-usage').textContent = `${system.cpu.toFixed(1)}%`;
+
+                    // Process bellek kullanımını göster (daha doğru)
+                    const memoryValue = system.processMemory ? system.processMemory.percentage : system.memory;
+                    document.getElementById('memory-usage').textContent = `${memoryValue.toFixed(1)}%`;
+
+                    document.getElementById('cpu-progress').style.width = `${system.cpu}%`;
+                    document.getElementById('memory-progress').style.width = `${memoryValue}%`;
+
+                    // Update CPU progress bar color
+                    const cpuProgress = document.getElementById('cpu-progress');
+                    if (system.cpu > 80) {
+                        cpuProgress.className = 'progress-bar bg-danger';
+                    } else if (system.cpu > 60) {
+                        cpuProgress.className = 'progress-bar bg-warning';
+                    } else {
+                        cpuProgress.className = 'progress-bar bg-success';
+                    }
+
+                    // Update memory progress bar color
+                    const memoryProgress = document.getElementById('memory-progress');
+                    if (memoryValue > 80) {
+                        memoryProgress.className = 'progress-bar bg-danger';
+                    } else if (memoryValue > 60) {
+                        memoryProgress.className = 'progress-bar bg-warning';
+                    } else {
+                        memoryProgress.className = 'progress-bar bg-success';
+                    }
+
+                    // Update agent metrics
+                    document.getElementById('total-agents').textContent = agents.total;
+                    document.getElementById('available-agents').textContent = agents.available;
+                    document.getElementById('busy-agents').textContent = agents.busy;
+                    document.getElementById('agent-limit').textContent = agents.limit;
+
+                    // Update agent progress
+                    const agentPercentage = agents.total > 0 ? (agents.total / agents.limit) * 100 : 0;
+                    document.getElementById('agent-progress').style.width = `${agentPercentage}%`;
+
+                    // Update queue metrics
+                    document.getElementById('queued-requests').textContent = queue.queuedRequests;
+                    document.getElementById('processing-requests').textContent = queue.processingRequests;
+                    document.getElementById('total-requests').textContent = queue.totalRequests;
+
+                    // Update last updated time
+                    document.getElementById('last-updated').textContent = `Güncelleme: ${formatDate(metricsData.timestamp)}`;
+                }
+
+                // Fetch active agents
+                const agentsResponse = await fetch('/api/agent/active-agents');
+                const agentsData = await agentsResponse.json();
+
+                if (agentsData.success) {
+                    const agentsTableBody = document.getElementById('agents-table-body');
+                    agentsTableBody.innerHTML = '';
+
+                    if (agentsData.agents.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="6" class="text-center">Aktif agent bulunmuyor</td>';
+                        agentsTableBody.appendChild(row);
+                    } else {
+                        agentsData.agents.forEach(agent => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${agent.id}</td>
+                                <td>${agent.browserType}</td>
+                                <td><span class="badge ${agent.status === 'idle' ? 'badge-success' : 'badge-danger'}">${agent.status === 'idle' ? 'Müsait' : 'Meşgul'}</span></td>
+                                <td>${formatDate(agent.createdAt)}</td>
+                                <td>${formatDate(agent.lastActiveAt)}</td>
+                                <td>${agent.currentRequest || 'Yok'}</td>
+                            `;
+                            agentsTableBody.appendChild(row);
+                        });
+                    }
+                }
+
+                // Fetch queued requests
+                const queuedResponse = await fetch('/api/agent/queued-requests');
+                const queuedData = await queuedResponse.json();
+
+                if (queuedData.success) {
+                    const queueTableBody = document.getElementById('queue-table-body');
+                    queueTableBody.innerHTML = '';
+
+                    if (queuedData.requests.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="7" class="text-center">Kuyrukta bekleyen istek bulunmuyor</td>';
+                        queueTableBody.appendChild(row);
+                    } else {
+                        queuedData.requests.forEach(request => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${request.id}</td>
+                                <td>${request.testPlan.name}</td>
+                                <td>${request.browserType || request.testPlan.browserPreference || 'chromium'}</td>
+                                <td><span class="badge ${getPriorityClass(request.priority)}">${request.priority}</span></td>
+                                <td>${request.testPlan.category || 'default'}</td>
+                                <td>${formatDate(request.queuedAt)}</td>
+                                <td>${formatWaitTime(request.queuedAt)}</td>
+                            `;
+                            queueTableBody.appendChild(row);
+                        });
+                    }
+                }
+
+                // Fetch processing requests
+                const processingResponse = await fetch('/api/agent/processing-requests');
+                const processingData = await processingResponse.json();
+
+                if (processingData.success) {
+                    // Store the processing requests
+                    processingRequests = processingData.requests.map(request => {
+                        const startTime = new Date(request.startedAt).getTime();
+                        const now = Date.now();
+                        const duration = now - startTime;
+
+                        return {
+                            ...request,
+                            duration: duration
+                        };
+                    });
+
+                    // Reset to first page and apply filters
+                    currentPageProcessing = 1;
+                    pageSizeProcessing = parseInt(document.getElementById('pageSize').value);
+                    filterProcessingRequests();
+                }
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        // Filter and paginate processing requests
+        function filterProcessingRequests() {
+            // No filtering, just show all requests
+            filteredProcessingRequests = processingRequests;
+
+            updateProcessingTable();
+        }
+
+        // Update processing table with pagination
+        function updateProcessingTable() {
+            const tableBody = document.getElementById('processing-table-body');
+            tableBody.innerHTML = '';
+
+            if (filteredProcessingRequests.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center">İşlenen istek bulunmuyor</td>';
+                tableBody.appendChild(row);
+
+                document.getElementById('processingTableInfo').textContent = 'Gösterilen: 0 - 0 / 0';
+                return;
+            }
+
+            // Calculate pagination
+            const startIndex = (currentPageProcessing - 1) * pageSizeProcessing;
+            const endIndex = Math.min(startIndex + pageSizeProcessing, filteredProcessingRequests.length);
+            const pageItems = filteredProcessingRequests.slice(startIndex, endIndex);
+
+            // Update table
+            pageItems.forEach(request => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${request.id}</td>
+                    <td>${request.testPlan.name}</td>
+                    <td>${request.browserType || request.testPlan.browserPreference || 'chromium'}</td>
+                    <td>${request.agentId || 'N/A'}</td>
+                    <td>${formatDate(request.startedAt)}</td>
+                    <td>${formatDuration(request.duration)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Update pagination info
+            document.getElementById('processingTableInfo').textContent =
+                `Gösterilen: ${startIndex + 1} - ${endIndex} / ${filteredProcessingRequests.length}`;
+
+            // Update pagination buttons state
+            document.getElementById('prevPageProcessing').disabled = currentPageProcessing === 1;
+            document.getElementById('nextPageProcessing').disabled =
+                endIndex >= filteredProcessingRequests.length;
+        }
+
+        // Initial update
+        updateDashboard();
+
+        // Set up auto-refresh
+        setInterval(updateDashboard, 5000); // Refresh every 5 seconds
+
+        // Event listeners for data table
+        document.addEventListener('DOMContentLoaded', function() {
+            // Page size change
+            document.getElementById('pageSize').addEventListener('change', function() {
+                pageSizeProcessing = parseInt(this.value);
+                currentPageProcessing = 1;
+                filterProcessingRequests();
+            });
+
+
+
+            // Pagination
+            document.getElementById('prevPageProcessing').addEventListener('click', function() {
+                if (currentPageProcessing > 1) {
+                    currentPageProcessing--;
+                    updateProcessingTable();
+                }
+            });
+
+            document.getElementById('nextPageProcessing').addEventListener('click', function() {
+                const maxPage = Math.ceil(filteredProcessingRequests.length / pageSizeProcessing);
+                if (currentPageProcessing < maxPage) {
+                    currentPageProcessing++;
+                    updateProcessingTable();
+                }
+            });
+        });
+
+        // Manual refresh button
+        document.getElementById('refresh-btn').addEventListener('click', updateDashboard);
+    </script>
+</body>
+</html>

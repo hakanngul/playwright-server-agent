@@ -41,6 +41,11 @@
     {
       "action": "takeScreenshot",
       "description": "Playwright sayfasının ekran görüntüsünü al"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Sonuçların yüklenmesini bekle"
     }
   ]
 }

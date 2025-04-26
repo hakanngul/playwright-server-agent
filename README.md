@@ -143,10 +143,10 @@ There are several ways to run tests with this server:
 
 ### 1. Using the API
 
-Send a POST request to `/api/test/run` with a test plan in the request body:
+Send a POST request to `/api/agent/test-run` with a test plan in the request body:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d @test-plan.json http://localhost:3002/api/test/run
+curl -X POST -H "Content-Type: application/json" -d @test-plan.json http://localhost:3002/api/agent/test-run
 ```
 
 ### 2. Using the Provided Scripts
@@ -186,7 +186,7 @@ This script runs the test in all supported browsers sequentially.
 
 ### Test Execution
 
-- `POST /api/test/run`: Run a test with the provided test plan
+- `POST /api/agent/test-run`: Run a test with the provided test plan
 - `POST /api/test/run-parallel`: Run multiple tests in parallel
 
 ### Browser Information

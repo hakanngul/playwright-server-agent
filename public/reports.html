@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Raporları - Playwright Server Agent</title>
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary-color: #03dac6;
+            --background-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --error-color: #b00020;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --text-hint: rgba(0, 0, 0, 0.38);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding-top: 80px;
+            padding-bottom: 40px;
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 500;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: 500;
+        }
+
+        .nav-link.active {
+            color: white !important;
+        }
+
+        .card {
+            margin-bottom: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            background-color: var(--surface-color);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            font-weight: 500;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .material-icons {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
+        .badge-success {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .badge-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .badge-warning {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .priority-high {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .priority-medium {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .priority-low {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .test-result-success {
+            border-left: 5px solid #4caf50;
+        }
+
+        .test-result-failed {
+            border-left: 5px solid #f44336;
+        }
+
+        .test-result-pending {
+            border-left: 5px solid #ff9800;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background-color: var(--primary-variant);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn .material-icons {
+            font-size: 24px;
+        }
+
+        .step-details {
+            margin-top: 10px;
+            padding: 16px;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .step-success {
+            border-left: 4px solid #4caf50;
+        }
+
+        .step-failed {
+            border-left: 4px solid #f44336;
+        }
+
+        .performance-metric {
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .test-category {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 75%;
+            font-weight: 500;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 16px;
+            margin-right: 5px;
+        }
+
+        .category-functional {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .category-regression {
+            background-color: #673ab7;
+            color: white;
+        }
+
+        .category-performance {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .category-critical {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .category-default {
+            background-color: #9e9e9e;
+            color: white;
+        }
+
+        .last-updated {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table th {
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-top: none;
+            border-bottom-width: 1px;
+        }
+
+        .table td {
+            border-color: rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 10px 16px;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(98, 0, 238, 0.25);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-variant);
+            border-color: var(--primary-variant);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-info {
+            background-color: #2196f3;
+            border-color: #2196f3;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #0d8bf2;
+            border-color: #0d8bf2;
+            color: white;
+        }
+
+
+
+        .modal-content {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="material-icons align-middle me-2">theater_comedy</i>
+                Playwright Server Agent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="material-icons align-middle me-1">dashboard</i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/reports.html">
+                            <i class="material-icons align-middle me-1">assessment</i>
+                            Test Raporları
+                        </a>
+                    </li>
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="mt-4 mb-4">
+            <h1 class="mb-3">Test Raporları</h1>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="material-icons">filter_list</i>
+                    <span>Rapor Seçenekleri</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="row g-2">
+                                <div class="col-6 col-sm-4">
+                                    <label for="reportPeriod" class="form-label">Dönem</label>
+                                    <select class="form-select" id="reportPeriod">
+                                        <option value="daily" selected>Günlük</option>
+                                        <option value="weekly">Haftalık</option>
+                                        <option value="monthly">Aylık</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-sm-4">
+                                    <label for="reportDate" class="form-label">Tarih</label>
+                                    <input type="date" class="form-control" id="reportDate">
+                                </div>
+                                <div class="col-12 col-sm-4 d-flex align-items-end">
+                                    <button id="loadReportsBtn" class="btn btn-primary w-100">
+                                        <i class="material-icons align-middle me-1">download</i>
+                                        Raporları Yükle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="last-updated" class="last-updated mb-3"></div>
+
+        <!-- Test Sonuçları Özeti -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="material-icons">pie_chart</i>
+                        <span>Test Sonuçları Özeti</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="test-results-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="material-icons">category</i>
+                        <span>Kategori Dağılımı</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="category-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Süresi ve Performans -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="material-icons">timer</i>
+                        <span>Test Süresi Dağılımı</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="duration-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="material-icons">speed</i>
+                        <span>Performans Metrikleri</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 text-center mb-3">
+                                <div class="performance-metric" id="avg-duration">-</div>
+                                <div class="metric-label">Ortalama Test Süresi</div>
+                            </div>
+                            <div class="col-md-6 text-center mb-3">
+                                <div class="performance-metric" id="success-rate">-</div>
+                                <div class="metric-label">Başarı Oranı</div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <div class="performance-metric" id="total-tests">-</div>
+                                <div class="metric-label">Toplam Test</div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <div class="performance-metric" id="avg-steps">-</div>
+                                <div class="metric-label">Ortalama Adım Sayısı</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtre Seçenekleri -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="material-icons">filter_list</i>
+                <span>Filtreler</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="filterBrowser" class="form-label">Tarayıcı</label>
+                        <select class="form-select" id="filterBrowser">
+                            <option value="all" selected>Tümü</option>
+                            <option value="chromium">Chromium</option>
+                            <option value="firefox">Firefox</option>
+                            <option value="webkit">WebKit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filterCategory" class="form-label">Kategori</label>
+                        <select class="form-select" id="filterCategory">
+                            <option value="all" selected>Tümü</option>
+                            <option value="functional">Fonksiyonel</option>
+                            <option value="regression">Regresyon</option>
+                            <option value="performance">Performans</option>
+                            <option value="critical">Kritik</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filterStatus" class="form-label">Durum</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="all" selected>Tümü</option>
+                            <option value="completed">Başarılı</option>
+                            <option value="failed">Başarısız</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="sortBy" class="form-label">Sıralama</label>
+                        <select class="form-select" id="sortBy">
+                            <option value="date-desc" selected>Tarih (Yeni-Eski)</option>
+                            <option value="date-asc">Tarih (Eski-Yeni)</option>
+                            <option value="duration-asc">Süre (Kısa-Uzun)</option>
+                            <option value="duration-desc">Süre (Uzun-Kısa)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Son Tamamlanan Testler -->
+        <div class="card">
+            <div class="card-header">
+                <i class="material-icons">history</i>
+                <span>Son Tamamlanan Testler</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Test Adı</th>
+                                <th>Kategori</th>
+                                <th>Tarayıcı</th>
+                                <th>Durum</th>
+                                <th>Süre</th>
+                                <th>Tamamlanma Zamanı</th>
+                                <th>Detaylar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="completed-tests-table">
+                            <!-- Tamamlanan testler burada listelenecek -->
+                            <tr>
+                                <td colspan="7" class="text-center">Henüz tamamlanan test yok</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Detayları Modal -->
+        <div class="modal fade" id="testDetailsModal" tabindex="-1" aria-labelledby="testDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="testDetailsModalLabel">
+                            <i class="material-icons align-middle me-1">assignment</i>
+                            Test Detayları
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="testDetailsContent">
+                        <!-- Test detayları burada gösterilecek -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        <button type="button" class="btn btn-primary" id="downloadReportBtn">
+                            <i class="material-icons align-middle me-1">download</i>
+                            Raporu İndir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh Button -->
+    <button id="refresh-btn" class="refresh-btn">
+        <i class="material-icons">refresh</i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+
+
+        // Test sonuçlarını saklayacak dizi
+        let completedTests = [];
+        let filteredTests = [];
+
+        // Socket.io bağlantısı
+        const socket = io();
+
+        // Socket.io olayları
+        socket.on('connect', () => {
+            console.log('Socket.io bağlantısı kuruldu');
+            updateLastUpdated();
+        });
+
+        socket.on('welcome', (data) => {
+            console.log('Server mesajı:', data.message);
+        });
+
+        socket.on('request:completed', (data) => {
+            console.log('Test tamamlandı:', data);
+            // Tamamlanan testi listeye ekle
+            completedTests.unshift(data);
+            // Maksimum 100 test sakla
+            if (completedTests.length > 100) {
+                completedTests.pop();
+            }
+            // Tabloyu ve grafikleri güncelle
+            applyFilters();
+            updateCharts();
+            updatePerformanceMetrics();
+            updateLastUpdated();
+        });
+
+        socket.on('request:failed', (data) => {
+            console.log('Test başarısız:', data);
+            // Başarısız testi listeye ekle
+            completedTests.unshift(data);
+            // Maksimum 100 test sakla
+            if (completedTests.length > 100) {
+                completedTests.pop();
+            }
+            // Tabloyu ve grafikleri güncelle
+            applyFilters();
+            updateCharts();
+            updatePerformanceMetrics();
+            updateLastUpdated();
+        });
+
+        // Tarih formatı fonksiyonu
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('tr-TR');
+        }
+
+        // Süre formatı fonksiyonu
+        function formatDuration(ms) {
+            if (!ms) return '0s';
+
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+
+        // Test süresini hesaplama fonksiyonu
+        function calculateTestDuration(test) {
+            if (!test.completedAt || !test.startedAt) return 0;
+
+            const startTime = new Date(test.startedAt).getTime();
+            const endTime = new Date(test.completedAt).getTime();
+            return endTime - startTime;
+        }
+
+        // Kategori rengini belirleme fonksiyonu
+        function getCategoryClass(category) {
+            switch (category) {
+                case 'functional': return 'category-functional';
+                case 'regression': return 'category-regression';
+                case 'performance': return 'category-performance';
+                case 'critical': return 'category-critical';
+                default: return 'category-default';
+            }
+        }
+
+        // Filtreleri uygulama fonksiyonu
+        function applyFilters() {
+            const browserFilter = document.getElementById('filterBrowser').value;
+            const categoryFilter = document.getElementById('filterCategory').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Filtreleme
+            filteredTests = completedTests.filter(test => {
+                // Tarayıcı filtresi
+                if (browserFilter !== 'all' && test.testPlan.browserPreference !== browserFilter) {
+                    return false;
+                }
+
+                // Kategori filtresi
+                if (categoryFilter !== 'all' && (test.testPlan.category || 'default') !== categoryFilter) {
+                    return false;
+                }
+
+                // Durum filtresi
+                if (statusFilter !== 'all' && test.status !== statusFilter) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Sıralama
+            filteredTests.sort((a, b) => {
+                const durationA = calculateTestDuration(a);
+                const durationB = calculateTestDuration(b);
+                const dateA = new Date(a.completedAt || 0).getTime();
+                const dateB = new Date(b.completedAt || 0).getTime();
+
+                switch (sortBy) {
+                    case 'date-desc':
+                        return dateB - dateA;
+                    case 'date-asc':
+                        return dateA - dateB;
+                    case 'duration-asc':
+                        return durationA - durationB;
+                    case 'duration-desc':
+                        return durationB - durationA;
+                    default:
+                        return dateB - dateA;
+                }
+            });
+
+            updateCompletedTestsTable();
+        }
+
+        // Tamamlanan testler tablosunu güncelleme
+        function updateCompletedTestsTable() {
+            const tableBody = document.getElementById('completed-tests-table');
+            tableBody.innerHTML = '';
+
+            if (filteredTests.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="7" class="text-center">Filtrelere uygun test bulunamadı</td>';
+                tableBody.appendChild(row);
+                return;
+            }
+
+            filteredTests.forEach((test, index) => {
+                const row = document.createElement('tr');
+                const isSuccess = test.status === 'completed';
+                const testDuration = calculateTestDuration(test);
+                const category = test.testPlan.category || 'default';
+                const originalIndex = completedTests.indexOf(test);
+
+                row.innerHTML = `
+                    <td>${test.testPlan.name}</td>
+                    <td><span class="test-category ${getCategoryClass(category)}">${category}</span></td>
+                    <td>${test.testPlan.browserPreference || 'chromium'}</td>
+                    <td><span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span></td>
+                    <td>${formatDuration(testDuration)}</td>
+                    <td>${formatDate(test.completedAt)}</td>
+                    <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${originalIndex})">Detaylar</button></td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Test detaylarını gösterme
+        function showTestDetails(index) {
+            const test = completedTests[index];
+            const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
+            const modalContent = document.getElementById('testDetailsContent');
+
+            const isSuccess = test.status === 'completed';
+            const testDuration = calculateTestDuration(test);
+            const category = test.testPlan.category || 'default';
+
+            let stepsHtml = '';
+            if (test.result && test.result.steps) {
+                test.result.steps.forEach((step, stepIndex) => {
+                    const stepSuccess = step.success !== false;
+                    stepsHtml += `
+                        <div class="step-details ${stepSuccess ? 'step-success' : 'step-failed'} mb-2">
+                            <div><strong>Adım ${stepIndex + 1}:</strong> ${step.description || step.action}</div>
+                            <div><strong>Eylem:</strong> ${step.action}</div>
+                            <div><strong>Hedef:</strong> ${step.target}</div>
+                            <div><strong>Değer:</strong> ${step.value || '-'}</div>
+                            <div><strong>Durum:</strong> <span class="badge ${stepSuccess ? 'badge-success' : 'badge-danger'}">${stepSuccess ? 'Başarılı' : 'Başarısız'}</span></div>
+                            ${step.error ? `<div><strong>Hata:</strong> ${step.error}</div>` : ''}
+                            ${step.screenshot ? `<div class="mt-2"><img src="${step.screenshot}" class="img-fluid" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                        </div>
+                    `;
+                });
+            } else if (test.error) {
+                stepsHtml = `
+                    <div class="alert alert-danger">
+                        <strong>Hata:</strong> ${test.error.message}
+                        ${test.error.stack ? `<pre>${test.error.stack}</pre>` : ''}
+                    </div>
+                `;
+            }
+
+            modalContent.innerHTML = `
+                <div class="card ${isSuccess ? 'test-result-success' : 'test-result-failed'} mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">${test.testPlan.name}</h5>
+                        <div class="mb-3">
+                            <span class="test-category ${getCategoryClass(category)}">${category}</span>
+                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Tarayıcı:</strong> ${test.testPlan.browserPreference || 'chromium'}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Süre:</strong> ${formatDuration(testDuration)}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Başlangıç:</strong> ${formatDate(test.startedAt)}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Bitiş:</strong> ${formatDate(test.completedAt)}
+                            </div>
+                        </div>
+                        <h6>Test Adımları:</h6>
+                        ${stepsHtml}
+                    </div>
+                </div>
+            `;
+
+            modal.show();
+        }
+
+        // Grafikleri güncelleme
+        function updateCharts() {
+            updateTestResultsChart();
+            updateCategoryChart();
+            updateDurationChart();
+        }
+
+        // Test sonuçları grafiğini güncelleme
+        function updateTestResultsChart() {
+            const ctx = document.getElementById('test-results-chart').getContext('2d');
+
+            // Başarılı ve başarısız test sayılarını hesapla
+            const successCount = completedTests.filter(test => test.status === 'completed').length;
+            const failedCount = completedTests.filter(test => test.status === 'failed').length;
+
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.testResultsChart) {
+                window.testResultsChart.data.datasets[0].data = [successCount, failedCount];
+                window.testResultsChart.update();
+            } else {
+                window.testResultsChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Başarılı', 'Başarısız'],
+                        datasets: [{
+                            data: [successCount, failedCount],
+                            backgroundColor: ['#28a745', '#dc3545'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Test Sonuçları'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Kategori grafiğini güncelleme
+        function updateCategoryChart() {
+            const ctx = document.getElementById('category-chart').getContext('2d');
+
+            // Kategorilere göre test sayılarını hesapla
+            const categories = {};
+            completedTests.forEach(test => {
+                const category = test.testPlan.category || 'default';
+                categories[category] = (categories[category] || 0) + 1;
+            });
+
+            const categoryLabels = Object.keys(categories);
+            const categoryData = Object.values(categories);
+            const categoryColors = categoryLabels.map(category => {
+                switch (category) {
+                    case 'functional': return '#007bff';
+                    case 'regression': return '#6f42c1';
+                    case 'performance': return '#fd7e14';
+                    case 'critical': return '#dc3545';
+                    default: return '#6c757d';
+                }
+            });
+
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.categoryChart) {
+                window.categoryChart.data.labels = categoryLabels;
+                window.categoryChart.data.datasets[0].data = categoryData;
+                window.categoryChart.data.datasets[0].backgroundColor = categoryColors;
+                window.categoryChart.update();
+            } else {
+                window.categoryChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryLabels,
+                        datasets: [{
+                            data: categoryData,
+                            backgroundColor: categoryColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Kategori Dağılımı'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Süre grafiğini güncelleme
+        function updateDurationChart() {
+            const ctx = document.getElementById('duration-chart').getContext('2d');
+
+            // Test sürelerini hesapla
+            const durations = completedTests.map(test => {
+                return {
+                    name: test.testPlan.name,
+                    duration: calculateTestDuration(test),
+                    success: test.status === 'completed'
+                };
+            });
+
+            // En son 10 testi al
+            const recentTests = durations.slice(0, 10).reverse();
+
+            // Eğer grafik zaten oluşturulmuşsa güncelle, yoksa yeni oluştur
+            if (window.durationChart) {
+                window.durationChart.data.labels = recentTests.map(test => test.name);
+                window.durationChart.data.datasets[0].data = recentTests.map(test => test.duration / 1000);
+                window.durationChart.data.datasets[0].backgroundColor = recentTests.map(test => test.success ? '#28a745' : '#dc3545');
+                window.durationChart.update();
+            } else {
+                window.durationChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: recentTests.map(test => test.name),
+                        datasets: [{
+                            label: 'Test Süresi (saniye)',
+                            data: recentTests.map(test => test.duration / 1000),
+                            backgroundColor: recentTests.map(test => test.success ? '#28a745' : '#dc3545'),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Süre (saniye)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Test Adı'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Son 10 Test Süresi'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Performans metriklerini güncelleme
+        function updatePerformanceMetrics() {
+            // Toplam test sayısı
+            document.getElementById('total-tests').textContent = completedTests.length;
+
+            // Başarı oranı
+            const successCount = completedTests.filter(test => test.status === 'completed').length;
+            const successRate = completedTests.length > 0 ? (successCount / completedTests.length * 100).toFixed(1) + '%' : '-';
+            document.getElementById('success-rate').textContent = successRate;
+
+            // Ortalama test süresi
+            const durations = completedTests.map(test => calculateTestDuration(test));
+            const avgDuration = durations.length > 0 ? formatDuration(durations.reduce((a, b) => a + b, 0) / durations.length) : '-';
+            document.getElementById('avg-duration').textContent = avgDuration;
+
+            // Ortalama adım sayısı
+            let totalSteps = 0;
+            let testsWithSteps = 0;
+            completedTests.forEach(test => {
+                if (test.result && test.result.steps) {
+                    totalSteps += test.result.steps.length;
+                    testsWithSteps++;
+                }
+            });
+            const avgSteps = testsWithSteps > 0 ? (totalSteps / testsWithSteps).toFixed(1) : '-';
+            document.getElementById('avg-steps').textContent = avgSteps;
+        }
+
+        // Son güncelleme zamanını güncelleme
+        function updateLastUpdated() {
+            document.getElementById('last-updated').textContent = `Son Güncelleme: ${formatDate(new Date())}`;
+        }
+
+        // Belirli bir dönem ve tarihteki verileri al
+        async function fetchReportsByDate(date, period = 'daily') {
+            try {
+                // Önce agent sisteminden tamamlanan testleri al
+                const completedResponse = await fetch('/api/agent/completed-requests');
+                const completedData = await completedResponse.json();
+
+                let agentTests = [];
+                if (completedData.success) {
+                    agentTests = completedData.requests;
+                }
+
+                // Sonra reports API'sinden seçilen dönem için raporları al
+                const reportsResponse = await fetch(`/api/reports?period=${period}&date=${date}`);
+                const reportsData = await reportsResponse.json();
+
+                // Seçilen dönem için özeti de al
+                const summaryResponse = await fetch(`/api/reports/summary/${period}?date=${date}`);
+                const summaryData = await summaryResponse.json();
+
+                // Agent testlerini ve raporları birleştir
+                let allTests = [...agentTests];
+
+                // Raporları agent formatına dönüştür ve ekle
+                if (reportsData && reportsData.length > 0) {
+                    const reportTests = reportsData.map(report => {
+                        return {
+                            id: report.id,
+                            status: report.success ? 'completed' : 'failed',
+                            testPlan: {
+                                name: report.name,
+                                description: report.description,
+                                browserPreference: report.browserType,
+                                category: report.tags && report.tags.length > 0 ? report.tags[0] : 'default'
+                            },
+                            startedAt: report.timestamp ? new Date(new Date(report.timestamp).getTime() - report.duration).toISOString() : null,
+                            completedAt: report.timestamp,
+                            result: {
+                                steps: report.steps
+                            },
+                            error: report.error
+                        };
+                    });
+
+                    // Duplicate ID'leri önlemek için agent testlerinde olmayan raporları ekle
+                    const existingIds = new Set(allTests.map(test => test.id));
+                    for (const test of reportTests) {
+                        if (!existingIds.has(test.id)) {
+                            allTests.push(test);
+                            existingIds.add(test.id);
+                        }
+                    }
+                }
+
+                // Tamamlanma zamanına göre sırala (en son tamamlanan en üstte)
+                allTests.sort((a, b) => {
+                    return new Date(b.completedAt || 0) - new Date(a.completedAt || 0);
+                });
+
+                // Tüm testleri güncelle
+                completedTests = allTests;
+
+                // Arayüzü güncelle
+                updateCompletedTestsTable();
+                updateCharts();
+                updatePerformanceMetrics();
+                updateLastUpdated();
+
+                // Özet bilgilerini göster
+                if (summaryData) {
+                    document.getElementById('total-tests').textContent = summaryData.totalTests || completedTests.length;
+                    document.getElementById('success-rate').textContent = summaryData.successRate ? `${summaryData.successRate.toFixed(1)}%` : '-';
+                    document.getElementById('avg-duration').textContent = summaryData.averageDuration ? formatDuration(summaryData.averageDuration) : '-';
+                }
+            } catch (error) {
+                console.error('Veri alınırken hata oluştu:', error);
+            }
+        }
+
+        // Bugünün tarihini al
+        function getTodayDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // Sayfa yüklendiğinde verileri al
+        async function fetchInitialData() {
+            const today = getTodayDate();
+            document.getElementById('reportDate').value = today;
+            const period = document.getElementById('reportPeriod').value || 'daily';
+            await fetchReportsByDate(today, period);
+        }
+
+        // Sayfa yüklendiğinde çalıştır
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchInitialData();
+
+            // Yenile butonu
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                const date = document.getElementById('reportDate').value || getTodayDate();
+                const period = document.getElementById('reportPeriod').value || 'daily';
+                fetchReportsByDate(date, period);
+            });
+
+            // Tarih seçimi ve yükleme butonu
+            document.getElementById('loadReportsBtn').addEventListener('click', () => {
+                const date = document.getElementById('reportDate').value || getTodayDate();
+                const period = document.getElementById('reportPeriod').value || 'daily';
+                fetchReportsByDate(date, period);
+            });
+
+            // Dönem değiştiğinde tarih formatını ayarla
+            document.getElementById('reportPeriod').addEventListener('change', (e) => {
+                const period = e.target.value;
+                const dateInput = document.getElementById('reportDate');
+
+                if (period === 'monthly') {
+                    // Ay seçimi için
+                    dateInput.type = 'month';
+                } else {
+                    // Gün seçimi için
+                    dateInput.type = 'date';
+                }
+            });
+
+            // Filtreleme olayları
+            document.getElementById('filterBrowser').addEventListener('change', applyFilters);
+            document.getElementById('filterCategory').addEventListener('change', applyFilters);
+            document.getElementById('filterStatus').addEventListener('change', applyFilters);
+            document.getElementById('sortBy').addEventListener('change', applyFilters);
+
+            // Rapor indirme butonu
+            document.getElementById('downloadReportBtn').addEventListener('click', () => {
+                const modalContent = document.getElementById('testDetailsContent');
+                const testName = modalContent.querySelector('.card-title').textContent;
+
+                // HTML içeriğini JSON'a dönüştür
+                const testData = {
+                    name: testName,
+                    html: modalContent.innerHTML,
+                    date: new Date().toISOString()
+                };
+
+                // JSON'ı dosya olarak indir
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(testData));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", `${testName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            });
+
+            // Tarih alanını bugünün tarihiyle doldur
+            document.getElementById('reportDate').value = getTodayDate();
+        });
+
+        // showTestDetails fonksiyonunu global olarak tanımla
+        window.showTestDetails = showTestDetails;
+    </script>
+</body>
+</html>

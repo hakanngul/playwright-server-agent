@@ -1,6 +1,6 @@
 import express from 'express';
 import http from 'http';
-import { WebSocketServer } from 'ws';
+import { Server as SocketIOServer } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -9,6 +9,7 @@ import apiRoutes from './routes/api.js';
 import reportRoutes from './routes/reports.js';
 import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
+import agentRoutes from './routes/agent.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
@@ -79,37 +80,33 @@ const PORT = process.env.PORT || 3002;
 // Create HTTP server
 const server = http.createServer(app);
 
-// Create WebSocket server
-const wss = new WebSocketServer({ server });
+// Create Socket.io server
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    methods: ['GET', 'POST']
+  }
+});
 
-// Array to store WebSocket connections
-const clients = [];
+// Make io available globally for other modules
+global.io = io;
 
-// WebSocket connection handler
-wss.on('connection', (ws) => {
-  console.log('WebSocket connection established');
-
-  // Add new connection to clients array
-  clients.push(ws);
+// Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('Socket.io connection established', socket.id);
 
   // Connection closed handler
-  ws.on('close', () => {
-    console.log('WebSocket connection closed');
-    // Remove connection from clients array
-    const index = clients.indexOf(ws);
-    if (index !== -1) {
-      clients.splice(index, 1);
-    }
+  socket.on('disconnect', () => {
+    console.log('Socket.io connection closed', socket.id);
   });
+
+  // Send initial data to the client
+  socket.emit('welcome', { message: 'Connected to Playwright Server Agent' });
 });
 
 // Function to broadcast message to all clients
 function broadcastMessage(message) {
-  clients.forEach(client => {
-    if (client.readyState === 1) { // 1 = OPEN in WebSocket
-      client.send(JSON.stringify(message));
-    }
-  });
+  io.emit('message', message);
 }
 
 // Middleware
@@ -144,7 +141,10 @@ if (!fs.existsSync(dataDir)) {
 
 // Screenshots, videos ve traces desteği kaldırıldı
 
-// Serve static files from the client/build directory
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from the client/build directory (for backward compatibility)
 app.use(express.static(path.join(__dirname, 'client/build')));
 
 // Use API routes
@@ -158,6 +158,9 @@ app.use('/api/performance', performanceRoutes);
 
 // Use status routes
 app.use('/api/status', statusRoutes);
+
+// Use agent routes
+app.use('/api/agent', agentRoutes);
 
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -230,9 +233,8 @@ app.post('/api/test/run-parallel', async (req, res) => {
     parallelTestManager.setTestCompletedCallback((result) => {
       console.log(`Test completed: ${result.name}, success: ${result.success}`);
 
-      // Send test completion message via WebSocket
-      broadcastMessage({
-        type: 'test_completed',
+      // Send test completion message via Socket.io
+      io.emit('test_completed', {
         testName: result.name,
         result: result
       });
@@ -255,8 +257,9 @@ app.post('/api/test/run-parallel', async (req, res) => {
   }
 });
 
+// Legacy endpoint - redirect to agent-based endpoint
 app.post('/api/test/run', async (req, res) => {
-  console.log('\n--- Received test run request ---');
+  console.log('\n--- Received legacy test run request, redirecting to agent-based endpoint ---');
   try {
     const testPlan = req.body;
 
@@ -267,55 +270,18 @@ app.post('/api/test/run', async (req, res) => {
       });
     }
 
-    console.log(`Received test plan: ${testPlan.name} with ${testPlan.steps.length} steps`);
+    console.log(`Redirecting test plan: ${testPlan.name} with ${testPlan.steps.length} steps to agent-based endpoint`);
 
-    // Get browser preference from test plan
-    const browserPreference = testPlan.browserPreference || 'chromium';
-    console.log(`Browser preference from request: ${browserPreference}`);
+    // Forward to agent-based endpoint
+    const requestId = agentRoutes.agentManager.submitRequest(testPlan);
 
-    // Get headless mode preference from test plan
-    const headless = testPlan.headless !== undefined ? testPlan.headless : true;
-    console.log(`Headless mode from request: ${headless} (${headless ? 'invisible browser' : 'visible browser'})`);
-
-    // Create test agent with browser preference and options
-    const testAgent = new TestAgent(browserPreference, {
-      headless
+    res.json({
+      success: true,
+      requestId,
+      message: 'Test request submitted successfully (redirected from legacy endpoint)'
     });
-
-    // Step completion callback
-    testAgent.setStepCompletedCallback((result) => {
-      console.log(`Step ${result.step} completed: ${result.success ? 'Success' : 'Failed'}`);
-
-      // Send step completion message via WebSocket
-      broadcastMessage({
-        type: 'step_completed',
-        stepIndex: result.step - 1,
-        step: {
-          action: result.action,
-          target: result.target,
-          value: result.value,
-          strategy: result.strategy,
-          description: result.description
-        },
-        result: result
-      });
-    });
-
-    // Run the test
-    const results = await testAgent.runTest(testPlan);
-
-    // Make sure to close the browser
-    try {
-      await testAgent.close();
-      console.log('Browser closed after test completion');
-    } catch (error) {
-      console.error('Error closing browser after test:', error);
-    }
-
-    console.log('Test completed, sending results to client');
-    res.json(results);
   } catch (error) {
-    console.error('Error running test:', error);
+    console.error('Error redirecting test request:', error);
     res.status(500).json({
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -364,6 +330,47 @@ server.listen(PORT, () => {
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
 
-  console.log('Browser pool feature has been removed');
+  console.log('Agent-based test execution system is active');
   console.log('Ready to run tests!');
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received. Shutting down gracefully...');
+
+  // Close agent manager
+  try {
+    const agentManager = agentRoutes.agentManager;
+    if (agentManager) {
+      await agentManager.close();
+    }
+  } catch (error) {
+    console.error('Error closing agent manager:', error);
+  }
+
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT signal received. Shutting down gracefully...');
+
+  // Close agent manager
+  try {
+    const agentManager = agentRoutes.agentManager;
+    if (agentManager) {
+      await agentManager.close();
+    }
+  } catch (error) {
+    console.error('Error closing agent manager:', error);
+  }
+
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

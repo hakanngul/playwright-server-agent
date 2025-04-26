@@ -1,0 +1,34 @@
+{
+  "name": "Başarısız Test Senaryosu",
+  "description": "Kasıtlı olarak başarısız olacak bir test senaryosu",
+  "browserPreference": "chromium",
+  "headless": true,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "category": "critical",
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/01/textbox.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "type",
+      "target": "text1",
+      "strategy": "id",
+      "value": "Test Kullanıcısı",
+      "description": "First name alanına metin yaz"
+    },
+    {
+      "action": "click",
+      "target": "non-existent-element",
+      "strategy": "id",
+      "description": "Var olmayan bir elementi tıkla (bu adım başarısız olacak)"
+    }
+  ]
+}

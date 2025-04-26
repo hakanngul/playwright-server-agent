@@ -1,0 +1,60 @@
+{
+  "name": "Regresyon Test Senaryosu",
+  "description": "Form elemanlarının işlevselliğini test eder",
+  "browserPreference": "chromium",
+  "headless": true,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "category": "regression",
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/01/textbox.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "type",
+      "target": "text1",
+      "strategy": "id",
+      "value": "Regresyon Test",
+      "description": "First name alanına metin yaz"
+    },
+    {
+      "action": "type",
+      "target": "text2",
+      "strategy": "id",
+      "value": "Kullanıcısı",
+      "description": "Last name alanına metin yaz"
+    },
+    {
+      "action": "click",
+      "target": "check1",
+      "strategy": "id",
+      "description": "İşaretli checkbox'ı tıkla"
+    },
+    {
+      "action": "click",
+      "target": "radio2",
+      "strategy": "id",
+      "description": "Radio button'ı tıkla"
+    },
+    {
+      "action": "select",
+      "target": "Carlist",
+      "strategy": "id",
+      "value": "Audi Car",
+      "description": "Dropdown'dan Audi seç"
+    },
+    {
+      "action": "click",
+      "target": "submitButton",
+      "strategy": "id",
+      "description": "Submit butonuna tıkla"
+    }
+  ]
+}

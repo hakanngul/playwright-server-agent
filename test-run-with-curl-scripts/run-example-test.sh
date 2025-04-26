@@ -4,10 +4,7 @@
 BROWSER="chromium"
 HEADLESS="true"
 SERVER_URL="http://localhost:3002/api/agent/test-run"
-TEST_PLAN_FILE="./test-plans/test-plan.json"
-
-# Firefox için özel uyarı
-FIREFOX_WARNING="Firefox tarayıcısı için tam ekran modu devre dışı bırakıldı. Normal pencere boyutunda çalışacak."
+TEST_PLAN_FILE="./test-plans/example-test-plan.json"
 
 # Display usage information
 function show_usage {
@@ -15,7 +12,7 @@ function show_usage {
   echo "Options:"
   echo "  -b, --browser BROWSER    Specify browser (chromium, firefox, edge) [default: chromium]"
   echo "  -h, --headless BOOL      Run in headless mode (true, false) [default: false]"
-  echo "  -f, --file FILE          Test plan file to use [default: test-plan.json]"
+  echo "  -f, --file FILE          Test plan file to use [default: example-test-plan.json]"
   echo "  --help                   Show this help message"
   echo ""
   echo "Example: $0 -b firefox -h true"
@@ -74,16 +71,11 @@ cat "$TEST_PLAN_FILE" | sed "s/\"browserPreference\": \"[^\"]*\"/\"browserPrefer
   sed "s/\"headless\": [^,}]*/\"headless\": $HEADLESS/" > "$TEMP_FILE"
 
 echo "==================================================="
-echo "Running Google Search Test with the following settings:"
+echo "Running Example Blog Test with the following settings:"
 echo "Browser: $BROWSER"
 echo "Headless: $HEADLESS"
 echo "Test Plan: $TEST_PLAN_FILE"
 echo "==================================================="
-
-# Firefox için uyarı göster
-if [[ "$BROWSER" == "firefox" ]]; then
-  echo -e "\033[33mUYARI: $FIREFOX_WARNING\033[0m"
-fi
 
 # Send the test plan to the server
 echo "Sending test plan to server..."
