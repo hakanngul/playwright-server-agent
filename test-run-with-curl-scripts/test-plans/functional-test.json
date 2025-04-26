@@ -1,0 +1,58 @@
+{
+  "name": "Fonksiyonel Test Senaryosu",
+  "description": "Alert ve confirm dialoglarını test eder",
+  "browserPreference": "chromium",
+  "headless": true,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "category": "functional",
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/01/textbox.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "click",
+      "target": "//button[contains(text(), 'Show Me Alert')]",
+      "strategy": "xpath",
+      "description": "Alert butonuna tıkla"
+    },
+    {
+      "action": "acceptDialog",
+      "description": "Alert dialogunu kabul et"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "click",
+      "target": "//button[contains(text(), 'Show Me Confirmation')]",
+      "strategy": "xpath",
+      "description": "Confirmation butonuna tıkla"
+    },
+    {
+      "action": "acceptDialog",
+      "description": "Confirmation dialogunu kabul et"
+    },
+    {
+      "action": "wait",
+      "value": "500",
+      "description": "Kısa bekle"
+    },
+    {
+      "action": "verifyText",
+      "target": "demo",
+      "strategy": "id",
+      "value": "You pressed OK!",
+      "description": "Confirmation sonucunu doğrula"
+    }
+  ]
+}

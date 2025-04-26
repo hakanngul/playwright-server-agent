@@ -1,0 +1,37 @@
+{
+  "name": "Performans Test Senaryosu",
+  "description": "Sayfa yükleme performansını test eder",
+  "browserPreference": "firefox",
+  "headless": true,
+  "useBrowserPool": false,
+  "takeScreenshots": false,
+  "category": "performance",
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://only-testing-blog.blogspot.com/2014/01/textbox.html",
+      "description": "Test sayfasına git"
+    },
+    {
+      "action": "wait",
+      "value": "1000",
+      "description": "Sayfanın yüklenmesini bekle"
+    },
+    {
+      "action": "click",
+      "target": "submitButton",
+      "strategy": "id",
+      "description": "Submit butonuna tıkla"
+    },
+    {
+      "action": "wait",
+      "value": "2000",
+      "description": "İşlemin tamamlanmasını bekle"
+    },
+    {
+      "action": "verifyTitle",
+      "value": "Only Testing: Textbox",
+      "description": "Sayfa başlığını doğrula"
+    }
+  ]
+}

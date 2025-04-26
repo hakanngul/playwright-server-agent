@@ -4,187 +4,399 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test Raporları - Playwright Server Agent</title>
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary-color: #03dac6;
+            --background-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --error-color: #b00020;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --text-hint: rgba(0, 0, 0, 0.38);
+        }
+
         body {
-            padding-top: 20px;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding-top: 80px;
             padding-bottom: 40px;
-            background-color: #f8f9fa;
         }
+
         .navbar {
-            margin-bottom: 20px;
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+
+        .navbar-brand {
+            font-weight: 500;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: 500;
+        }
+
+        .nav-link.active {
+            color: white !important;
+        }
+
         .card {
-            margin-bottom: 20px;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            margin-bottom: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            background-color: var(--surface-color);
+            border: none;
+            transition: all 0.3s ease;
         }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            font-weight: 500;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 20px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .material-icons {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
         .chart-container {
             position: relative;
             height: 300px;
             margin-bottom: 20px;
         }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+
         .badge-success {
-            background-color: #28a745;
+            background-color: #4caf50;
             color: white;
         }
+
         .badge-danger {
-            background-color: #dc3545;
+            background-color: #f44336;
             color: white;
         }
+
         .badge-warning {
-            background-color: #ffc107;
-            color: black;
-        }
-        .badge-info {
-            background-color: #17a2b8;
+            background-color: #ff9800;
             color: white;
         }
+
+        .badge-info {
+            background-color: #2196f3;
+            color: white;
+        }
+
         .priority-high {
-            background-color: #dc3545;
+            background-color: #f44336;
+            color: white;
         }
+
         .priority-medium {
-            background-color: #ffc107;
-            color: #212529;
+            background-color: #ff9800;
+            color: white;
         }
+
         .priority-low {
-            background-color: #28a745;
+            background-color: #4caf50;
+            color: white;
         }
+
         .test-result-success {
-            border-left: 5px solid #28a745;
+            border-left: 5px solid #4caf50;
         }
+
         .test-result-failed {
-            border-left: 5px solid #dc3545;
+            border-left: 5px solid #f44336;
         }
+
         .test-result-pending {
-            border-left: 5px solid #ffc107;
+            border-left: 5px solid #ff9800;
         }
+
         .refresh-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 24px;
+            right: 24px;
             z-index: 1000;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border: none;
+            transition: all 0.3s ease;
         }
+
+        .refresh-btn:hover {
+            background-color: var(--primary-variant);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn .material-icons {
+            font-size: 24px;
+        }
+
         .step-details {
             margin-top: 10px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
+            padding: 16px;
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
+
         .step-success {
-            border-left: 3px solid #28a745;
+            border-left: 4px solid #4caf50;
         }
+
         .step-failed {
-            border-left: 3px solid #dc3545;
+            border-left: 4px solid #f44336;
         }
+
         .performance-metric {
-            font-size: 1.2rem;
-            font-weight: bold;
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--primary-color);
         }
+
         .metric-label {
             font-size: 0.9rem;
-            color: #6c757d;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
+
         .test-category {
             display: inline-block;
             padding: 0.25em 0.6em;
             font-size: 75%;
-            font-weight: 700;
+            font-weight: 500;
             line-height: 1;
             text-align: center;
             white-space: nowrap;
             vertical-align: baseline;
-            border-radius: 0.25rem;
+            border-radius: 16px;
             margin-right: 5px;
         }
+
         .category-functional {
-            background-color: #007bff;
+            background-color: #2196f3;
             color: white;
         }
+
         .category-regression {
-            background-color: #6f42c1;
+            background-color: #673ab7;
             color: white;
         }
+
         .category-performance {
-            background-color: #fd7e14;
+            background-color: #ff9800;
             color: white;
         }
+
         .category-critical {
-            background-color: #dc3545;
+            background-color: #f44336;
             color: white;
         }
+
         .category-default {
-            background-color: #6c757d;
+            background-color: #9e9e9e;
             color: white;
         }
+
         .last-updated {
             font-size: 0.8rem;
-            color: #6c757d;
+            color: var(--text-secondary);
             margin-top: 5px;
         }
-        .navbar-brand {
-            font-weight: bold;
+
+        .table {
+            color: var(--text-primary);
         }
-        .nav-link {
-            font-weight: 500;
-        }
+
         .table th {
-            font-weight: 600;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-top: none;
+            border-bottom-width: 1px;
         }
+
+        .table td {
+            border-color: rgba(0, 0, 0, 0.05);
+            vertical-align: middle;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 10px 16px;
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(98, 0, 238, 0.25);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-variant);
+            border-color: var(--primary-variant);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-info {
+            background-color: #2196f3;
+            border-color: #2196f3;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #0d8bf2;
+            border-color: #0d8bf2;
+            color: white;
+        }
+
+
+
+        .modal-content {
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 16px 24px;
+        }
+
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="/">Playwright Server Agent</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">Dashboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="/reports.html">Test Raporları</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="material-icons align-middle me-2">theater_comedy</i>
+                Playwright Server Agent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="material-icons align-middle me-1">dashboard</i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/reports.html">
+                            <i class="material-icons align-middle me-1">assessment</i>
+                            Test Raporları
+                        </a>
+                    </li>
+                </ul>
 
-        <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
-            <h1>Test Raporları</h1>
-            <div class="d-flex align-items-center">
-                <div class="me-2">
-                    <label for="reportPeriod" class="form-label mb-0">Dönem:</label>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="mt-4 mb-4">
+            <h1 class="mb-3">Test Raporları</h1>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="material-icons">filter_list</i>
+                    <span>Rapor Seçenekleri</span>
                 </div>
-                <div class="me-2">
-                    <select class="form-select" id="reportPeriod">
-                        <option value="daily" selected>Günlük</option>
-                        <option value="weekly">Haftalık</option>
-                        <option value="monthly">Aylık</option>
-                    </select>
-                </div>
-                <div class="me-2">
-                    <label for="reportDate" class="form-label mb-0">Tarih:</label>
-                </div>
-                <div class="me-2">
-                    <input type="date" class="form-control" id="reportDate">
-                </div>
-                <div>
-                    <button id="loadReportsBtn" class="btn btn-primary">Raporları Yükle</button>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="row g-2">
+                                <div class="col-6 col-sm-4">
+                                    <label for="reportPeriod" class="form-label">Dönem</label>
+                                    <select class="form-select" id="reportPeriod">
+                                        <option value="daily" selected>Günlük</option>
+                                        <option value="weekly">Haftalık</option>
+                                        <option value="monthly">Aylık</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-sm-4">
+                                    <label for="reportDate" class="form-label">Tarih</label>
+                                    <input type="date" class="form-control" id="reportDate">
+                                </div>
+                                <div class="col-12 col-sm-4 d-flex align-items-end">
+                                    <button id="loadReportsBtn" class="btn btn-primary w-100">
+                                        <i class="material-icons align-middle me-1">download</i>
+                                        Raporları Yükle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -194,7 +406,10 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="card">
-                    <div class="card-header">Test Sonuçları Özeti</div>
+                    <div class="card-header">
+                        <i class="material-icons">pie_chart</i>
+                        <span>Test Sonuçları Özeti</span>
+                    </div>
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="test-results-chart"></canvas>
@@ -204,7 +419,10 @@
             </div>
             <div class="col-md-6">
                 <div class="card">
-                    <div class="card-header">Kategori Dağılımı</div>
+                    <div class="card-header">
+                        <i class="material-icons">category</i>
+                        <span>Kategori Dağılımı</span>
+                    </div>
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="category-chart"></canvas>
@@ -218,7 +436,10 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="card">
-                    <div class="card-header">Test Süresi Dağılımı</div>
+                    <div class="card-header">
+                        <i class="material-icons">timer</i>
+                        <span>Test Süresi Dağılımı</span>
+                    </div>
                     <div class="card-body">
                         <div class="chart-container">
                             <canvas id="duration-chart"></canvas>
@@ -228,7 +449,10 @@
             </div>
             <div class="col-md-6">
                 <div class="card">
-                    <div class="card-header">Performans Metrikleri</div>
+                    <div class="card-header">
+                        <i class="material-icons">speed</i>
+                        <span>Performans Metrikleri</span>
+                    </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6 text-center mb-3">
@@ -253,9 +477,60 @@
             </div>
         </div>
 
+        <!-- Filtre Seçenekleri -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="material-icons">filter_list</i>
+                <span>Filtreler</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="filterBrowser" class="form-label">Tarayıcı</label>
+                        <select class="form-select" id="filterBrowser">
+                            <option value="all" selected>Tümü</option>
+                            <option value="chromium">Chromium</option>
+                            <option value="firefox">Firefox</option>
+                            <option value="webkit">WebKit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filterCategory" class="form-label">Kategori</label>
+                        <select class="form-select" id="filterCategory">
+                            <option value="all" selected>Tümü</option>
+                            <option value="functional">Fonksiyonel</option>
+                            <option value="regression">Regresyon</option>
+                            <option value="performance">Performans</option>
+                            <option value="critical">Kritik</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="filterStatus" class="form-label">Durum</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="all" selected>Tümü</option>
+                            <option value="completed">Başarılı</option>
+                            <option value="failed">Başarısız</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="sortBy" class="form-label">Sıralama</label>
+                        <select class="form-select" id="sortBy">
+                            <option value="date-desc" selected>Tarih (Yeni-Eski)</option>
+                            <option value="date-asc">Tarih (Eski-Yeni)</option>
+                            <option value="duration-asc">Süre (Kısa-Uzun)</option>
+                            <option value="duration-desc">Süre (Uzun-Kısa)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Son Tamamlanan Testler -->
         <div class="card">
-            <div class="card-header">Son Tamamlanan Testler</div>
+            <div class="card-header">
+                <i class="material-icons">history</i>
+                <span>Son Tamamlanan Testler</span>
+            </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped">
@@ -286,7 +561,10 @@
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="testDetailsModalLabel">Test Detayları</h5>
+                        <h5 class="modal-title" id="testDetailsModalLabel">
+                            <i class="material-icons align-middle me-1">assignment</i>
+                            Test Detayları
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body" id="testDetailsContent">
@@ -294,6 +572,10 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        <button type="button" class="btn btn-primary" id="downloadReportBtn">
+                            <i class="material-icons align-middle me-1">download</i>
+                            Raporu İndir
+                        </button>
                     </div>
                 </div>
             </div>
@@ -301,17 +583,17 @@
     </div>
 
     <!-- Refresh Button -->
-    <button id="refresh-btn" class="btn btn-primary refresh-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-        </svg>
+    <button id="refresh-btn" class="refresh-btn">
+        <i class="material-icons">refresh</i>
     </button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+
+
         // Test sonuçlarını saklayacak dizi
         let completedTests = [];
+        let filteredTests = [];
 
         // Socket.io bağlantısı
         const socket = io();
@@ -335,7 +617,7 @@
                 completedTests.pop();
             }
             // Tabloyu ve grafikleri güncelle
-            updateCompletedTestsTable();
+            applyFilters();
             updateCharts();
             updatePerformanceMetrics();
             updateLastUpdated();
@@ -350,7 +632,7 @@
                 completedTests.pop();
             }
             // Tabloyu ve grafikleri güncelle
-            updateCompletedTestsTable();
+            applyFilters();
             updateCharts();
             updatePerformanceMetrics();
             updateLastUpdated();
@@ -360,7 +642,7 @@
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
             const date = new Date(dateString);
-            return date.toLocaleString();
+            return date.toLocaleString('tr-TR');
         }
 
         // Süre formatı fonksiyonu
@@ -395,23 +677,75 @@
             }
         }
 
+        // Filtreleri uygulama fonksiyonu
+        function applyFilters() {
+            const browserFilter = document.getElementById('filterBrowser').value;
+            const categoryFilter = document.getElementById('filterCategory').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+            const sortBy = document.getElementById('sortBy').value;
+
+            // Filtreleme
+            filteredTests = completedTests.filter(test => {
+                // Tarayıcı filtresi
+                if (browserFilter !== 'all' && test.testPlan.browserPreference !== browserFilter) {
+                    return false;
+                }
+
+                // Kategori filtresi
+                if (categoryFilter !== 'all' && (test.testPlan.category || 'default') !== categoryFilter) {
+                    return false;
+                }
+
+                // Durum filtresi
+                if (statusFilter !== 'all' && test.status !== statusFilter) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Sıralama
+            filteredTests.sort((a, b) => {
+                const durationA = calculateTestDuration(a);
+                const durationB = calculateTestDuration(b);
+                const dateA = new Date(a.completedAt || 0).getTime();
+                const dateB = new Date(b.completedAt || 0).getTime();
+
+                switch (sortBy) {
+                    case 'date-desc':
+                        return dateB - dateA;
+                    case 'date-asc':
+                        return dateA - dateB;
+                    case 'duration-asc':
+                        return durationA - durationB;
+                    case 'duration-desc':
+                        return durationB - durationA;
+                    default:
+                        return dateB - dateA;
+                }
+            });
+
+            updateCompletedTestsTable();
+        }
+
         // Tamamlanan testler tablosunu güncelleme
         function updateCompletedTestsTable() {
             const tableBody = document.getElementById('completed-tests-table');
             tableBody.innerHTML = '';
 
-            if (completedTests.length === 0) {
+            if (filteredTests.length === 0) {
                 const row = document.createElement('tr');
-                row.innerHTML = '<td colspan="7" class="text-center">Henüz tamamlanan test yok</td>';
+                row.innerHTML = '<td colspan="7" class="text-center">Filtrelere uygun test bulunamadı</td>';
                 tableBody.appendChild(row);
                 return;
             }
 
-            completedTests.forEach((test, index) => {
+            filteredTests.forEach((test, index) => {
                 const row = document.createElement('tr');
                 const isSuccess = test.status === 'completed';
                 const testDuration = calculateTestDuration(test);
                 const category = test.testPlan.category || 'default';
+                const originalIndex = completedTests.indexOf(test);
 
                 row.innerHTML = `
                     <td>${test.testPlan.name}</td>
@@ -420,7 +754,7 @@
                     <td><span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span></td>
                     <td>${formatDuration(testDuration)}</td>
                     <td>${formatDate(test.completedAt)}</td>
-                    <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${index})">Detaylar</button></td>
+                    <td><button class="btn btn-sm btn-info" onclick="showTestDetails(${originalIndex})">Detaylar</button></td>
                 `;
 
                 tableBody.appendChild(row);
@@ -818,6 +1152,34 @@
                     // Gün seçimi için
                     dateInput.type = 'date';
                 }
+            });
+
+            // Filtreleme olayları
+            document.getElementById('filterBrowser').addEventListener('change', applyFilters);
+            document.getElementById('filterCategory').addEventListener('change', applyFilters);
+            document.getElementById('filterStatus').addEventListener('change', applyFilters);
+            document.getElementById('sortBy').addEventListener('change', applyFilters);
+
+            // Rapor indirme butonu
+            document.getElementById('downloadReportBtn').addEventListener('click', () => {
+                const modalContent = document.getElementById('testDetailsContent');
+                const testName = modalContent.querySelector('.card-title').textContent;
+
+                // HTML içeriğini JSON'a dönüştür
+                const testData = {
+                    name: testName,
+                    html: modalContent.innerHTML,
+                    date: new Date().toISOString()
+                };
+
+                // JSON'ı dosya olarak indir
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(testData));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", `${testName.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
             });
 
             // Tarih alanını bugünün tarihiyle doldur
