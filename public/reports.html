@@ -595,7 +595,7 @@
 
         <!-- Test Detayları Modal -->
         <div class="modal fade" id="testDetailsModal" tabindex="-1" aria-labelledby="testDetailsModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
+            <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="testDetailsModalLabel">
@@ -604,11 +604,14 @@
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body" id="testDetailsContent">
+                    <div class="modal-body p-0" id="testDetailsContent">
                         <!-- Test detayları burada gösterilecek -->
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="material-icons align-middle me-1">close</i>
+                            Kapat
+                        </button>
                         <button type="button" class="btn btn-primary" id="downloadReportBtn">
                             <i class="material-icons align-middle me-1">download</i>
                             Raporu İndir
@@ -829,56 +832,100 @@
             const testDuration = calculateTestDuration(test);
             const category = test.testPlan.category || 'default';
 
+            // Başarı durumuna göre renk sınıfı
+            const statusClass = isSuccess ? 'success' : 'error';
+            const statusIcon = isSuccess ? 'check_circle' : 'error';
+            const statusText = isSuccess ? 'Başarılı' : 'Başarısız';
+
+            // Adımları HTML'e dönüştür
             let stepsHtml = '';
+            let totalSteps = 0;
+            let successfulSteps = 0;
+
             if (test.result && test.result.steps) {
+                totalSteps = test.result.steps.length;
+                successfulSteps = test.result.steps.filter(step => step.success !== false).length;
+
+                stepsHtml = '<div class="steps-list p-4">';
+                stepsHtml += '<div class="steps-header d-flex justify-content-between align-items-center">';
+                stepsHtml += `<h6 class="mb-0"><i class="material-icons align-middle me-1">list</i> Test Adımları (${successfulSteps}/${totalSteps})</h6>`;
+                stepsHtml += `<span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${successfulSteps}/${totalSteps} Adım Başarılı</span>`;
+                stepsHtml += '</div>';
+
                 test.result.steps.forEach((step, stepIndex) => {
                     const stepSuccess = step.success !== false;
+                    const stepIcon = stepSuccess ? 'check_circle' : 'error';
+
                     stepsHtml += `
-                        <div class="step-details ${stepSuccess ? 'step-success' : 'step-failed'} mb-2">
-                            <div><strong>Adım ${stepIndex + 1}:</strong> ${step.description || step.action}</div>
-                            <div><strong>Eylem:</strong> ${step.action}</div>
-                            <div><strong>Hedef:</strong> ${step.target}</div>
-                            <div><strong>Değer:</strong> ${step.value || '-'}</div>
-                            <div><strong>Durum:</strong> <span class="badge ${stepSuccess ? 'badge-success' : 'badge-danger'}">${stepSuccess ? 'Başarılı' : 'Başarısız'}</span></div>
-                            ${step.error ? `<div><strong>Hata:</strong> ${step.error}</div>` : ''}
-                            ${step.screenshot ? `<div class="mt-2"><img src="${step.screenshot}" class="img-fluid" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                        <div class="step-item ${stepSuccess ? 'step-success' : 'step-error'} mb-3">
+                            <div class="step-header">
+                                <span class="step-number">${stepIndex + 1}</span>
+                                <span class="step-action">${step.action}</span>
+                                <span class="step-status">
+                                    <i class="material-icons ${stepSuccess ? 'text-success' : 'text-danger'}">${stepIcon}</i>
+                                </span>
+                            </div>
+                            <div class="step-details">
+                                <div><strong>Hedef:</strong> ${step.target || '-'}</div>
+                                <div><strong>Strateji:</strong> ${step.strategy || '-'}</div>
+                                <div><strong>Değer:</strong> ${step.value || '-'}</div>
+                                <div><strong>Açıklama:</strong> ${step.description || '-'}</div>
+                                <div><strong>Süre:</strong> ${formatDuration(step.duration)}</div>
+                                ${step.error ? `<div class="text-danger mt-2 p-2 bg-light rounded"><strong>Hata:</strong> ${step.error}</div>` : ''}
+                                ${step.screenshot ? `<div class="mt-3"><img src="${step.screenshot}" class="img-fluid rounded shadow-sm" alt="Adım Ekran Görüntüsü"></div>` : ''}
+                            </div>
                         </div>
                     `;
                 });
+                stepsHtml += '</div>';
             } else if (test.error) {
                 stepsHtml = `
-                    <div class="alert alert-danger">
-                        <strong>Hata:</strong> ${test.error.message}
-                        ${test.error.stack ? `<pre>${test.error.stack}</pre>` : ''}
+                    <div class="p-4">
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading"><i class="material-icons align-middle me-1">error</i> Hata</h6>
+                            <p>${test.error.message}</p>
+                            ${test.error.stack ? `<pre class="mt-3 p-2 bg-light rounded small">${test.error.stack}</pre>` : ''}
+                        </div>
                     </div>
                 `;
+            } else {
+                stepsHtml = '<div class="p-4"><div class="alert alert-info">Bu test için adım bilgisi bulunmuyor.</div></div>';
             }
 
             modalContent.innerHTML = `
-                <div class="card ${isSuccess ? 'test-result-success' : 'test-result-failed'} mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">${test.testPlan.name}</h5>
-                        <div class="mb-3">
-                            <span class="test-category ${getCategoryClass(category)}">${category}</span>
-                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${isSuccess ? 'Başarılı' : 'Başarısız'}</span>
+                <div class="test-info-header ${statusClass} p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="test-info-title mb-0">
+                            <i class="material-icons">${statusIcon}</i>
+                            ${test.testPlan.name}
+                        </h5>
+                        <div>
+                            <span class="test-category ${getCategoryClass(category)} me-2">${category}</span>
+                            <span class="badge ${isSuccess ? 'badge-success' : 'badge-danger'}">${statusText}</span>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <strong>Tarayıcı:</strong> ${test.testPlan.browserPreference || 'chromium'}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Süre:</strong> ${formatDuration(testDuration)}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Başlangıç:</strong> ${formatDate(test.startedAt)}
-                            </div>
-                            <div class="col-md-6">
-                                <strong>Bitiş:</strong> ${formatDate(test.completedAt)}
-                            </div>
-                        </div>
-                        <h6>Test Adımları:</h6>
-                        ${stepsHtml}
                     </div>
+                </div>
+                <div class="test-info-body p-4">
+                    <div class="test-info-grid">
+                        <div class="test-info-item">
+                            <strong>Tarayıcı</strong>
+                            <span>${test.testPlan.browserPreference || 'chromium'}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Süre</strong>
+                            <span>${formatDuration(testDuration)}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Başlangıç</strong>
+                            <span>${formatDate(test.startedAt)}</span>
+                        </div>
+                        <div class="test-info-item">
+                            <strong>Bitiş</strong>
+                            <span>${formatDate(test.completedAt)}</span>
+                        </div>
+                    </div>
+
+                    ${stepsHtml}
                 </div>
             `;
 
@@ -1357,19 +1404,37 @@
                 const modal = new bootstrap.Modal(document.getElementById('testDetailsModal'));
                 const modalContent = document.getElementById('testDetailsContent');
 
+                // Başarı durumuna göre renk sınıfı
+                const statusClass = report.success ? 'success' : 'error';
+                const statusIcon = report.success ? 'check_circle' : 'error';
+                const statusText = report.success ? 'Başarılı' : 'Başarısız';
+
                 // Adımları HTML'e dönüştür
                 let stepsHtml = '';
+                let totalSteps = 0;
+                let successfulSteps = 0;
+
                 if (report.steps && report.steps.length > 0) {
-                    stepsHtml = '<div class="steps-list">';
+                    totalSteps = report.steps.length;
+                    successfulSteps = report.steps.filter(step => step.success).length;
+
+                    stepsHtml = '<div class="steps-list p-4">';
+                    stepsHtml += '<div class="steps-header d-flex justify-content-between align-items-center">';
+                    stepsHtml += `<h6 class="mb-0"><i class="material-icons align-middle me-1">list</i> Test Adımları (${successfulSteps}/${totalSteps})</h6>`;
+                    stepsHtml += `<span class="badge ${report.success ? 'badge-success' : 'badge-danger'}">${successfulSteps}/${totalSteps} Adım Başarılı</span>`;
+                    stepsHtml += '</div>';
+
                     report.steps.forEach(step => {
                         const isStepSuccess = step.success;
+                        const stepIcon = isStepSuccess ? 'check_circle' : 'error';
+
                         stepsHtml += `
-                            <div class="step-item ${isStepSuccess ? 'step-success' : 'step-error'}">
+                            <div class="step-item ${isStepSuccess ? 'step-success' : 'step-error'} mb-3">
                                 <div class="step-header">
-                                    <span class="step-number">${step.step}.</span>
+                                    <span class="step-number">${step.step}</span>
                                     <span class="step-action">${step.action}</span>
-                                    <span class="step-status ${isStepSuccess ? 'text-success' : 'text-danger'}">
-                                        <i class="bi ${isStepSuccess ? 'bi-check-circle' : 'bi-x-circle'}"></i>
+                                    <span class="step-status">
+                                        <i class="material-icons ${isStepSuccess ? 'text-success' : 'text-danger'}">${stepIcon}</i>
                                     </span>
                                 </div>
                                 <div class="step-details">
@@ -1378,44 +1443,55 @@
                                     <div><strong>Değer:</strong> ${step.value || '-'}</div>
                                     <div><strong>Açıklama:</strong> ${step.description || '-'}</div>
                                     <div><strong>Süre:</strong> ${formatDuration(step.duration)}</div>
-                                    ${step.error ? `<div class="text-danger"><strong>Hata:</strong> ${step.error}</div>` : ''}
+                                    ${step.error ? `<div class="text-danger mt-2 p-2 bg-light rounded"><strong>Hata:</strong> ${step.error}</div>` : ''}
                                 </div>
                             </div>
                         `;
                     });
                     stepsHtml += '</div>';
                 } else {
-                    stepsHtml = '<p>Bu test için adım bilgisi bulunmuyor.</p>';
+                    stepsHtml = '<div class="p-4"><div class="alert alert-info">Bu test için adım bilgisi bulunmuyor.</div></div>';
                 }
 
                 // Modal içeriğini oluştur
                 modalContent.innerHTML = `
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title">${report.name}</h5>
+                    <div class="test-info-header ${statusClass} p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="test-info-title mb-0">
+                                <i class="material-icons">${statusIcon}</i>
+                                ${report.name}
+                            </h5>
+                            <span class="badge ${report.success ? 'badge-success' : 'badge-danger'}">${statusText}</span>
                         </div>
-                        <div class="card-body">
-                            <div class="test-info">
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <strong>Durum:</strong> <span class="badge ${report.success ? 'badge-success' : 'badge-danger'}">${report.success ? 'Başarılı' : 'Başarısız'}</span>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>Tarayıcı:</strong> ${report.browserType}
-                                    </div>
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <strong>Süre:</strong> ${formatDuration(report.duration)}
-                                    </div>
-                                    <div class="col-md-6">
-                                        <strong>Tamamlanma:</strong> ${formatDate(report.timestamp)}
-                                    </div>
-                                </div>
+                    </div>
+                    <div class="test-info-body p-4">
+                        <div class="test-info-grid">
+                            <div class="test-info-item">
+                                <strong>Tarayıcı</strong>
+                                <span>${report.browserType || 'Chromium'}</span>
                             </div>
-                            <h6>Test Adımları:</h6>
-                            ${stepsHtml}
+                            <div class="test-info-item">
+                                <strong>Kategori</strong>
+                                <span>${report.tags && report.tags.length > 0 ? report.tags[0] : 'Default'}</span>
+                            </div>
+                            <div class="test-info-item">
+                                <strong>Süre</strong>
+                                <span>${formatDuration(report.duration)}</span>
+                            </div>
+                            <div class="test-info-item">
+                                <strong>Tamamlanma Zamanı</strong>
+                                <span>${formatDate(report.timestamp)}</span>
+                            </div>
                         </div>
+
+                        ${report.error ? `
+                        <div class="alert alert-danger mt-3">
+                            <h6 class="alert-heading"><i class="material-icons align-middle me-1">error</i> Hata</h6>
+                            <p class="mb-0">${report.error}</p>
+                        </div>
+                        ` : ''}
+
+                        ${stepsHtml}
                     </div>
                 `;
 
@@ -1432,12 +1508,44 @@
             let successfulTests = 0;
             let failedTests = 0;
             let totalDuration = 0;
+            let totalSteps = 0;
+            let testsWithSteps = 0;
 
             // Kategori dağılımı için
             const categories = {};
 
             // Test süreleri için
             const testDurations = [];
+
+            // Önce raporlardan adım sayılarını hesaplamak için tüm raporları alalım
+            const calculateStepsFromReports = async () => {
+                for (const summary of summaries) {
+                    if (summary.date) {
+                        // Raporları al
+                        try {
+                            const reportsResponse = await fetch(`/api/reports?period=daily&date=${summary.date}`);
+                            const reports = await reportsResponse.json();
+
+                            // Her rapor için adım sayısını hesapla
+                            for (const report of reports) {
+                                if (report.steps && report.steps.length > 0) {
+                                    totalSteps += report.steps.length;
+                                    testsWithSteps++;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Raporlar alınırken hata oluştu:', error);
+                        }
+                    }
+                }
+
+                // Ortalama adım sayısını hesapla ve güncelle
+                const avgSteps = testsWithSteps > 0 ? (totalSteps / testsWithSteps).toFixed(1) : '-';
+                document.getElementById('avg-steps').textContent = avgSteps;
+            };
+
+            // Adım sayılarını hesapla
+            calculateStepsFromReports();
 
             summaries.forEach(summary => {
                 totalTests += summary.totalTests;
