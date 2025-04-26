@@ -34,3 +34,5 @@ Thumbs.db
 
 #UI 
 client/node_modules
+playwright-report/index.html
+test-results
