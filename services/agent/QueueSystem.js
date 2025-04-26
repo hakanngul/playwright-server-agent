@@ -52,11 +52,12 @@ export class QueueSystem extends EventEmitter {
     const queuedRequest = {
       ...request,
       id: requestId,
-      status: 'queued',
+      status: 'queued', // Başlangıçta 'queued' durumunda
       priority: calculatedPriority,
       queuedAt: new Date().toISOString(),
       startedAt: null,
-      completedAt: null
+      completedAt: null,
+      processed: false // İşlenip işlenmediğini takip etmek için
     };
 
     // Kategori belirle
@@ -211,7 +212,9 @@ export class QueueSystem extends EventEmitter {
     // Tüm kuyrukları birleştir
     const allRequests = [];
     for (const category in this.queues) {
-      allRequests.push(...this.queues[category]);
+      // Sadece 'queued' durumundaki istekleri ekle
+      const queuedRequests = this.queues[category].filter(req => req.status === 'queued');
+      allRequests.push(...queuedRequests);
     }
     return allRequests;
   }

@@ -123,10 +123,13 @@ router.get('/queued-requests', (req, res) => {
   try {
     const requests = agentManager.queueSystem.getQueuedRequests();
 
+    // Sadece 'queued' durumundaki istekleri filtrele
+    const queuedRequests = requests.filter(req => req.status === 'queued');
+
     res.json({
       success: true,
-      count: requests.length,
-      requests
+      count: queuedRequests.length,
+      requests: queuedRequests
     });
   } catch (error) {
     console.error('Error getting queued requests:', error);

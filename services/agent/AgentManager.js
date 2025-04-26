@@ -276,8 +276,13 @@ export class AgentManager extends EventEmitter {
     }
 
     // If no matching agent is available, check if we can create a new one
-    if (this.agents.size < this.options.maxAgents) {
+    if (this.agents.size < this.dynamicAgentOptions.currentLimit) {
       const agentId = this._createAgent(options);
+      // Eğer agent oluşturulamazsa null döner
+      if (agentId === null) {
+        console.log("Could not create a new agent, resource limits may be exceeded");
+        return null;
+      }
       return this.agents.get(agentId);
     }
 
