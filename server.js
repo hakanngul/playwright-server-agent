@@ -11,6 +11,7 @@ import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
 import agentRoutes from './routes/agent.js';
 import testPlansRoutes from './routes/test-plans.js';
+import testSuitesRoutes from './routes/test-suites.js';
 import { TestAgent } from './services/testAgent.js';
 import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
 import os from 'os';
@@ -165,6 +166,9 @@ app.use('/api/agent', agentRoutes);
 
 // Use test plans routes
 app.use('/api/test-plans', testPlansRoutes);
+
+// Use test suites routes
+app.use('/api/test-suites', testSuitesRoutes);
 
 // Add a simple health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -343,6 +347,14 @@ server.listen(PORT, () => {
   console.log(`API server running at http://localhost:${PORT}`);
   console.log(`Frontend should be started separately on port 3000`);
   logSystemInfo();
+
+  // Make agent manager available to routes
+  if (agentRoutes.agentManager) {
+    app.set('agentManager', agentRoutes.agentManager);
+    console.log('Agent manager set in app for other routes to use');
+  } else {
+    console.error('WARNING: agentManager not available from agentRoutes');
+  }
 
   console.log('Agent-based test execution system is active');
   console.log('Ready to run tests!');

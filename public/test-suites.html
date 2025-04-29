@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Server Agent - Test Suite'leri</title>
+    <!-- Material Design Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #6200ee;
+            --primary-variant: #3700b3;
+            --secondary-color: #03dac6;
+            --background-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --error-color: #b00020;
+            --on-primary: #ffffff;
+            --on-secondary: #000000;
+            --on-background: #000000;
+            --on-surface: #000000;
+            --on-error: #ffffff;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            padding-top: 70px;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--primary-color);
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: var(--on-primary);
+            padding: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header i {
+            margin-right: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-variant);
+            border-color: var(--primary-variant);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: var(--on-secondary);
+        }
+
+        .btn-secondary:hover {
+            background-color: #00b5a3;
+            border-color: #00b5a3;
+            color: var(--on-secondary);
+        }
+
+        .action-buttons button {
+            margin-right: 5px;
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: var(--on-primary);
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .fab-button:hover {
+            background-color: var(--primary-variant);
+            transform: scale(1.05);
+        }
+
+        .fab-button i {
+            font-size: 24px;
+        }
+
+        .alert-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 350px;
+            z-index: 1050;
+        }
+
+        .suite-card {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .suite-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .suite-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suite-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .suite-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .suite-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .suite-info-item {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .suite-info-item i {
+            font-size: 16px;
+            margin-right: 5px;
+        }
+
+        .test-plan-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .test-plan-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-plan-item:last-child {
+            border-bottom: none;
+        }
+
+        .suite-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .badge-browser {
+            background-color: #e0f7fa;
+            color: #006064;
+        }
+
+        .badge-headless {
+            background-color: #f3e5f5;
+            color: #4a148c;
+        }
+
+        .badge-parallel {
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        .badge-category {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="material-icons align-middle me-2">theater_comedy</i>
+                Playwright Server Agent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="material-icons align-middle me-1">dashboard</i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html">
+                            <i class="material-icons align-middle me-1">assessment</i>
+                            Test Raporları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/test-plans.html">
+                            <i class="material-icons align-middle me-1">playlist_add_check</i>
+                            Test Planları
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/test-suites.html">
+                            <i class="material-icons align-middle me-1">library_books</i>
+                            Test Suite'leri
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/create-test.html">
+                            <i class="material-icons align-middle me-1">add_circle</i>
+                            Test Oluştur
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="alert-container"></div>
+
+        <h1 class="mb-4">Test Suite'leri</h1>
+
+        <!-- Test Suites Container -->
+        <div id="test-suites-container">
+            <!-- Test suites will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Add New Test Suite Button -->
+    <button id="add-test-suite-btn" class="fab-button" data-bs-toggle="modal" data-bs-target="#testSuiteModal">
+        <i class="material-icons">add</i>
+    </button>
+
+    <!-- Test Suite Modal -->
+    <div class="modal fade" id="testSuiteModal" tabindex="-1" aria-labelledby="testSuiteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="testSuiteModalLabel">Yeni Test Suite</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="test-suite-form">
+                        <!-- Test Suite Basic Info -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="suite-name" class="form-label">Suite Adı</label>
+                                <input type="text" class="form-control" id="suite-name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="suite-description" class="form-label">Açıklama</label>
+                                <input type="text" class="form-control" id="suite-description">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="suite-category" class="form-label">Kategori</label>
+                                <select class="form-select" id="suite-category">
+                                    <option value="regression">Regression</option>
+                                    <option value="functional">Functional</option>
+                                    <option value="performance">Performance</option>
+                                    <option value="security">Security</option>
+                                    <option value="accessibility">Accessibility</option>
+                                    <option value="integration">Integration</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="suite-parallel" class="form-label">Paralel Çalıştırma</label>
+                                <select class="form-select" id="suite-parallel">
+                                    <option value="true">Evet</option>
+                                    <option value="false">Hayır</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="suite-max-workers" class="form-label">Maksimum Worker</label>
+                                <input type="number" class="form-control" id="suite-max-workers" min="1" max="10" value="5">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="suite-browser" class="form-label">Varsayılan Tarayıcı</label>
+                                <select class="form-select" id="suite-browser">
+                                    <option value="chromium">Chromium</option>
+                                    <option value="firefox">Firefox</option>
+                                    <option value="webkit">WebKit</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="suite-headless" class="form-label">Varsayılan Headless</label>
+                                <select class="form-select" id="suite-headless">
+                                    <option value="false">Hayır</option>
+                                    <option value="true">Evet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Test Plans Selection -->
+                        <h5 class="mb-3">Test Planları</h5>
+                        <div class="mb-3">
+                            <div class="test-plan-selection" id="test-plan-selection">
+                                <!-- Test plans will be loaded here -->
+                                <div class="alert alert-info">
+                                    Test planları yükleniyor...
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" id="save-test-suite-btn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let testSuites = [];
+        let testPlans = [];
+        let currentTestSuite = {
+            name: '',
+            description: '',
+            category: 'regression',
+            parallelExecution: true,
+            maxWorkers: 5,
+            defaultBrowserPreference: 'chromium',
+            defaultHeadless: false,
+            testPlans: []
+        };
+        let editMode = false;
+        let editId = null;
+
+        // Document ready
+        $(document).ready(function() {
+            // Load test suites
+            loadTestSuites();
+
+            // Load test plans for selection
+            loadTestPlans();
+
+            // Setup event listeners
+            setupEventListeners();
+        });
+
+        // Load test suites
+        function loadTestSuites() {
+            $.ajax({
+                url: '/api/test-suites',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        testSuites = response.testSuites;
+                        renderTestSuites();
+                    } else {
+                        showAlert('danger', 'Test suite\'leri yüklenirken bir hata oluştu.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading test suites:', error);
+                    showAlert('danger', 'Test suite\'leri yüklenirken bir hata oluştu.');
+
+                    // For demo purposes, use mock data if API fails
+                    testSuites = [
+                        {
+                            id: 'test-suite',
+                            name: 'Only Testing Blog Test Suite',
+                            description: 'Only Testing Blog sitesi için kapsamlı test suite',
+                            category: 'regression',
+                            parallelExecution: true,
+                            maxWorkers: 5,
+                            defaultBrowserPreference: 'chromium',
+                            defaultHeadless: false,
+                            testPlans: []
+                        }
+                    ];
+
+                    renderTestSuites();
+                }
+            });
+        }
+
+        // Load test plans for selection
+        function loadTestPlans() {
+            $.ajax({
+                url: '/api/test-plans',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        testPlans = response.testPlans;
+                        renderTestPlanSelection();
+                    } else {
+                        showAlert('danger', 'Test planları yüklenirken bir hata oluştu.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading test plans:', error);
+                    showAlert('danger', 'Test planları yüklenirken bir hata oluştu.');
+
+                    // For demo purposes, use mock data if API fails
+                    testPlans = [
+                        { id: 'plan1', name: 'Google Arama Testi', description: 'Google\'a git ve arama yap', browserPreference: 'firefox' },
+                        { id: 'plan2', name: 'Example Blog Test', description: 'Example Blog sitesine git ve test et', browserPreference: 'chromium' },
+                        { id: 'plan3', name: 'Temel Etkileşimler Testi', description: 'Only Testing Blog üzerinde temel etkileşimleri test eder', browserPreference: 'chromium' },
+                        { id: 'plan4', name: 'Doğrulama İşlemleri Testi', description: 'Only Testing Blog üzerinde doğrulama işlemlerini test eder', browserPreference: 'firefox' },
+                        { id: 'plan5', name: 'Fonksiyonel Test Senaryosu', description: 'Alert ve confirm dialoglarını test eder', browserPreference: 'chromium' }
+                    ];
+                    renderTestPlanSelection();
+                }
+            });
+        }
+
+        // Render test suites
+        function renderTestSuites() {
+            const container = $('#test-suites-container');
+            container.empty();
+
+            if (testSuites.length === 0) {
+                container.append(`
+                    <div class="alert alert-info">
+                        Henüz test suite bulunmuyor. Yeni bir test suite oluşturmak için sağ alttaki + butonuna tıklayın.
+                    </div>
+                `);
+                return;
+            }
+
+            testSuites.forEach(suite => {
+                const suiteCard = $(`
+                    <div class="card suite-card">
+                        <div class="card-body">
+                            <div class="suite-header">
+                                <div class="suite-title">${suite.name}</div>
+                                <div class="badge badge-category">${suite.category}</div>
+                            </div>
+                            <div class="suite-description">${suite.description}</div>
+                            <div class="suite-info">
+                                <div class="suite-info-item badge-browser">
+                                    <i class="material-icons">web</i>
+                                    ${suite.defaultBrowserPreference}
+                                </div>
+                                <div class="suite-info-item badge-headless">
+                                    <i class="material-icons">visibility${suite.defaultHeadless ? '_off' : ''}</i>
+                                    Headless: ${suite.defaultHeadless ? 'Evet' : 'Hayır'}
+                                </div>
+                                <div class="suite-info-item badge-parallel">
+                                    <i class="material-icons">sync</i>
+                                    Paralel: ${suite.parallelExecution ? 'Evet' : 'Hayır'}
+                                </div>
+                                <div class="suite-info-item">
+                                    <i class="material-icons">group_work</i>
+                                    Max Workers: ${suite.maxWorkers}
+                                </div>
+                                <div class="suite-info-item">
+                                    <i class="material-icons">playlist_add_check</i>
+                                    Test Sayısı: ${suite.testPlans.length}
+                                </div>
+                            </div>
+                            <div class="test-plan-list">
+                                <div class="list-group">
+                                    ${suite.testPlans && suite.testPlans.length > 0 ?
+                                        suite.testPlans.map(plan => `
+                                            <div class="test-plan-item">
+                                                <div>${plan.name}</div>
+                                                <div class="badge bg-primary">${plan.browserPreference}</div>
+                                            </div>
+                                        `).join('') :
+                                        '<div class="alert alert-info mb-0">Bu test suite\'inde henüz test planı bulunmuyor.</div>'
+                                    }
+                                </div>
+                            </div>
+                            <div class="suite-actions">
+                                <button class="btn btn-sm btn-outline-primary edit-suite-btn" data-id="${suite.id}">
+                                    <i class="material-icons">edit</i> Düzenle
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger delete-suite-btn" data-id="${suite.id}">
+                                    <i class="material-icons">delete</i> Sil
+                                </button>
+                                <button class="btn btn-sm btn-success run-suite-btn" data-id="${suite.id}">
+                                    <i class="material-icons">play_arrow</i> Çalıştır
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                container.append(suiteCard);
+            });
+
+            // Add event listeners for suite actions
+            $('.edit-suite-btn').on('click', function() {
+                const suiteId = $(this).data('id');
+                editTestSuite(suiteId);
+            });
+
+            $('.delete-suite-btn').on('click', function() {
+                const suiteId = $(this).data('id');
+                deleteTestSuite(suiteId);
+            });
+
+            $('.run-suite-btn').on('click', function() {
+                const suiteId = $(this).data('id');
+                runTestSuite(suiteId);
+            });
+        }
+
+        // Render test plan selection
+        function renderTestPlanSelection() {
+            const container = $('#test-plan-selection');
+            container.empty();
+
+            if (testPlans.length === 0) {
+                container.append(`
+                    <div class="alert alert-warning">
+                        Henüz test planı bulunmuyor. Önce test planları oluşturun.
+                    </div>
+                `);
+                return;
+            }
+
+            const testPlanList = $('<div class="list-group mb-3"></div>');
+
+            testPlans.forEach(plan => {
+                const isSelected = currentTestSuite.testPlans.some(p => p.id === plan.id);
+
+                const planItem = $(`
+                    <div class="list-group-item">
+                        <div class="form-check">
+                            <input class="form-check-input test-plan-checkbox" type="checkbox" value="${plan.id}" id="plan-${plan.id}" ${isSelected ? 'checked' : ''}>
+                            <label class="form-check-label" for="plan-${plan.id}">
+                                <strong>${plan.name}</strong>
+                                <span class="badge bg-primary ms-2">${plan.browserPreference}</span>
+                                <div class="text-muted small">${plan.description}</div>
+                            </label>
+                        </div>
+                    </div>
+                `);
+
+                testPlanList.append(planItem);
+            });
+
+            container.append(testPlanList);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // New test suite button
+            $('#add-test-suite-btn').on('click', function() {
+                resetTestSuiteForm();
+                editMode = false;
+                editId = null;
+                $('#testSuiteModalLabel').text('Yeni Test Suite');
+                $('#save-test-suite-btn').text('Kaydet');
+            });
+
+            // Save test suite button
+            $('#save-test-suite-btn').on('click', saveTestSuite);
+        }
+
+        // Reset test suite form
+        function resetTestSuiteForm() {
+            $('#suite-name').val('');
+            $('#suite-description').val('');
+            $('#suite-category').val('regression');
+            $('#suite-parallel').val('true');
+            $('#suite-max-workers').val('5');
+            $('#suite-browser').val('chromium');
+            $('#suite-headless').val('false');
+
+            currentTestSuite = {
+                name: '',
+                description: '',
+                category: 'regression',
+                parallelExecution: true,
+                maxWorkers: 5,
+                defaultBrowserPreference: 'chromium',
+                defaultHeadless: false,
+                testPlans: []
+            };
+
+            // Uncheck all test plan checkboxes
+            $('.test-plan-checkbox').prop('checked', false);
+        }
+
+        // Edit test suite
+        function editTestSuite(suiteId) {
+            const suite = testSuites.find(s => s.id === suiteId);
+            if (!suite) return;
+
+            editMode = true;
+            editId = suiteId;
+
+            // Populate form
+            $('#suite-name').val(suite.name);
+            $('#suite-description').val(suite.description);
+            $('#suite-category').val(suite.category);
+            $('#suite-parallel').val(suite.parallelExecution.toString());
+            $('#suite-max-workers').val(suite.maxWorkers);
+            $('#suite-browser').val(suite.defaultBrowserPreference);
+            $('#suite-headless').val(suite.defaultHeadless.toString());
+
+            // Set current test suite
+            currentTestSuite = { ...suite };
+
+            // Update test plan selection
+            renderTestPlanSelection();
+
+            // Show modal
+            $('#testSuiteModalLabel').text('Test Suite Düzenle');
+            $('#save-test-suite-btn').text('Güncelle');
+            $('#testSuiteModal').modal('show');
+        }
+
+        // Delete test suite
+        function deleteTestSuite(suiteId) {
+            if (confirm('Bu test suite\'i silmek istediğinize emin misiniz?')) {
+                // Send delete request to server
+                $.ajax({
+                    url: `/api/test-suites/${suiteId}`,
+                    method: 'DELETE',
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('success', 'Test suite başarıyla silindi.');
+                            loadTestSuites(); // Reload from server
+                        } else {
+                            showAlert('danger', 'Test suite silinirken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error deleting test suite:', error);
+                        showAlert('danger', 'Test suite silinirken bir hata oluştu.');
+
+                        // For demo purposes, update local data if API fails
+                        testSuites = testSuites.filter(s => s.id !== suiteId);
+                        renderTestSuites();
+                    }
+                });
+            }
+        }
+
+        // Run test suite
+        function runTestSuite(suiteId) {
+            const suite = testSuites.find(s => s.id === suiteId);
+            if (!suite) {
+                showAlert('danger', 'Test suite bulunamadı.');
+                return;
+            }
+
+            showAlert('info', `"${suite.name}" test suite'i çalıştırılıyor...`);
+            console.log(`Running test suite with ID: ${suiteId}`);
+
+            // Doğrudan çalıştırma isteği gönder
+            $.ajax({
+                url: `/api/test-suites/${suiteId}/run`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    maxWorkers: suite.maxWorkers,
+                    headless: suite.defaultHeadless
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', `"${suite.name}" test suite'i başarıyla çalıştırıldı.`);
+
+                        // Show request IDs if available
+                        if (response.requestIds && response.requestIds.length > 0) {
+                            const requestCount = response.requestIds.length;
+                            showAlert('info', `${requestCount} test isteği gönderildi. İlerlemeyi Dashboard'dan takip edebilirsiniz.`);
+
+                            // Redirect to dashboard to see progress
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 2000);
+                        }
+                    } else {
+                        showAlert('danger', `Test suite çalıştırılırken bir hata oluştu: ${response.error || 'Bilinmeyen hata'}`);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error running test suite:', error);
+                    console.error('Status:', status);
+                    console.error('Error details:', xhr.responseText);
+
+                    let errorMessage = 'Test suite çalıştırılırken bir hata oluştu.';
+
+                    // Try to extract more detailed error message
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.error) {
+                            errorMessage += ` Hata: ${errorResponse.error}`;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing error response:', e);
+                    }
+
+                    showAlert('danger', errorMessage);
+
+                    // For demo purposes, show success message if API fails
+                    setTimeout(() => {
+                        showAlert('success', `"${suite.name}" test suite'i başarıyla çalıştırıldı (demo).`);
+                    }, 2000);
+                }
+            });
+        }
+
+        // Save test suite
+        function saveTestSuite() {
+            // Get form values
+            const name = $('#suite-name').val();
+            const description = $('#suite-description').val();
+            const category = $('#suite-category').val();
+            const parallelExecution = $('#suite-parallel').val() === 'true';
+            const maxWorkers = parseInt($('#suite-max-workers').val());
+            const defaultBrowserPreference = $('#suite-browser').val();
+            const defaultHeadless = $('#suite-headless').val() === 'true';
+
+            // Validate form
+            if (!name) {
+                showAlert('danger', 'Suite adı gereklidir.');
+                return;
+            }
+
+            // Get selected test plans
+            const selectedPlanIds = [];
+            $('.test-plan-checkbox:checked').each(function() {
+                selectedPlanIds.push($(this).val());
+            });
+
+            if (selectedPlanIds.length === 0) {
+                showAlert('warning', 'En az bir test planı seçmelisiniz.');
+                return;
+            }
+
+            // Get full test plan objects
+            const selectedPlans = [];
+
+            // Fetch each selected test plan's full details
+            for (const planId of selectedPlanIds) {
+                // Find the plan in our local cache
+                const planInfo = testPlans.find(p => p.id === planId);
+
+                if (planInfo) {
+                    // Fetch the complete test plan with steps
+                    $.ajax({
+                        url: `/api/test-plans/${planId}`,
+                        method: 'GET',
+                        async: false, // Synchronous request to ensure we have all plans before saving
+                        success: function(response) {
+                            if (response.success && response.testPlan) {
+                                // Add the complete test plan with steps
+                                selectedPlans.push(response.testPlan);
+                            } else {
+                                console.error(`Failed to fetch complete test plan for ID: ${planId}`);
+                                // Add basic info as fallback
+                                selectedPlans.push(planInfo);
+                            }
+                        },
+                        error: function() {
+                            console.error(`Error fetching test plan details for ID: ${planId}`);
+                            // Add basic info as fallback
+                            selectedPlans.push(planInfo);
+                        }
+                    });
+                }
+            }
+
+            // Update current test suite
+            currentTestSuite = {
+                name,
+                description,
+                category,
+                parallelExecution,
+                maxWorkers,
+                defaultBrowserPreference,
+                defaultHeadless,
+                testPlans: selectedPlans
+            };
+
+            // Send to server via AJAX
+            if (editMode) {
+                // Update existing suite
+                $.ajax({
+                    url: `/api/test-suites/${editId}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentTestSuite),
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('success', 'Test suite başarıyla güncellendi.');
+                            // Close modal and refresh list
+                            $('#testSuiteModal').modal('hide');
+                            loadTestSuites(); // Reload from server
+                        } else {
+                            showAlert('danger', 'Test suite güncellenirken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error updating test suite:', error);
+                        showAlert('danger', 'Test suite güncellenirken bir hata oluştu.');
+
+                        // For demo purposes, update local data if API fails
+                        const index = testSuites.findIndex(s => s.id === editId);
+                        if (index !== -1) {
+                            testSuites[index] = { ...currentTestSuite, id: editId };
+                        }
+                        $('#testSuiteModal').modal('hide');
+                        renderTestSuites();
+                    }
+                });
+            } else {
+                // Add new suite
+                $.ajax({
+                    url: '/api/test-suites',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentTestSuite),
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('success', 'Test suite başarıyla oluşturuldu.');
+                            // Close modal and refresh list
+                            $('#testSuiteModal').modal('hide');
+                            loadTestSuites(); // Reload from server
+                        } else {
+                            showAlert('danger', 'Test suite oluşturulurken bir hata oluştu.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error creating test suite:', error);
+                        showAlert('danger', 'Test suite oluşturulurken bir hata oluştu.');
+
+                        // For demo purposes, add to local data if API fails
+                        const newId = 'suite-' + Date.now();
+                        testSuites.push({ ...currentTestSuite, id: newId });
+                        $('#testSuiteModal').modal('hide');
+                        renderTestSuites();
+                    }
+                });
+            }
+        }
+
+        // Show alert
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+
+            // Add alert to container
+            $('.alert-container').append(alertHtml);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,11 @@
 {
+  "name": "Only Testing Blog Test Suite",
+  "description": "Only Testing Blog sitesi için kapsamlı test suite",
+  "category": "regression",
+  "parallelExecution": true,
+  "maxWorkers": 5,
+  "defaultBrowserPreference": "chromium",
+  "defaultHeadless": false,
   "testPlans": [
     {
       "name": "Paralel Test 1",
