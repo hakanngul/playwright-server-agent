@@ -309,7 +309,7 @@ export class PlaywrightTestAdapter {
           headless: ${testPlan.headless !== undefined ? testPlan.headless : this.options.headless},
           actionTimeout: 15000,
           navigationTimeout: 15000,
-          trace: 'on-first-retry',
+          // trace ve video özellikleri kaldırıldı
           screenshot: 'only-on-failure'
         },
         projects: [

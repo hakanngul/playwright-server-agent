@@ -19,7 +19,15 @@ export class BrowserController extends IBrowserController {
   constructor(browserType = 'chromium', options = {}) {
     super();
     this.browserType = browserType;
-    this.headless = options.headless !== undefined ? options.headless : true;
+    // Headless modunu doğru şekilde işle
+    if (options.headless === false || options.headless === 'false') {
+      this.headless = false;
+    } else if (options.headless === true || options.headless === 'true') {
+      this.headless = true;
+    } else {
+      // Varsayılan olarak true kullan
+      this.headless = true;
+    }
     this.browserManager = null;
     this.browser = null;
     this.context = null;

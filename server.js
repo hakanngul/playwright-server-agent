@@ -11,10 +11,8 @@ import performanceRoutes from './routes/performance.js';
 import statusRoutes from './routes/status.js';
 import agentRoutes from './routes/agent.js';
 import testPlansRoutes from './routes/test-plans.js';
-import { TestAgent } from './services/testAgent.js';
-import { ParallelTestManager } from './services/browser/ParallelTestManager.js';
-import os from 'os';
 import config from './config.js';
+import os from 'os';
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -24,20 +22,21 @@ const __dirname = path.dirname(__filename);
 function logSystemInfo() {
   console.log('\n--- System Information ---');
   console.log(`Platform: ${process.platform}`);
+  console.log(`Architecture: ${process.arch}`);
   console.log(`Node Version: ${process.version}`);
+  console.log(`Memory: ${Math.round(os.totalmem() / (1024 * 1024 * 1024))} GB`);
+  console.log(`CPUs: ${os.cpus().length}`);
 
   // Check for Chrome/Chromium
   try {
     const chromeVersion = execSync('google-chrome --version').toString().trim();
     console.log(`Chrome Version: ${chromeVersion}`);
   } catch (e) {
-    console.log('Chrome not found via google-chrome command');
-
     try {
       const chromiumVersion = execSync('chromium --version').toString().trim();
       console.log(`Chromium Version: ${chromiumVersion}`);
     } catch (e) {
-      console.log('Chromium not found via chromium command');
+      console.log('Chrome/Chromium not found');
     }
   }
 
@@ -45,7 +44,7 @@ function logSystemInfo() {
   if (process.platform === 'win32') {
     try {
       const winChromeVersion = execSync('reg query "HKEY_CURRENT_USER\\Software\\Google\\Chrome\\BLBeacon" /v version').toString().trim();
-      const versionMatch = winChromeVersion.match(/version\\s+REG_SZ\\s+([\\d.]+)/i);
+      const versionMatch = winChromeVersion.match(/version\s+REG_SZ\s+([\d.]+)/i);
       if (versionMatch && versionMatch[1]) {
         console.log(`Windows Chrome Version: ${versionMatch[1]}`);
       }
@@ -58,7 +57,7 @@ function logSystemInfo() {
   try {
     if (process.platform === 'win32') {
       const firefoxVersion = execSync('reg query "HKEY_CURRENT_USER\\Software\\Mozilla\\Mozilla Firefox" /v CurrentVersion').toString().trim();
-      const versionMatch = firefoxVersion.match(/CurrentVersion\\s+REG_SZ\\s+([\\d.]+)/i);
+      const versionMatch = firefoxVersion.match(/CurrentVersion\s+REG_SZ\s+([\d.]+)/i);
       if (versionMatch && versionMatch[1]) {
         console.log(`Firefox Version: ${versionMatch[1]}`);
       }
@@ -67,16 +66,14 @@ function logSystemInfo() {
       console.log(`Firefox Version: ${firefoxVersion}`);
     }
   } catch (e) {
-    console.log('Firefox not found or version check failed');
+    console.log('Firefox not found');
   }
 
-  // WebKit/Safari desteği kaldırıldı
-
-  console.log('------------------------\n');
+  console.log('------------------------');
 }
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || config.server.port || 3002;
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -84,7 +81,7 @@ const server = http.createServer(app);
 // Create Socket.io server
 const io = new SocketIOServer(server, {
   cors: {
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: config.server.allowedOrigins || ['http://localhost:3000', 'http://localhost:3001'],
     methods: ['GET', 'POST']
   }
 });
@@ -105,18 +102,16 @@ io.on('connection', (socket) => {
   socket.emit('welcome', { message: 'Connected to Playwright Server Agent' });
 });
 
-// Function to broadcast message to all clients
-function broadcastMessage(message) {
-  io.emit('message', message);
-}
+// Socket.io ile mesaj göndermek için yardımcı fonksiyon
+// Doğrudan io.emit('message', message) kullanılabilir
 
 // Middleware
 app.use(express.json());
 
 // Enable CORS for frontend requests
 app.use((req, res, next) => {
-  // Allow both 3000 and 3001 ports for frontend
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+  // İzin verilen kaynakları yapılandırmadan al
+  const allowedOrigins = config.server.allowedOrigins || ['http://localhost:3000', 'http://localhost:3001'];
   const origin = req.headers.origin;
 
   if (allowedOrigins.includes(origin)) {
@@ -140,7 +135,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Screenshots, videos ve traces desteği kaldırıldı
+// Screenshots desteği var, videos ve traces desteği kaldırıldı
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -208,15 +203,7 @@ app.get('/api/browsers', (_req, res) => {
   res.json(browsers);
 });
 
-// Create parallel test manager
-const parallelTestManager = new ParallelTestManager({
-  workers: process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : config.test.workers,
-  headless: process.env.HEADLESS !== 'false' ? true : config.test.headless,
-  // Screenshots desteği kaldırıldı
-  browserTypes: config.test.browserTypes,
-  usePlaywrightTestRunner: config.test.usePlaywrightTestRunner,
-  retries: config.test.retries
-});
+// Legacy endpoint'ler için yapılandırma değerleri doğrudan config.js'den alınır
 
 // Add parallel test execution endpoint (legacy - redirects to agent-based endpoint)
 app.post('/api/test/run-parallel', async (req, res) => {
@@ -234,7 +221,7 @@ app.post('/api/test/run-parallel', async (req, res) => {
     console.log(`Redirecting ${testPlans.length} test plans to agent-based endpoint`);
 
     // Forward to agent-based endpoint
-    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : 5;
+    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : config.test.workers;
     console.log(`Using maximum ${maxAgents} agents for parallel execution`);
 
     // Submit all test plans to the agent manager
@@ -338,13 +325,22 @@ app.use((err, _req, res, _next) => {
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`\n=== Playwright-Based Test Runner Server ===`);
+  console.log(`\n=== Playwright Server Agent ===`);
   console.log(`Server running on port ${PORT}`);
   console.log(`API server running at http://localhost:${PORT}`);
-  console.log(`Frontend should be started separately on port 3000`);
+  console.log(`Frontend should be started separately on port ${config.server.allowedOrigins[0].split(':')[2] || '3000'}`);
+
+  // Sistem bilgilerini göster
   logSystemInfo();
 
-  console.log('Agent-based test execution system is active');
+  // Yapılandırma bilgilerini göster
+  console.log('\n--- Configuration ---');
+  console.log(`Agent-based test execution system is active`);
+  console.log(`Supported browsers: ${config.test.browserTypes.join(', ')}`);
+  console.log(`Headless mode: ${config.test.headless ? 'enabled' : 'disabled'}`);
+  console.log(`Workers: ${config.test.workers}`);
+  console.log(`Retries: ${config.test.retries}`);
+  console.log(`Timeout: ${config.test.timeout}ms`);
   console.log('Ready to run tests!');
 });
 

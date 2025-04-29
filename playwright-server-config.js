@@ -1,7 +1,8 @@
 /**
  * Playwright Server Agent Configuration Example
  *
- * Copy this file to playwright-server-config.js and modify as needed
+ * Bu dosya, varsayılan yapılandırmayı geçersiz kılmak için kullanılır.
+ * Sadece değiştirmek istediğiniz ayarları belirtin, diğerleri varsayılan değerlerini koruyacaktır.
  */
 
 import path from 'path';
@@ -12,81 +13,25 @@ const __dirname = path.dirname(__filename);
 
 export default {
   server: {
+    // Sunucu portu
     port: 3002,
+
+    // İzin verilen kaynaklar (CORS)
     allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
   },
   test: {
-    // Use Playwright Test Runner instead of custom implementation
-    usePlaywrightTestRunner: true,
-
-    // Number of parallel workers
+    // Paralel çalışacak işçi sayısı
     workers: 4,
 
-    // Run browsers in headless mode
+    // Tarayıcıları headless modda çalıştır
     headless: true,
 
-    // Number of retries for failed tests
-    retries: 1,
-
-    // Test timeout in milliseconds
-    timeout: 30000,
-
-    // Supported browser types
+    // Desteklenen tarayıcı türleri
     browserTypes: ['chromium', 'firefox']
   },
   paths: {
-    // Directory for screenshots
-    screenshotsDir: path.join(__dirname, 'screenshots'),
-
-    // Directory for videos
-    videosDir: path.join(__dirname, 'videos'),
-
-    // Directory for traces
-    tracesDir: path.join(__dirname, 'traces'),
-
-    // Directory for reports
+    // Raporlar için dizin
     reportsDir: path.join(__dirname, 'data/reports')
-
-    // testPlansDir kaldırıldı - farklı bir mimariye geçiş için
-  },
-  performance: {
-    // Collect performance metrics
-    collectMetrics: true,
-
-    // Collect Web Vitals metrics
-    webVitals: true,
-
-    // Collect network metrics
-    networkMetrics: true,
-
-    // Performance thresholds
-    thresholds: {
-      // Largest Contentful Paint (ms)
-      lcp: 2500,
-
-      // First Input Delay (ms)
-      fid: 100,
-
-      // Cumulative Layout Shift
-      cls: 0.1,
-
-      // Time to First Byte (ms)
-      ttfb: 600
-    }
-  },
-  database: {
-    // Database type: 'sqlite' or 'mongodb'
-    type: 'sqlite',
-
-    // MongoDB configuration
-    mongodb: {
-      uri: 'mongodb://localhost:27017',
-      dbName: 'playwright_server_agent'
-    },
-
-    // SQLite configuration
-    sqlite: {
-      path: path.join(__dirname, 'data', 'database.sqlite')
-    }
+    // traces ve videos özellikleri kaldırıldı
   }
 };

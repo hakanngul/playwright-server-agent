@@ -19,12 +19,15 @@ export class FirefoxFactory extends BrowserFactory {
     console.log('Using Firefox browser');
     // Firefox için özel seçenekler
 
-    // Yeni Playwright sürümlerinde headless modu için yeni yaklaşım
+    // Headless modu yapılandırması
     let headlessMode;
     if (options.headless === false || options.headless === 'false') {
       headlessMode = false;
+    } else if (options.headless === true || options.headless === 'true') {
+      headlessMode = true;
     } else {
-      headlessMode = 'new'; // Yeni headless modu kullan (true yerine)
+      // Varsayılan olarak true kullan
+      headlessMode = true;
     }
 
     const firefoxOptions = {
@@ -87,7 +90,7 @@ export class FirefoxFactory extends BrowserFactory {
     };
 
     console.log(`Launching Firefox with headless mode: ${headlessMode ? 'true (invisible)' : 'false (visible)'}`);
-    console.log(`Launch options: ${JSON.stringify({ headless: headlessMode }, null, 2)}`);
+    console.log(`Launch options: ${JSON.stringify({ ...firefoxOptions, headless: headlessMode }, null, 2)}`);
 
     return await firefox.launch(firefoxOptions);
   }

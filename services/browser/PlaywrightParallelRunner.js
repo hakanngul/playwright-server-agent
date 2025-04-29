@@ -36,6 +36,7 @@ export class PlaywrightParallelRunner {
 
       // Reporting
       screenshotsDir: options.screenshotsDir || config.paths.screenshotsDir || path.join(process.cwd(), 'screenshots'),
+      // traces ve videos özellikleri kaldırıldı
 
       // Callbacks
       onTestStart: options.onTestStart || null,

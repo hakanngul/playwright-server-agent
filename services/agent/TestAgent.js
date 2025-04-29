@@ -24,7 +24,10 @@ export class TestAgent extends EventEmitter {
     // Headless modunu doğru şekilde işle
     if (options.headless === false || options.headless === 'false') {
       this.headless = false;
+    } else if (options.headless === true || options.headless === 'true') {
+      this.headless = true;
     } else {
+      // Varsayılan olarak true kullan
       this.headless = true;
     }
 

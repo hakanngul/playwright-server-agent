@@ -17,31 +17,73 @@ const defaultConfig = {
     allowedOrigins: ['http://localhost:3000', 'http://localhost:3001']
   },
   test: {
+    // Use Playwright Test Runner instead of custom implementation
     usePlaywrightTestRunner: true,
-    workers: 5,
+
+    // Number of parallel workers
+    workers: 4,
+
+    // Run browsers in headless mode
     headless: true,
+
+    // Number of retries for failed tests
     retries: 1,
+
+    // Test timeout in milliseconds
     timeout: 30000,
+
+    // Supported browser types
     browserTypes: ['chromium', 'firefox']
   },
   paths: {
-    // Screenshots, videos ve traces desteği kaldırıldı
+    // Directory for screenshots
+    screenshotsDir: path.join(__dirname, 'screenshots'),
+
+    // Directory for reports
     reportsDir: path.join(__dirname, 'data/reports')
-    // testPlansDir kaldırıldı - farklı bir mimariye geçiş için
+
+    // videos ve traces özellikleri kaldırıldı
   },
   performance: {
-    // Performans raporlama özelliği geçici olarak devre dışı bırakıldı
-    collectMetrics: false,
-    webVitals: false,
-    networkMetrics: false,
+    // Collect performance metrics
+    collectMetrics: true,
+
+    // Collect Web Vitals metrics
+    webVitals: true,
+
+    // Collect network metrics
+    networkMetrics: true,
+
+    // Performance thresholds
     thresholds: {
+      // Largest Contentful Paint (ms)
       lcp: 2500,
+
+      // First Input Delay (ms)
       fid: 100,
+
+      // Cumulative Layout Shift
       cls: 0.1,
+
+      // Time to First Byte (ms)
       ttfb: 600
     }
   },
-  // Veritabanı desteği kaldırıldı
+  database: {
+    // Database type: 'sqlite' or 'mongodb'
+    type: 'sqlite',
+
+    // MongoDB configuration
+    mongodb: {
+      uri: 'mongodb://localhost:27017',
+      dbName: 'playwright_server_agent'
+    },
+
+    // SQLite configuration
+    sqlite: {
+      path: path.join(__dirname, 'data', 'database.sqlite')
+    }
+  }
 };
 
 // Load user configuration if exists
@@ -53,6 +95,7 @@ if (fs.existsSync(userConfigPath)) {
     // Use dynamic import for ES modules
     const importedConfig = await import(userConfigPath);
     userConfig = importedConfig.default || importedConfig;
+    console.log('User configuration loaded successfully');
   } catch (error) {
     console.error(`Error loading user configuration: ${error.message}`);
   }
@@ -72,7 +115,7 @@ const config = {
       ...(userConfig.performance?.thresholds || {})
     }
   },
-  // Veritabanı desteği kaldırıldı
+  database: { ...defaultConfig.database, ...(userConfig.database || {}) }
 };
 
 // Create directories if they don't exist

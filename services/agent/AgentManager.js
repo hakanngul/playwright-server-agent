@@ -270,8 +270,15 @@ export class AgentManager extends EventEmitter {
     // Determine browser type
     const browserType = options.browserType || this.options.browserTypes[0];
 
-    // Create agent
-    const headless = options.headless === false || options.headless === 'false' ? false : this.options.headless;
+    // Headless modunu doğru şekilde işle
+    let headless;
+    if (options.headless === false || options.headless === 'false') {
+      headless = false;
+    } else if (options.headless === true || options.headless === 'true') {
+      headless = true;
+    } else {
+      headless = this.options.headless;
+    }
 
     console.log(`Creating agent with browserType: ${browserType}, headless: ${headless}`);
 
@@ -530,7 +537,16 @@ export class AgentManager extends EventEmitter {
 
     // Get browser type and headless mode from request
     const browserType = request.browserType || this.options.browserTypes[0];
-    const headless = request.headless === false || request.headless === 'false' ? false : this.options.headless;
+
+    // Headless modunu doğru şekilde işle
+    let headless;
+    if (request.headless === false || request.headless === 'false') {
+      headless = false;
+    } else if (request.headless === true || request.headless === 'true') {
+      headless = true;
+    } else {
+      headless = this.options.headless;
+    }
 
     console.log(`Processing request ${request.id} with browser: ${browserType}, headless: ${headless}`);
 

@@ -8,10 +8,16 @@ import AgentManager from '../services/agent/AgentManager.js';
 
 const router = express.Router();
 
+// Import config
+import config from '../config.js';
+
 // Create agent manager instance
 const agentManager = new AgentManager({
   closeAgentAfterTest: true, // Test tamamlandıktan sonra agent'ı kapat
-  agentIdleTimeout: 5000 // 5 saniye sonra boşta kalan agent'ları kapat
+  agentIdleTimeout: 5000, // 5 saniye sonra boşta kalan agent'ları kapat
+  workers: config.test.workers,
+  headless: config.test.headless,
+  browserTypes: config.test.browserTypes
 });
 
 // Export agent manager for graceful shutdown
@@ -257,7 +263,7 @@ router.post('/run-parallel', async (req, res) => {
     console.log(`\n--- Received parallel test run request with ${testPlans.length} test plans ---`);
 
     // Set maximum number of agents to use
-    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : 5;
+    const maxAgents = process.env.MAX_WORKERS ? parseInt(process.env.MAX_WORKERS) : config.test.workers;
     console.log(`Using maximum ${maxAgents} agents for parallel execution`);
 
     // Submit all test plans to the agent manager
